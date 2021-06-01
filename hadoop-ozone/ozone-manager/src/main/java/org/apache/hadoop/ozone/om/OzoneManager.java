@@ -111,6 +111,7 @@ import org.apache.hadoop.ozone.audit.AuditMessage;
 import org.apache.hadoop.ozone.audit.Auditor;
 import org.apache.hadoop.ozone.audit.OMAction;
 import org.apache.hadoop.ozone.common.Storage.StorageState;
+import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.ha.OMHANodeDetails;
@@ -227,6 +228,8 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_KERBEROS_KEYTAB_F
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_METRICS_SAVE_INTERVAL;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_METRICS_SAVE_INTERVAL_DEFAULT;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_USER_MAX_DATABASE;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_USER_MAX_DATABASE_DEFAULT;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_USER_MAX_VOLUME;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_USER_MAX_VOLUME_DEFAULT;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_VOLUME_LISTALL_ALLOWED;
@@ -276,6 +279,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
   private OMMetadataManager metadataManager;
   private VolumeManager volumeManager;
+  private DatabaseManager databaseManager;
   private BucketManager bucketManager;
   private KeyManager keyManager;
   private PrefixManagerImpl prefixManager;
@@ -324,6 +328,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   // Adding parameters needed for VolumeRequests here, so that during request
   // execution, we can get from ozoneManager.
   private long maxUserVolumeCount;
+  private long maxUserDatabaseCount;
 
   private int minMultipartUploadPartSize = OzoneConsts.OM_MULTIPART_MIN_SIZE;
 
@@ -369,7 +374,9 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     this.allowListAllVolumes = conf.getBoolean(OZONE_OM_VOLUME_LISTALL_ALLOWED,
         OZONE_OM_VOLUME_LISTALL_ALLOWED_DEFAULT);
     this.maxUserVolumeCount = conf.getInt(OZONE_OM_USER_MAX_VOLUME,
-        OZONE_OM_USER_MAX_VOLUME_DEFAULT);
+            OZONE_OM_USER_MAX_VOLUME_DEFAULT);
+    this.maxUserDatabaseCount = conf.getInt(OZONE_OM_USER_MAX_DATABASE,
+            OZONE_OM_USER_MAX_DATABASE_DEFAULT);
     Preconditions.checkArgument(this.maxUserVolumeCount > 0,
         OZONE_OM_USER_MAX_VOLUME + " value should be greater than zero");
 
@@ -1697,6 +1704,139 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
               (args == null) ? null : args.toAuditMap(), ex)
       );
       throw ex;
+    }
+  }
+
+  @Override
+  public void createDatabase(HmDatabaseArgs args) throws IOException {
+    try {
+      metrics.incNumVolumeCreates();
+      databaseManager.createDatabase(args);
+      AUDIT.logWriteSuccess(buildAuditMessageForSuccess(OMAction.CREATE_DATABASE,
+              (args == null) ? null : args.toAuditMap()));
+      metrics.incNumVolumes();
+    } catch (Exception ex) {
+      metrics.incNumDatabaseCreateFails();
+      AUDIT.logWriteFailure(
+              buildAuditMessageForFailure(OMAction.CREATE_DATABASE,
+                      (args == null) ? null : args.toAuditMap(), ex)
+      );
+      throw ex;
+    }
+  }
+
+  @Override
+  public HmDatabaseArgs getDatabaseInfo(String databaseName) throws IOException {
+    if (isAclEnabled) {
+//      checkAcls(ResourceType.VOLUME, StoreType.OZONE, ACLType.READ, volume,
+//              null, null);
+    }
+
+    boolean auditSuccess = true;
+    Map<String, String> auditMap = buildAuditMap(databaseName);
+    try {
+      metrics.incNumDatabaseInfos();
+      return databaseManager.getDatabaseInfo(databaseName);
+    } catch (Exception ex) {
+      metrics.incNumDatabaseInfoFails();
+      auditSuccess = false;
+      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.READ_DATABASE,
+              auditMap, ex));
+      throw ex;
+    } finally {
+      if (auditSuccess) {
+        AUDIT.logReadSuccess(buildAuditMessageForSuccess(OMAction.READ_DATABASE,
+                auditMap));
+      }
+    }
+  }
+
+  @Override
+  public void deleteDatabase(String databaseName) throws IOException {
+    // TODO del database
+  }
+
+  @Override
+  public List<HmDatabaseArgs> listAllDatabases(String databasePrefix, String prevDatabase, int maxKeys) throws IOException {
+    boolean auditSuccess = true;
+    Map<String, String> auditMap = new LinkedHashMap<>();
+    auditMap.put(OzoneConsts.PREV_KEY, databasePrefix);
+    auditMap.put(OzoneConsts.PREFIX, prevDatabase);
+    auditMap.put(OzoneConsts.MAX_KEYS, String.valueOf(maxKeys));
+    auditMap.put(OzoneConsts.USERNAME, null);
+    try {
+      metrics.incNumDatabaseLists();
+      boolean allowListAllDatabases = true;
+      if (!allowListAllDatabases) {
+        // Only admin can list all Database when disallowed in config
+        if (isAclEnabled) {
+//          checkAcls(ResourceType.DATABASE, StoreType.OZONE, ACLType.LIST,
+//                  OzoneConsts.OZONE_ROOT, null, null);
+        }
+      }
+      return databaseManager.listDatabase(null, databasePrefix, prevDatabase, maxKeys);
+    } catch (Exception ex) {
+      metrics.incNumDatabaseListFails();
+      auditSuccess = false;
+      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.LIST_DATABASES,
+              auditMap, ex));
+      throw ex;
+    } finally {
+      if (auditSuccess) {
+        AUDIT.logReadSuccess(buildAuditMessageForSuccess(OMAction.LIST_DATABASES,
+                auditMap));
+      }
+    }
+  }
+
+  @Override
+  public List<HmDatabaseArgs> listDatabaseByUser(String userName, String databasePrefix, String prevDatabase, int maxKeys) throws IOException {
+    UserGroupInformation remoteUserUgi =
+            ProtobufRpcEngine.Server.getRemoteUser();
+    if (isAclEnabled) {
+//      if (remoteUserUgi == null) {
+//        LOG.error("Rpc user UGI is null. Authorization failed.");
+//        throw new OMException("Rpc user UGI is null. Authorization failed.",
+//                ResultCodes.PERMISSION_DENIED);
+//      }
+    }
+    boolean auditSuccess = true;
+    Map<String, String> auditMap = new LinkedHashMap<>();
+    auditMap.put(OzoneConsts.PREV_KEY, databasePrefix);
+    auditMap.put(OzoneConsts.PREFIX, prevDatabase);
+    auditMap.put(OzoneConsts.MAX_KEYS, String.valueOf(maxKeys));
+    auditMap.put(OzoneConsts.USERNAME, userName);
+    try {
+      metrics.incNumDatabaseLists();
+      if (isAclEnabled) {
+        // TODO not support acl
+        // List all volumes first
+        List<HmDatabaseArgs> listAllDatabase = databaseManager.listDatabase(
+                null, databasePrefix, prevDatabase, maxKeys);
+        List<HmDatabaseArgs> result = new ArrayList<>();
+        // Filter all volumes by LIST ACL
+        for (HmDatabaseArgs hmDatabaseArgs : listAllDatabase) {
+          if (hasAcls(userName, ResourceType.DATABASE, StoreType.OZONE,
+                  ACLType.LIST, hmDatabaseArgs.getName(), null, null)) {
+            result.add(hmDatabaseArgs);
+          }
+        }
+        return result;
+      } else {
+        // When ACL is not enabled, fallback to filter by owner
+        return databaseManager.listDatabase(userName, databasePrefix, prevDatabase, maxKeys);
+      }
+    } catch (Exception ex) {
+      metrics.incNumDatabaseListFails();
+      auditSuccess = false;
+      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.LIST_DATABASES,
+              auditMap, ex));
+      throw ex;
+    } finally {
+      if (auditSuccess) {
+        AUDIT.logReadSuccess(buildAuditMessageForSuccess(OMAction.LIST_DATABASES,
+                auditMap));
+      }
     }
   }
 
@@ -3522,6 +3662,15 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   public long getMaxUserVolumeCount() {
     return maxUserVolumeCount;
+  }
+
+  /**
+   * Return maximum databases count per user.
+   *
+   * @return maxUserDatabaseCount
+   */
+  public long getMaxUserDatabaseCount() {
+    return maxUserDatabaseCount;
   }
   /**
    * Return true, if the current OM node is leader and in ready state to

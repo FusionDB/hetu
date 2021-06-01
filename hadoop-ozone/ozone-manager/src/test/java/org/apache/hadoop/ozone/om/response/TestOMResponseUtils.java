@@ -20,6 +20,9 @@
 package org.apache.hadoop.ozone.om.response;
 
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
+import org.apache.hadoop.ozone.om.helpers.OmTableInfo;
+import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.util.Time;
 
 /**
@@ -35,6 +38,18 @@ public final class TestOMResponseUtils {
     return OmBucketInfo.newBuilder().setVolumeName(volume).setBucketName(bucket)
         .setCreationTime(Time.now()).setIsVersionEnabled(true).addMetadata(
             "key1", "value1").build();
+
+  }
+
+  public static OmTableInfo createTable(String database, String table) {
+    return OmTableInfo.newBuilder().setDatabaseName(database).setTableName(table)
+            .setColumns(TestOMRequestUtils.getColumnSchemas())
+            .setStorageEngine(OzoneManagerProtocolProtos.TableInfo.StorageEngineProto.LUCENE)
+            .setNumReplicas(3)
+            .setPartitions(TestOMRequestUtils.getPartitionsProto())
+            .setComment("")
+            .setCreationTime(Time.now()).setIsVersionEnabled(true).addMetadata(
+                    "key1", "value1").build();
 
   }
 

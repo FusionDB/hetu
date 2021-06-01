@@ -27,15 +27,19 @@ import org.apache.hadoop.hdds.utils.db.TableIterator;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.hadoop.ozone.common.BlockGroup;
+import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmPrefixInfo;
+import org.apache.hadoop.ozone.om.helpers.OmTableInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.lock.OzoneManagerLock;
 import org.apache.hadoop.ozone.om.ratis.OMTransactionInfo;
+import org.apache.hadoop.ozone.storage.proto.
+    OzoneManagerStorageProtos.PersistedUserDatabaseInfo;
 import org.apache.hadoop.ozone.storage.proto.
     OzoneManagerStorageProtos.PersistedUserVolumeInfo;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
@@ -270,6 +274,13 @@ public interface OMMetadataManager {
   Table<String, PersistedUserVolumeInfo> getUserTable();
 
   /**
+   * Returns the user Table.
+   *
+   * @return UserTable.
+   */
+  Table<String, PersistedUserDatabaseInfo> getUserTableDb();
+
+  /**
    * Returns the Volume Table.
    *
    * @return VolumeTable.
@@ -397,4 +408,81 @@ public interface OMMetadataManager {
 
   TableIterator<String, ? extends Table.KeyValue<String, OmKeyInfo>>
       getKeyIterator();
+
+  /**
+   * Returns the Database Table.
+   *
+   * @return DatabaseTable.
+   */
+  Table<String, HmDatabaseArgs> getDatabaseTable();
+
+  /**
+   * Given a database return the corresponding DB key.
+   *
+   * @param database - Database name
+   */
+  String getDatabaseKey(String database);
+
+  /**
+   * Given a database, check if it is empty, i.e there are no tables inside it.
+   *
+   * @param database - Database name
+   */
+  boolean isDatabaseEmpty(String database) throws IOException;
+
+  /**
+   * Returns a list of databases owned by a given user; if user is null, returns
+   * all databases.
+   *
+   * @param userName database owner
+   * @param prefix the database prefix used to filter the listing result.
+   * @param startKey the start database name determines where to start listing
+   * from, this key is excluded from the result.
+   * @param maxKeys the maximum number of databases to return.
+   * @return a list of {@link HmDatabaseArgs}
+   * @throws IOException
+   */
+  List<HmDatabaseArgs> listDatabase(String userName, String prefix, String startKey, int maxKeys) throws IOException;
+
+  /**
+   * Given a table return the corresponding DB key.
+   *
+   *  @param databaseName - database name
+   * @param tableName - table name
+   */
+  String getMetaTableKey(String databaseName, String tableName);
+
+  /**
+   * Returns the Meta Table.
+   * @return
+   */
+  Table<String, OmTableInfo> getMetaTable();
+
+  /**
+   * Given a table, check if it is empty, i.e there are no tablets inside it.
+   * @param databaseName
+   * @param tableName
+   * @return
+   */
+  boolean isMetaTableEmpty(String databaseName, String tableName) throws IOException;
+
+  /**
+   * Returns a list of tables represented by {@link OmTableInfo} in the given
+   * databse.
+   *
+   * @param databaseName the name of the database. This argument is required, this
+   * method returns tables in this given database.
+   * @param startTable the start table name. Only the tables whose name is
+   * after this value will be included in the result. This key is excluded from
+   * the result.
+   * @param tablePrefix table name prefix. Only the tables whose name has
+   * this prefix will be included in the result.
+   * @param maxNumOfTables the maximum number of tables to return. It ensures
+   * the size of the result will not exceed this limit.
+   * @return a list of tables.
+   * @throws IOException
+   */
+  List<OmTableInfo> listMetaTables(String databaseName, String startTable,
+                                 String tablePrefix, int maxNumOfTables)
+          throws IOException;
 }

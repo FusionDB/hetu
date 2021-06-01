@@ -29,6 +29,7 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.DBUpdates;
 import org.apache.hadoop.ozone.om.helpers.KeyValueUtil;
@@ -136,6 +137,17 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetBuck
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetVolumePropertyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Type;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DatabaseInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ListDatabaseRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ListDatabaseResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateDatabaseRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateDatabaseResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DeleteDatabaseRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DeleteDatabaseResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetDatabaseRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetDatabaseResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetDatabasePropertyRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetDatabasePropertyResponse;
 import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
@@ -220,12 +232,100 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
     return transport.submitRequest(payload);
   }
 
-  /**
-   * Creates a volume.
-   *
-   * @param args - Arguments to create Volume.
-   * @throws IOException
-   */
+  @Override
+  public void createDatabase(HmDatabaseArgs args) throws IOException {
+    CreateDatabaseRequest.Builder req =
+            CreateDatabaseRequest.newBuilder();
+    DatabaseInfo databaseInfo = args.getProtobuf();
+    req.setDatabaseInfo(databaseInfo);
+
+    OMRequest omRequest = createOMRequest(Type.CreateDatabase)
+            .setCreateDatabaseRequest(req)
+            .build();
+
+    OMResponse omResponse = submitRequest(omRequest);
+    handleError(omResponse);
+  }
+
+  @Override
+  public HmDatabaseArgs getDatabaseInfo(String databaseName) throws IOException {
+    GetDatabaseRequest.Builder req = GetDatabaseRequest.newBuilder();
+    req.setName(databaseName);
+
+    OMRequest omRequest = createOMRequest(Type.GetDatabase)
+            .setGetDatabaseRequest(req)
+            .build();
+
+    GetDatabaseResponse resp =
+            handleError(submitRequest(omRequest)).getGetDatabaseResponse();
+
+
+    return HmDatabaseArgs.getFromProtobuf(resp.getDatabaseInfo());
+  }
+
+  @Override
+  public void deleteDatabase(String databaseName) throws IOException {
+    DeleteDatabaseRequest.Builder req = DeleteDatabaseRequest.newBuilder();
+    req.setName(databaseName);
+
+    OMRequest omRequest = createOMRequest(Type.DeleteDatabase)
+            .setDeleteDatabaseRequest(req)
+            .build();
+
+    handleError(submitRequest(omRequest));
+  }
+
+  @Override
+  public List<HmDatabaseArgs> listAllDatabases(String prefix, String prevKey, int maxKeys) throws IOException {
+    ListDatabaseRequest.Builder builder = ListDatabaseRequest.newBuilder();
+    if (!Strings.isNullOrEmpty(prefix)) {
+      builder.setPrefix(prefix);
+    }
+    if (!Strings.isNullOrEmpty(prevKey)) {
+      builder.setPrevKey(prevKey);
+    }
+    builder.setMaxKeys(maxKeys);
+    builder.setScope(ListDatabaseRequest.Scope.DATABASES_BY_CLUSTER);
+    return listDatabase(builder.build());
+  }
+
+  @Override
+  public List<HmDatabaseArgs> listDatabaseByUser(String userName, String prefix, String prevKey, int maxKeys) throws IOException {
+    ListDatabaseRequest.Builder builder = ListDatabaseRequest.newBuilder();
+    if (!Strings.isNullOrEmpty(prefix)) {
+      builder.setPrefix(prefix);
+    }
+    if (!Strings.isNullOrEmpty(prevKey)) {
+      builder.setPrevKey(prevKey);
+    }
+    builder.setMaxKeys(maxKeys);
+    builder.setUserName(userName);
+    builder.setScope(ListDatabaseRequest.Scope.DATABASES_BY_USER);
+    return listDatabase(builder.build());
+  }
+
+  private List<HmDatabaseArgs> listDatabase(ListDatabaseRequest request)
+          throws IOException {
+
+    OMRequest omRequest = createOMRequest(Type.ListDatabase)
+            .setListDatabaseRequest(request)
+            .build();
+
+    ListDatabaseResponse resp =
+            handleError(submitRequest(omRequest)).getListDatabaseResponse();
+    List<HmDatabaseArgs> list = new ArrayList<>(resp.getDatabaseInfoList().size());
+    for (DatabaseInfo info : resp.getDatabaseInfoList()) {
+      list.add(HmDatabaseArgs.getFromProtobuf(info));
+    }
+    return list;
+  }
+
+    /**
+     * Creates a volume.
+     *
+     * @param args - Arguments to create Volume.
+     * @throws IOException
+     */
   @Override
   public void createVolume(OmVolumeArgs args) throws IOException {
     CreateVolumeRequest.Builder req =

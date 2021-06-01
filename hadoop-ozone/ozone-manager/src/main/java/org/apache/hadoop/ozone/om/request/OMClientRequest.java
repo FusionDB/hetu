@@ -341,6 +341,12 @@ public abstract class OMClientRequest implements RequestAuditor {
     return auditMap;
   }
 
+  @Override
+  public Map<String, String> buildDatabaseAuditMap(String database) {
+    Map<String, String> auditMap = new LinkedHashMap<>();
+    auditMap.put(OzoneConsts.DATABASE, database);
+    return auditMap;
+  }
 
   public static String validateAndNormalizeKey(boolean enableFileSystemPaths,
       String keyName) throws OMException {

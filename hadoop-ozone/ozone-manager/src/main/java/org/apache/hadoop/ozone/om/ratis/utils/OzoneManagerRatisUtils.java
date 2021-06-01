@@ -32,6 +32,8 @@ import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.om.request.bucket.acl.OMBucketAddAclRequest;
 import org.apache.hadoop.ozone.om.request.bucket.acl.OMBucketRemoveAclRequest;
 import org.apache.hadoop.ozone.om.request.bucket.acl.OMBucketSetAclRequest;
+import org.apache.hadoop.ozone.om.request.database.OMDatabaseCreateRequest;
+import org.apache.hadoop.ozone.om.request.database.OMDatabaseDeleteRequest;
 import org.apache.hadoop.ozone.om.request.file.OMDirectoryCreateRequest;
 import org.apache.hadoop.ozone.om.request.file.OMFileCreateRequest;
 import org.apache.hadoop.ozone.om.request.key.OMKeysDeleteRequest;
@@ -57,6 +59,9 @@ import org.apache.hadoop.ozone.om.request.s3.security.S3GetSecretRequest;
 import org.apache.hadoop.ozone.om.request.security.OMCancelDelegationTokenRequest;
 import org.apache.hadoop.ozone.om.request.security.OMGetDelegationTokenRequest;
 import org.apache.hadoop.ozone.om.request.security.OMRenewDelegationTokenRequest;
+import org.apache.hadoop.ozone.om.request.table.OMTableCreateRequest;
+import org.apache.hadoop.ozone.om.request.table.OMTableDeleteRequest;
+import org.apache.hadoop.ozone.om.request.table.OMTableSetPropertyRequest;
 import org.apache.hadoop.ozone.om.request.volume.OMVolumeCreateRequest;
 import org.apache.hadoop.ozone.om.request.volume.OMVolumeDeleteRequest;
 import org.apache.hadoop.ozone.om.request.volume.OMVolumeSetOwnerRequest;
@@ -96,6 +101,12 @@ public final class OzoneManagerRatisUtils {
     switch (cmdType) {
     case CreateVolume:
       return new OMVolumeCreateRequest(omRequest);
+    case CreateDatabase:
+      return new OMDatabaseCreateRequest(omRequest);
+    case DeleteDatabase:
+        return new OMDatabaseDeleteRequest(omRequest);
+//    case SetDatabaseProperty:
+//        return new OMSetDatabasePropertyRequest(omRequest);
     case SetVolumeProperty:
       boolean hasQuota = omRequest.getSetVolumePropertyRequest()
           .hasQuotaInBytes();
@@ -118,6 +129,12 @@ public final class OzoneManagerRatisUtils {
       return new OMBucketDeleteRequest(omRequest);
     case SetBucketProperty:
       return new OMBucketSetPropertyRequest(omRequest);
+    case CreateTable:
+      return new OMTableCreateRequest(omRequest);
+    case DeleteTable:
+      return new OMTableDeleteRequest(omRequest);
+    case SetTableProperty:
+      return new OMTableSetPropertyRequest(omRequest);
     case AllocateBlock:
       return new OMAllocateBlockRequest(omRequest);
     case CreateKey:

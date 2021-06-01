@@ -24,6 +24,7 @@ import java.util.List;
 
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.DBUpdates;
@@ -525,4 +526,13 @@ public interface OzoneManagerProtocol
     return false;
   }
 
+  void createDatabase(HmDatabaseArgs build) throws IOException;
+
+  HmDatabaseArgs getDatabaseInfo(String databaseName) throws IOException;
+
+  void deleteDatabase(String databaseName) throws IOException;
+
+  List<HmDatabaseArgs> listAllDatabases(String databasePrefix, String prevDatabase, int maxListResult) throws IOException;
+
+  List<HmDatabaseArgs> listDatabaseByUser(String user, String databasePrefix, String prevDatabase, int maxListResult) throws IOException;
 }

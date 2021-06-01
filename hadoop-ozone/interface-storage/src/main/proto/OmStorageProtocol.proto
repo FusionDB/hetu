@@ -64,3 +64,9 @@ message PersistedUserVolumeInfo {
   optional uint64 objectID = 2;
   optional uint64 updateID = 3;
 }
+
+message PersistedUserDatabaseInfo {
+  repeated string databaseNames = 1;
+  optional uint64 objectID = 2;
+  optional uint64 updateID = 3;
+}

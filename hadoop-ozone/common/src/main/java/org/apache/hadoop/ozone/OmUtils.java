@@ -506,6 +506,18 @@ public final class OmUtils {
   }
 
   /**
+   * Verify database name is a valid DNS name.
+   */
+  public static void validateDatabaseName(String databaseName) throws OMException {
+    try {
+      HddsClientUtils.verifyResourceName(databaseName);
+    } catch (IllegalArgumentException e) {
+      throw new OMException("Invalid database name: " + databaseName,
+              OMException.ResultCodes.INVALID_DATABASE_NAME);
+    }
+  }
+
+  /**
    * Verify bucket name is a valid DNS name.
    */
   public static void validateBucketName(String bucketName)
@@ -515,6 +527,19 @@ public final class OmUtils {
     } catch (IllegalArgumentException e) {
       throw new OMException("Invalid bucket name: " + bucketName,
           OMException.ResultCodes.INVALID_BUCKET_NAME);
+    }
+  }
+
+  /**
+   * Verify table name is a valid DNS name.
+   */
+  public static void validateTableName(String tableName)
+          throws OMException {
+    try {
+      HddsClientUtils.verifyResourceName(tableName);
+    } catch (IllegalArgumentException e) {
+      throw new OMException("Invalid table name: " + tableName,
+              OMException.ResultCodes.INVALID_TABLE_NAME);
     }
   }
 

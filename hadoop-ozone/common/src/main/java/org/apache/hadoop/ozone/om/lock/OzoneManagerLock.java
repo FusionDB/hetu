@@ -194,6 +194,9 @@ public class OzoneManagerLock {
     } else if (resources.length == 2 && resource == Resource.BUCKET_LOCK) {
       return OzoneManagerLockUtil.generateBucketLockName(resources[0],
           resources[1]);
+    } else if (resources.length == 2 && resource == Resource.TABLE_LOCK) {
+      return OzoneManagerLockUtil.generateTableLockName(resources[0],
+              resources[1]);
     } else {
       throw new IllegalArgumentException("acquire lock is supported on single" +
           " resource for all locks except for resource bucket");
@@ -379,17 +382,19 @@ public class OzoneManagerLock {
 
     // For volume need to allow both s3 bucket and volume. 01 + 10 = 11 (3)
     VOLUME_LOCK((byte) 1, "VOLUME_LOCK"), // = 2
+    DATABASE_LOCK((byte) 2, "VOLUME_LOCK"), // = 3
 
     // For bucket we need to allow both s3 bucket, volume and bucket. Which
     // is equal to 100 + 010 + 001 = 111 = 4 + 2 + 1 = 7
-    BUCKET_LOCK((byte) 2, "BUCKET_LOCK"), // = 4
+    BUCKET_LOCK((byte) 3, "BUCKET_LOCK"), // = 4
+    TABLE_LOCK((byte) 4, "BUCKET_LOCK"), // = 4
 
-    // For user we need to allow s3 bucket, volume, bucket and user lock.
+    // For user we need to allow s3 bucket, volume, database, bucket and user lock.
     // Which is 8  4 + 2 + 1 = 15
-    USER_LOCK((byte) 3, "USER_LOCK"), // 15
+    USER_LOCK((byte) 5, "USER_LOCK"), // 15
 
-    S3_SECRET_LOCK((byte) 4, "S3_SECRET_LOCK"), // 31
-    PREFIX_LOCK((byte) 5, "PREFIX_LOCK"); //63
+    S3_SECRET_LOCK((byte) 6, "S3_SECRET_LOCK"), // 31
+    PREFIX_LOCK((byte) 7, "PREFIX_LOCK"); //63
 
     // level of the resource
     private byte lockLevel;

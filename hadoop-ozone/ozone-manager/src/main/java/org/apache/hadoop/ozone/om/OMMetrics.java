@@ -38,17 +38,22 @@ public class OMMetrics {
 
   // OM request type op metrics
   private @Metric MutableCounterLong numVolumeOps;
+  private @Metric MutableCounterLong numDatabaseOps;
   private @Metric MutableCounterLong numBucketOps;
   private @Metric MutableCounterLong numKeyOps;
   private @Metric MutableCounterLong numFSOps;
+  private @Metric MutableCounterLong numTableOps;
 
   // OM op metrics
   private @Metric MutableCounterLong numVolumeCreates;
+  private @Metric MutableCounterLong numDatabaseCreates;
   private @Metric MutableCounterLong numVolumeUpdates;
   private @Metric MutableCounterLong numVolumeInfos;
+  private @Metric MutableCounterLong numDatabaseInfos;
   private @Metric MutableCounterLong numVolumeCheckAccesses;
   private @Metric MutableCounterLong numBucketCreates;
   private @Metric MutableCounterLong numVolumeDeletes;
+  private @Metric MutableCounterLong numDatabaseDeletes;
   private @Metric MutableCounterLong numBucketInfos;
   private @Metric MutableCounterLong numBucketUpdates;
   private @Metric MutableCounterLong numBucketDeletes;
@@ -60,12 +65,18 @@ public class OMMetrics {
   private @Metric MutableCounterLong numKeyLists;
   private @Metric MutableCounterLong numTrashKeyLists;
   private @Metric MutableCounterLong numVolumeLists;
+  private @Metric MutableCounterLong numDatabaseLists;
   private @Metric MutableCounterLong numKeyCommits;
   private @Metric MutableCounterLong numBlockAllocations;
   private @Metric MutableCounterLong numGetServiceLists;
   private @Metric MutableCounterLong numBucketS3Lists;
   private @Metric MutableCounterLong numInitiateMultipartUploads;
   private @Metric MutableCounterLong numCompleteMultipartUploads;
+  private @Metric MutableCounterLong numTableCreates;
+  private @Metric MutableCounterLong numTabletDeletes;
+  private @Metric MutableCounterLong numTableDeletes;
+  private @Metric MutableCounterLong numTableUpdates;
+  private @Metric MutableCounterLong numDatabaseUpdates;
 
   private @Metric MutableCounterLong numGetFileStatus;
   private @Metric MutableCounterLong numCreateDirectory;
@@ -113,6 +124,13 @@ public class OMMetrics {
   private @Metric MutableCounterLong numListMultipartUploadParts;
   private @Metric MutableCounterLong numListMultipartUploadPartFails;
   private @Metric MutableCounterLong numOpenKeyDeleteRequestFails;
+  private @Metric MutableCounterLong numDatabaseInfoFails;
+  private @Metric MutableCounterLong numDatabaseDeleteFails;
+  private @Metric MutableCounterLong numDatabaseCreateFails;
+  private @Metric MutableCounterLong numDatabaseListFails;
+  private @Metric MutableCounterLong numTableDeleteFails;
+  private @Metric MutableCounterLong numTableUpdateFails;
+  private @Metric MutableCounterLong numDatabaseUpdateFails;
 
   private @Metric MutableCounterLong numGetFileStatusFails;
   private @Metric MutableCounterLong numCreateDirectoryFails;
@@ -125,6 +143,8 @@ public class OMMetrics {
   private @Metric MutableCounterLong numVolumes;
   private @Metric MutableCounterLong numBuckets;
   private @Metric MutableCounterLong numS3Buckets;
+  private @Metric MutableCounterLong numDatabases;
+  private @Metric MutableCounterLong numTables;
 
   //TODO: This metric is an estimate and it may be inaccurate on restart if the
   // OM process was not shutdown cleanly. Key creations/deletions in the last
@@ -204,6 +224,10 @@ public class OMMetrics {
     numVolumes.incr();
   }
 
+  public void incNumDatabases() {
+    numDatabases.incr();
+  }
+
   public void decNumVolumes() {
     numVolumes.incr(-1);
   }
@@ -228,6 +252,11 @@ public class OMMetrics {
     numKeys.incr(-1);
   }
 
+  public void setNumDatabases(long val) {
+    long oldVal = this.numDatabases.value();
+    this.numDatabases.incr(val - oldVal);
+  }
+
   public void setNumVolumes(long val) {
     long oldVal = this.numVolumes.value();
     this.numVolumes.incr(val - oldVal);
@@ -236,6 +265,11 @@ public class OMMetrics {
   public void setNumBuckets(long val) {
     long oldVal = this.numBuckets.value();
     this.numBuckets.incr(val - oldVal);
+  }
+
+  public void setNumTables(long val) {
+    long oldVal = this.numTables.value();
+    this.numTables.incr(val - oldVal);
   }
 
   public void setNumKeys(long val) {
@@ -253,6 +287,10 @@ public class OMMetrics {
 
   public long getNumBuckets() {
     return numBuckets.value();
+  }
+
+  public long getNumTables() {
+    return numTables.value();
   }
 
   public long getNumKeys() {
@@ -446,6 +484,10 @@ public class OMMetrics {
     numVolumeCreateFails.incr();
   }
 
+  public void incNumDatabaseCreateFails() {
+    numDatabaseCreateFails.incr();
+  }
+
   public void incNumVolumeUpdateFails() {
     numVolumeUpdateFails.incr();
   }
@@ -590,6 +632,11 @@ public class OMMetrics {
   }
 
   @VisibleForTesting
+  public long getNumDatabaseCreates() {
+    return numDatabaseCreates.value();
+  }
+
+  @VisibleForTesting
   public long getNumVolumeUpdates() {
     return numVolumeUpdates.value();
   }
@@ -605,6 +652,11 @@ public class OMMetrics {
   }
 
   @VisibleForTesting
+  public long getNumDatabaseDeletes() {
+    return numDatabaseDeletes.value();
+  }
+
+  @VisibleForTesting
   public long getNumVolumeCheckAccesses() {
     return numVolumeCheckAccesses.value();
   }
@@ -612,6 +664,11 @@ public class OMMetrics {
   @VisibleForTesting
   public long getNumBucketCreates() {
     return numBucketCreates.value();
+  }
+
+  @VisibleForTesting
+  public long getNumTableCreates() {
+    return numTableCreates.value();
   }
 
   @VisibleForTesting
@@ -627,6 +684,21 @@ public class OMMetrics {
   @VisibleForTesting
   public long getNumBucketDeletes() {
     return numBucketDeletes.value();
+  }
+
+  @VisibleForTesting
+  public long getNumTableDeletes() {
+    return numTableDeletes.value();
+  }
+
+  @VisibleForTesting
+  public long getNumTableUpdates() {
+    return numTableUpdates.value();
+  }
+
+  @VisibleForTesting
+  public long getNumDatabaseUpdates() {
+    return numDatabaseUpdates.value();
   }
 
   @VisibleForTesting
@@ -675,6 +747,11 @@ public class OMMetrics {
   }
 
   @VisibleForTesting
+  public long getNumDatabaseDeleteFails() {
+    return numDatabaseDeleteFails.value();
+  }
+
+  @VisibleForTesting
   public long getNumVolumeCheckAccessFails() {
     return numVolumeCheckAccessFails.value();
   }
@@ -697,6 +774,21 @@ public class OMMetrics {
   @VisibleForTesting
   public long getNumBucketDeleteFails() {
     return numBucketDeleteFails.value();
+  }
+
+  @VisibleForTesting
+  public long getNumTableDeleteFails() {
+    return numTableDeleteFails.value();
+  }
+
+  @VisibleForTesting
+  public long getNumTableUpdateFails() {
+    return numTableUpdateFails.value();
+  }
+
+  @VisibleForTesting
+  public long getNumDatabaseUpdateFails() {
+    return numDatabaseUpdateFails.value();
   }
 
   @VisibleForTesting
@@ -929,5 +1021,81 @@ public class OMMetrics {
   public void unRegister() {
     MetricsSystem ms = DefaultMetricsSystem.instance();
     ms.unregisterSource(SOURCE_NAME);
+  }
+
+  public void incNumDatabaseInfos() {
+    numDatabaseOps.incr();
+    numDatabaseInfos.incr();
+  }
+
+  public void incNumDatabaseInfoFails() {
+    numDatabaseInfoFails.incr();
+  }
+
+  public void incNumDatabaseLists() {
+    numDatabaseOps.incr();
+    numDatabaseLists.incr();
+  }
+
+  public void incNumDatabaseListFails() {
+    numDatabaseListFails.incr();
+  }
+
+  public void incNumDatabaseCreates() {
+    numDatabaseOps.incr();
+    numDatabaseCreates.incr();
+  }
+
+  public void incNumDatabaseDeletes() {
+    numDatabaseOps.incr();
+    numDatabaseDeletes.incr();
+  }
+
+  public void decNumDatabases() {
+    numDatabases.incr(-1);
+  }
+
+  public void incNumDatabaseDeleteFails() {
+    numDatabaseDeleteFails.incr();
+  }
+
+  public void incNumTableCreates() {
+    numTableOps.incr();
+    numTableCreates.incr();
+  }
+
+  public void incNumTables() {
+    numTables.incr();
+  }
+
+  public void incNumTableDeletes() {
+    numTableOps.incr();
+    numTableDeletes.incr();
+  }
+
+  public void incNumTableDeleteFails() {
+    numTableDeleteFails.incr();
+  }
+
+  public void decNumTables() {
+    numTables.incr(-1);
+  }
+
+  public void incNumTableUpdates() {
+    numTableOps.incr();
+    numTableUpdates.incr();
+  }
+
+  public void incNumTableUpdateFails() {
+    numTableUpdateFails.incr();
+  }
+
+  public void incNumDatabaseUpdates() {
+    numDatabaseOps.incr();
+    numDatabaseUpdates.incr();
+  }
+
+  public void incNumDatabaseUpdateFails() {
+    numDatabaseUpdateFails.incr();
   }
 }

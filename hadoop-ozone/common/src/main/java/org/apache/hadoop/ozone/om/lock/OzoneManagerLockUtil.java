@@ -46,6 +46,8 @@ final class OzoneManagerLockUtil {
       return OM_S3_PREFIX + resourceName;
     } else if (resource == OzoneManagerLock.Resource.VOLUME_LOCK) {
       return OM_KEY_PREFIX + resourceName;
+    } else if (resource == OzoneManagerLock.Resource.DATABASE_LOCK) {
+      return OM_KEY_PREFIX + resourceName;
     } else if (resource == OzoneManagerLock.Resource.USER_LOCK) {
       return OM_USER_PREFIX + resourceName;
     } else if (resource == OzoneManagerLock.Resource.S3_SECRET_LOCK) {
@@ -69,6 +71,17 @@ final class OzoneManagerLockUtil {
   public static String generateBucketLockName(String volumeName,
       String bucketName) {
     return OM_KEY_PREFIX + volumeName + OM_KEY_PREFIX + bucketName;
+
+  }
+
+  /**
+   * Generate table lock name.
+   * @param databaseName
+   * @param tableName
+   */
+  public static String generateTableLockName(String databaseName,
+                                              String tableName) {
+    return OM_KEY_PREFIX + databaseName + OM_KEY_PREFIX + tableName;
 
   }
 

@@ -95,7 +95,9 @@ public abstract class OzoneObj implements IOzoneObj {
     VOLUME(OzoneConsts.VOLUME),
     BUCKET(OzoneConsts.BUCKET),
     KEY(OzoneConsts.KEY),
-    PREFIX(OzoneConsts.PREFIX);
+    PREFIX(OzoneConsts.PREFIX),
+    DATABASE(OzoneConsts.DATABASE),
+    TABLE(OzoneConsts.TABLE);
 
     /**
      * String value for this Enum.

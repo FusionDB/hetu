@@ -54,6 +54,13 @@ public interface RequestAuditor {
   Map<String, String> buildVolumeAuditMap(String volume);
 
   /**
+   * Build auditMap with specified database.
+   * @param database
+   * @return auditMap.
+   */
+  Map<String, String> buildDatabaseAuditMap(String database);
+
+  /**
    * Build auditMap for KeyArgs.
    * @param keyArgs
    */
