@@ -40,10 +40,14 @@ import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
+import org.apache.hadoop.ozone.tablet.lstore.LStoreContainerData;
 
 import com.google.common.base.Preconditions;
 import static org.apache.hadoop.ozone.container.keyvalue
     .KeyValueContainerData.KEYVALUE_YAML_TAG;
+import static org.apache.hadoop.ozone.tablet.lstore
+    .LStoreContainerData.LSTORE_YAML_TAG;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
@@ -188,6 +192,16 @@ public final class ContainerDataYaml {
       Constructor keyValueDataConstructor = new ContainerDataConstructor();
 
       return new Yaml(keyValueDataConstructor, representer);
+    case LStoreContainer:
+      Representer rep = new ContainerDataRepresenter();
+      rep.setPropertyUtils(propertyUtils);
+      rep.addClassTag(
+              LStoreContainerData.class,
+              LSTORE_YAML_TAG);
+
+      Constructor lStoreDataConstructor = new ContainerDataConstructor();
+
+      return new Yaml(lStoreDataConstructor, rep);
     default:
       throw new StorageContainerException("Unrecognized container Type " +
           "format " + containerType, ContainerProtos.Result
@@ -208,6 +222,15 @@ public final class ContainerDataYaml {
       // to be filtered here
       if (type.equals(KeyValueContainerData.class)) {
         List<String> yamlFields = KeyValueContainerData.getYamlFields();
+        // filter properties
+        for (Property prop : set) {
+          String name = prop.getName();
+          if (yamlFields.contains(name)) {
+            filtered.add(prop);
+          }
+        }
+      } else if (type.equals(LStoreContainerData.class)) {
+        List<String> yamlFields = LStoreContainerData.getYamlFields();
         // filter properties
         for (Property prop : set) {
           String name = prop.getName();
@@ -241,6 +264,8 @@ public final class ContainerDataYaml {
       // for that
       this.yamlConstructors.put(
           KEYVALUE_YAML_TAG, new ConstructKeyValueContainerData());
+      this.yamlConstructors.put(
+              LSTORE_YAML_TAG, new ConstructLStoreContainerData());
       this.yamlConstructors.put(Tag.INT, new ConstructLong());
     }
 
@@ -283,6 +308,48 @@ public final class ContainerDataYaml {
         kvData.setSchemaVersion(schemaVersion);
 
         return kvData;
+      }
+    }
+
+    private class ConstructLStoreContainerData extends AbstractConstruct {
+      @Override
+      public Object construct(Node node) {
+        MappingNode mnode = (MappingNode) node;
+        Map<Object, Object> nodes = constructMapping(mnode);
+
+        //Needed this, as TAG.INT type is by default converted to Long.
+        long layOutVersion = (long) nodes.get(OzoneConsts.LAYOUTVERSION);
+        ChunkLayOutVersion layoutVersion =
+                ChunkLayOutVersion.getChunkLayOutVersion((int) layOutVersion);
+
+        long size = (long) nodes.get(OzoneConsts.MAX_SIZE);
+
+        String originPipelineId = (String) nodes.get(
+                OzoneConsts.ORIGIN_PIPELINE_ID);
+        String originNodeId = (String) nodes.get(OzoneConsts.ORIGIN_NODE_ID);
+
+        //When a new field is added, it needs to be added here.
+        LStoreContainerData lsData = new LStoreContainerData(
+                (long) nodes.get(OzoneConsts.CONTAINER_ID), layoutVersion, size,
+                originPipelineId, originNodeId);
+
+        lsData.setContainerDBType((String)nodes.get(
+                OzoneConsts.CONTAINER_DB_TYPE));
+        lsData.setMetadataPath((String) nodes.get(
+                OzoneConsts.METADATA_PATH));
+        lsData.setChunksPath((String) nodes.get(OzoneConsts.CHUNKS_PATH));
+        Map<String, String> meta = (Map) nodes.get(OzoneConsts.METADATA);
+        lsData.setMetadata(meta);
+        lsData.setChecksum((String) nodes.get(OzoneConsts.CHECKSUM));
+        Long timestamp = (Long) nodes.get(OzoneConsts.DATA_SCAN_TIMESTAMP);
+        lsData.setDataScanTimestamp(timestamp);
+        String state = (String) nodes.get(OzoneConsts.STATE);
+        lsData
+                .setState(ContainerProtos.ContainerDataProto.State.valueOf(state));
+        String schemaVersion = (String) nodes.get(OzoneConsts.SCHEMA_VERSION);
+        lsData.setSchemaVersion(schemaVersion);
+
+        return lsData;
       }
     }
 
