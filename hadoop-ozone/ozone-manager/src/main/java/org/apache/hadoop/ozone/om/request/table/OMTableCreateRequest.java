@@ -214,7 +214,7 @@ public class OMTableCreateRequest extends OMClientRequest {
       omMetrics.incNumTables();
       return omClientResponse;
     } else {
-      omMetrics.incNumBucketCreateFails();
+      omMetrics.incNumTableCreateFails();
       LOG.error("Table creation failed for table:{} in database:{}",
           tableName, databaseName, exception);
       return omClientResponse;

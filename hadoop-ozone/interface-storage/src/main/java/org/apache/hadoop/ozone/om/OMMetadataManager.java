@@ -31,8 +31,10 @@ import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmPartitionInfo;
 import org.apache.hadoop.ozone.om.helpers.OmPrefixInfo;
 import org.apache.hadoop.ozone.om.helpers.OmTableInfo;
+import org.apache.hadoop.ozone.om.helpers.OmTabletInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
@@ -115,8 +117,17 @@ public interface OMMetadataManager {
    * @param key    - key name
    * @return DB key as String.
    */
-
   String getOzoneKey(String volume, String bucket, String key);
+
+  /**
+   * Given a volume, bucket and a key, return the corresponding DB key.
+   *
+   * @param database - database name
+   * @param table - table name
+   * @param tablet    - tablet name
+   * @return DB key as String.
+   */
+  String getOzoneTablet(String database, String table, String tablet);
 
   /**
    * Given a volume, bucket and a key, return the corresponding DB directory
@@ -128,6 +139,17 @@ public interface OMMetadataManager {
    * @return DB directory key as String.
    */
   String getOzoneDirKey(String volume, String bucket, String key);
+
+  /**
+   * Given a database, table and a tablet, return the corresponding DB directory
+   * key.
+   *
+   * @param database - database name
+   * @param table - table name
+   * @param tablet    - tablet name
+   * @return DB directory key as String.
+   */
+  String getOzoneDirTablet(String database, String table, String tablet);
 
 
   /**
@@ -453,10 +475,31 @@ public interface OMMetadataManager {
   String getMetaTableKey(String databaseName, String tableName);
 
   /**
+   * Given a table return the corresponding DB key.
+   *
+   *  @param databaseName - database name
+   * @param tableName - table name
+   * @param partitionName - partition name
+   */
+  String getPartitionKey(String databaseName, String tableName, String partitionName);
+
+  /**
    * Returns the Meta Table.
    * @return
    */
   Table<String, OmTableInfo> getMetaTable();
+
+  /**
+   * Returns the Partition Table.
+   * @return
+   */
+  Table<String, OmPartitionInfo> getPartitionTable();
+
+  /**
+   * Returns the tablet Table.
+   * @return
+   */
+  Table<String, OmTabletInfo> getTabletTable();
 
   /**
    * Given a table, check if it is empty, i.e there are no tablets inside it.
@@ -465,6 +508,15 @@ public interface OMMetadataManager {
    * @return
    */
   boolean isMetaTableEmpty(String databaseName, String tableName) throws IOException;
+
+  /**
+   * Given a table, check if it is empty, i.e there are no tablets inside it.
+   * @param databaseName
+   * @param tableName
+   * @param partitionName
+   * @return
+   */
+  boolean isPartitionEmpty(String databaseName, String tableName, String partitionName) throws IOException;
 
   /**
    * Returns a list of tables represented by {@link OmTableInfo} in the given
@@ -484,5 +536,27 @@ public interface OMMetadataManager {
    */
   List<OmTableInfo> listMetaTables(String databaseName, String startTable,
                                  String tablePrefix, int maxNumOfTables)
+          throws IOException;
+
+  /**
+   * Returns a list of tables represented by {@link OmTableInfo} in the given
+   * databse.
+   *
+   * @param databaseName the name of the database. This argument is required, this
+   * method returns tables in this given database.
+   * @param tableName the name of the meta table. This argument is required, this
+   * method returns partitions in this given meta table.
+   * @param startPartition the start partition name. Only the tables whose name is
+   * after this value will be included in the result. This key is excluded from
+   * the result.
+   * @param partitionPrefix partition name prefix. Only the tables whose name has
+   * this prefix will be included in the result.
+   * @param maxNumOfTables the maximum number of partitions to return. It ensures
+   * the size of the result will not exceed this limit.
+   * @return a list of tables.
+   * @throws IOException
+   */
+  List<OmPartitionInfo> listPartitions(String databaseName, String tableName, String startPartition,
+                                   String partitionPrefix, int maxNumOfTables)
           throws IOException;
 }

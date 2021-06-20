@@ -90,10 +90,6 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
    * Table of usedCapacityInBytes
    */
   private long usedCapacityInBytes;
-  /**
-   * Table of comment
-   */
-  private String comment;
 
   /**
    * Private constructor, constructed via builder.
@@ -114,7 +110,6 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
                       StorageEngineProto storageEngine,
                       int numReplicas,
                       PartitionsProto partitions,
-                      String comment,
                       long creationTime,
                       long modificationTime,
                       long objectID,
@@ -134,7 +129,6 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
     this.storageEngine = storageEngine;
     this.numReplicas = numReplicas;
     this.partitions = partitions;
-    this.comment = comment;
     this.usedCapacityInBytes = usedCapacityInBytes;
   }
 
@@ -228,14 +222,6 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
   }
 
   /**
-   * Returns table comment
-   * @return
-   */
-  public String getComment() {
-    return comment;
-  }
-
-  /**
    * Returns new builder class that builds a OmTableInfo.
    *
    * @return Builder
@@ -263,8 +249,6 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
     auditMap.put(OzoneConsts.NUM_REPLICAS, String.valueOf(this.numReplicas));
     auditMap.put(OzoneConsts.TABLE_PARTITIONS, String.valueOf(this.partitions));
     auditMap.put(OzoneConsts.USED_CAPACITY_IN_BYTES, String.valueOf(this.usedCapacityInBytes));
-    auditMap.put(OzoneConsts.TABLE_COMMENT,
-        String.valueOf(this.comment));
     return auditMap;
   }
 
@@ -291,8 +275,7 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
         .setStorageEngine(storageEngine)
         .setNumReplicas(numReplicas)
         .setPartitions(partitions)
-        .setUsedCapacityInBytes(usedCapacityInBytes)
-        .setComment(comment);
+        .setUsedCapacityInBytes(usedCapacityInBytes);
   }
 
   /**
@@ -319,7 +302,7 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
       //Default values
       this.isVersionEnabled = false;
       this.storageType = StorageType.DISK;
-      this.storageEngine = StorageEngineProto.LUCENE;
+      this.storageEngine = StorageEngineProto.LSTORE;
       this.metadata = new HashMap<>();
       this.usedCapacityInBytes = OzoneConsts.USED_CAPACITY_IN_BYTES_RESET;
     }
@@ -401,11 +384,6 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
       return this;
     }
 
-    public Builder setComment(String comment) {
-      this.comment = comment;
-      return this;
-    }
-
     /**
      * Constructs the OmBucketInfo.
      * @return instance of OmBucketInfo.
@@ -420,7 +398,7 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
 
       return new OmTableInfo(databaseName, tableName, isVersionEnabled,
           storageType, columns, storageEngine, numReplicas, partitions,
-          comment, creationTime, modificationTime, objectID, updateID,
+          creationTime, modificationTime, objectID, updateID,
           metadata, usedCapacityInBytes);
     }
   }
@@ -446,8 +424,7 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
         .setStorageEngine(storageEngine)
         .setNumReplicas(numReplicas)
         .setPartitions(partitions)
-        .setUsedCapacityInBytes(usedCapacityInBytes)
-        .setComment(comment);
+        .setUsedCapacityInBytes(usedCapacityInBytes);
     return bib.build();
   }
 
@@ -471,8 +448,7 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
         .setStorageEngine(tableInfo.getStorageEngine())
         .setNumReplicas(tableInfo.getNumReplicas())
         .setPartitions(tableInfo.getPartitions())
-        .setUsedCapacityInBytes(tableInfo.getUsedCapacityInBytes())
-        .setComment(tableInfo.getComment());
+        .setUsedCapacityInBytes(tableInfo.getUsedCapacityInBytes());
 
     if (tableInfo.hasObjectID()) {
       obib.setObjectID(tableInfo.getObjectID());
@@ -500,8 +476,7 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
         ", modificationTime=" + modificationTime +
         ", numReplicas=" + numReplicas +
         ", partitions=" + partitions +
-        ", usedCapacityInBytes=" + usedCapacityInBytes +
-        ", comment='" + comment + '\'' +
+        ", usedCapacityInBytes='" + usedCapacityInBytes + '\'' +
         '}';
   }
 
@@ -527,7 +502,6 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
         numReplicas == that.numReplicas &&
         partitions == that.partitions &&
         usedCapacityInBytes == that.usedCapacityInBytes &&
-        comment == that.comment &&
         Objects.equals(metadata, that.metadata);
   }
 
@@ -549,8 +523,7 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
         ", modificationTime=" + modificationTime +
         ", numReplicas=" + numReplicas +
         ", partitions=" + partitions +
-        ", usedCapacityInBytes=" + usedCapacityInBytes +
-        ", comment='" + comment + '\'' +
+        ", usedCapacityInBytes='" + usedCapacityInBytes + '\'' +
         '}';
   }
 }

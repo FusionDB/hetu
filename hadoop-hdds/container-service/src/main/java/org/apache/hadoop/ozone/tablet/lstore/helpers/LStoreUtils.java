@@ -151,23 +151,23 @@ public class LStoreUtils {
                 } else if (structField.getDataType().getDisplayName().equalsIgnoreCase(StandardTypes.DOUBLE)) {
                     doc.add(new SortedDocValuesField(name, bytesRef));
                 } else if (structField.getDataType().getDisplayName().equalsIgnoreCase(StandardTypes.INTEGER)) {
-
+                    doc.add(new SortedDocValuesField(name, bytesRef));
                 } else if (structField.getDataType().getDisplayName().equalsIgnoreCase(StandardTypes.MAP)) {
-
+                    doc.add(new SortedDocValuesField(name, bytesRef));
                 } else if (structField.getDataType().getDisplayName().equalsIgnoreCase(StandardTypes.SMALLINT)) {
-
+                    doc.add(new SortedDocValuesField(name, bytesRef));
                 } else if (structField.getDataType().getDisplayName().equalsIgnoreCase(StandardTypes.REAL)) {
-
+                    doc.add(new SortedDocValuesField(name, bytesRef));
                 } else if (structField.getDataType().getDisplayName().equalsIgnoreCase(StandardTypes.TIME)) {
-
+                    doc.add(new SortedDocValuesField(name, bytesRef));
                 } else if (structField.getDataType().getDisplayName().equalsIgnoreCase(StandardTypes.TIMESTAMP)) {
-
+                    doc.add(new SortedDocValuesField(name, bytesRef));
                 } else if (structField.getDataType().getDisplayName().equalsIgnoreCase(StandardTypes.TINYINT)) {
-
+                    doc.add(new SortedDocValuesField(name, bytesRef));
                 } else if (structField.getDataType().getDisplayName().equalsIgnoreCase(StandardTypes.VARBINARY)) {
-
+                    doc.add(new SortedDocValuesField(name, bytesRef));
                 } else if (structField.getDataType().getDisplayName().equalsIgnoreCase(StandardTypes.VARCHAR)) {
-
+                    doc.add(new SortedDocValuesField(name, bytesRef));
                 } else {
                     throw new RuntimeException("Unsupported data type");
                 }

@@ -199,6 +199,12 @@ public final class OzoneConsts {
   public static final long OLD_QUOTA_DEFAULT = -2;
 
   /**
+   * Table used RESET default is -1: usedCapacityInBytes
+   */
+  public static final long USED_CAPACITY_IN_BYTES_RESET = -1;
+
+
+  /**
    * Quota Units.
    */
   public enum Units {TB, GB, MB, KB, B}
@@ -323,6 +329,18 @@ public final class OzoneConsts {
   public static final String SOURCE_VOLUME = "sourceVolume";
   public static final String SOURCE_BUCKET = "sourceBucket";
 
+  public static final String DATABASE = "database";
+  public static final String TABLE = "table";
+  public static final String PARTITION = "partition";
+  public static final String PARTITION_VALUE = "partition_value";
+  public static final String TABLE_SCHEMA = "schema";
+  public static final String STORAGE_ENGINE = "storageEngine";
+  public static final String NUM_REPLICAS = "numReplicas";
+  public static final String TABLE_PARTITIONS = "partitions";
+  public static final String USED_CAPACITY_IN_BYTES = "used_capacity_in_bytes";
+  public static final String SIZE_IN_BYTES = "size_in_bytes";
+  public static final String ROWS = "rows";
+  public static final String BUCKETS = "buckets";
 
 
   // For OM metrics saving to a file
@@ -376,6 +394,20 @@ public final class OzoneConsts {
    * https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingMetadata.html
    */
   public static final Pattern KEYNAME_ILLEGAL_CHARACTER_CHECK_REGEX  =
+          Pattern.compile("^[^^{}<>^?%~#`\\[\\]\\|\\\\(\\x80-\\xff)]+$");
+
+  /**
+   * Block tablet name as illegal characters
+   *
+   * This regular expression is used to check if tablet name
+   * contains illegal characters when creating/renaming tablet.
+   *
+   * Avoid the following characters in a tablet name:
+   * "\", "{", "}", "^", "<", ">", "#", "|", "%", "`", "[", "]", "~", "?"
+   * and Non-printable ASCII characters (128–255 decimal characters).
+   * https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingMetadata.html
+   */
+  public static final Pattern TABLET_NAME_ILLEGAL_CHARACTER_CHECK_REGEX  =
           Pattern.compile("^[^^{}<>^?%~#`\\[\\]\\|\\\\(\\x80-\\xff)]+$");
 
   public static final String FS_FILE_COPYING_TEMP_SUFFIX= "._COPYING_";

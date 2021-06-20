@@ -43,6 +43,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numKeyOps;
   private @Metric MutableCounterLong numFSOps;
   private @Metric MutableCounterLong numTableOps;
+  private @Metric MutableCounterLong numPartitionOps;
 
   // OM op metrics
   private @Metric MutableCounterLong numVolumeCreates;
@@ -77,6 +78,9 @@ public class OMMetrics {
   private @Metric MutableCounterLong numTableDeletes;
   private @Metric MutableCounterLong numTableUpdates;
   private @Metric MutableCounterLong numDatabaseUpdates;
+  private @Metric MutableCounterLong numPartitionCreates;
+  private @Metric MutableCounterLong numPartitionDeletes;
+  private @Metric MutableCounterLong numPartitionUpdates;
 
   private @Metric MutableCounterLong numGetFileStatus;
   private @Metric MutableCounterLong numCreateDirectory;
@@ -130,7 +134,11 @@ public class OMMetrics {
   private @Metric MutableCounterLong numDatabaseListFails;
   private @Metric MutableCounterLong numTableDeleteFails;
   private @Metric MutableCounterLong numTableUpdateFails;
+  private @Metric MutableCounterLong numTableCreateFails;
+  private @Metric MutableCounterLong numPartitionCreateFails;
   private @Metric MutableCounterLong numDatabaseUpdateFails;
+  private @Metric MutableCounterLong numPartitionDeleteFails;
+  private @Metric MutableCounterLong numPartitionUpdateFails;
 
   private @Metric MutableCounterLong numGetFileStatusFails;
   private @Metric MutableCounterLong numCreateDirectoryFails;
@@ -145,6 +153,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numS3Buckets;
   private @Metric MutableCounterLong numDatabases;
   private @Metric MutableCounterLong numTables;
+  private @Metric MutableCounterLong numPartitions;
 
   //TODO: This metric is an estimate and it may be inaccurate on restart if the
   // OM process was not shutdown cleanly. Key creations/deletions in the last
@@ -272,6 +281,11 @@ public class OMMetrics {
     this.numTables.incr(val - oldVal);
   }
 
+  public void setNumPartitions(long val) {
+    long oldVal = this.numPartitions.value();
+    this.numPartitions.incr(val - oldVal);
+  }
+
   public void setNumKeys(long val) {
     long oldVal = this.numKeys.value();
     this.numKeys.incr(val- oldVal);
@@ -291,6 +305,10 @@ public class OMMetrics {
 
   public long getNumTables() {
     return numTables.value();
+  }
+
+  public long getNumPartitions() {
+    return numPartitions.value();
   }
 
   public long getNumKeys() {
@@ -508,6 +526,14 @@ public class OMMetrics {
     numBucketCreateFails.incr();
   }
 
+  public void incNumTableCreateFails() {
+    numTableCreateFails.incr();
+  }
+
+  public void incNumPartitionCreateFails() {
+    numPartitionCreateFails.incr();
+  }
+
   public void incNumBucketInfoFails() {
     numBucketInfoFails.incr();
   }
@@ -672,6 +698,12 @@ public class OMMetrics {
   }
 
   @VisibleForTesting
+  public long getNumPartitionCreates() {
+    return numPartitionCreates.value();
+  }
+
+
+  @VisibleForTesting
   public long getNumBucketInfos() {
     return numBucketInfos.value();
   }
@@ -692,8 +724,18 @@ public class OMMetrics {
   }
 
   @VisibleForTesting
+  public long getNumPartitionDeletes() {
+    return numPartitionDeletes.value();
+  }
+
+  @VisibleForTesting
   public long getNumTableUpdates() {
     return numTableUpdates.value();
+  }
+
+  @VisibleForTesting
+  public long getNumPartitionUpdates() {
+    return numPartitionUpdates.value();
   }
 
   @VisibleForTesting
@@ -782,8 +824,18 @@ public class OMMetrics {
   }
 
   @VisibleForTesting
+  public long getNumPartitionDeleteFails() {
+    return numPartitionDeleteFails.value();
+  }
+
+  @VisibleForTesting
   public long getNumTableUpdateFails() {
     return numTableUpdateFails.value();
+  }
+
+  @VisibleForTesting
+  public long getNumPartitionUpdateFails() {
+    return numPartitionUpdateFails.value();
   }
 
   @VisibleForTesting
@@ -1064,8 +1116,17 @@ public class OMMetrics {
     numTableCreates.incr();
   }
 
+  public void incNumPartitionCreates() {
+    numPartitionOps.incr();
+    numPartitionCreates.incr();
+  }
+
   public void incNumTables() {
     numTables.incr();
+  }
+
+  public void incNumPartitions() {
+    numPartitions.incr();
   }
 
   public void incNumTableDeletes() {
@@ -1073,12 +1134,25 @@ public class OMMetrics {
     numTableDeletes.incr();
   }
 
+  public void incNumPartitionDeletes() {
+    numPartitionOps.incr();
+    numPartitionDeletes.incr();
+  }
+
   public void incNumTableDeleteFails() {
     numTableDeleteFails.incr();
   }
 
+  public void incNumPartitionDeleteFails() {
+    numPartitionDeleteFails.incr();
+  }
+
   public void decNumTables() {
     numTables.incr(-1);
+  }
+
+  public void decNumPartitions() {
+    numPartitions.incr(-1);
   }
 
   public void incNumTableUpdates() {
@@ -1086,8 +1160,17 @@ public class OMMetrics {
     numTableUpdates.incr();
   }
 
+  public void incNumPartitionUpdates() {
+    numPartitionOps.incr();
+    numPartitionUpdates.incr();
+  }
+
   public void incNumTableUpdateFails() {
     numTableUpdateFails.incr();
+  }
+
+  public void incNumPartitionUpdateFails() {
+    numPartitionUpdateFails.incr();
   }
 
   public void incNumDatabaseUpdates() {

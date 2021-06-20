@@ -33,6 +33,7 @@ public enum OMAction implements AuditAction {
   DELETE_DATABASE,
   DELETE_BUCKET,
   DELETE_TABLE,
+  DELETE_PARTITION,
   DELETE_KEY,
   RENAME_KEY,
   RENAME_KEYS,
@@ -45,6 +46,8 @@ public enum OMAction implements AuditAction {
   DELETE_KEYS,
   CREATE_TABLE,
   UPDATE_TABLE,
+  CREATE_PARTITION,
+  UPDATE_PARTITION,
 
 
   // READ Actions

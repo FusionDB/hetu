@@ -229,6 +229,11 @@ public final class OMConfigKeys {
   public static final boolean OZONE_OM_KEYNAME_CHARACTER_CHECK_ENABLED_DEFAULT =
           false;
 
+  public static final String OZONE_OM_TABLET_NAME_CHARACTER_CHECK_ENABLED_KEY =
+          "ozone.om.tablet.character.check.enabled";
+  public static final boolean OZONE_OM_TABLET_NAME_CHARACTER_CHECK_ENABLED_DEFAULT =
+          false;
+
   // This config needs to be enabled, when S3G created objects used via
   // FileSystem API.
   public static final String OZONE_OM_ENABLE_FILESYSTEM_PATHS =

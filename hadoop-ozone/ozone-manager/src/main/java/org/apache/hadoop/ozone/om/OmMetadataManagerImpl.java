@@ -68,8 +68,10 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUpload;
+import org.apache.hadoop.ozone.om.helpers.OmPartitionInfo;
 import org.apache.hadoop.ozone.om.helpers.OmPrefixInfo;
 import org.apache.hadoop.ozone.om.helpers.OmTableInfo;
+import org.apache.hadoop.ozone.om.helpers.OmTabletInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OzoneFSUtils;
 import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
@@ -121,7 +123,11 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
    * |----------------------------------------------------------------------|
    * | databaseTable      |     /database->DatabaseInfo                     |
    * |----------------------------------------------------------------------|
-   * | metaTable      |     /database->TableInfo                            |
+   * | metaTable          |     /database/tableName->TableInfo              |
+   * |----------------------------------------------------------------------|
+   * | partitionTable     | /database/tableName/partitionName->partitionInfo|
+   * |----------------------------------------------------------------------|
+   * | tabletTable        |  /databaseName/tableName/partitionName/tabletName->TabletInfo |
    * |----------------------------------------------------------------------|
    * | bucketTable        |     /volume/bucket-> BucketInfo                 |
    * |----------------------------------------------------------------------|
@@ -149,6 +155,8 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   public static final String VOLUME_TABLE = "volumeTable";
   public static final String DATABASE_TABLE = "databaseTable";
   public static final String META_TABLE = "metaTable";
+  public static final String TABLET_TABLE = "tabletTable";
+  public static final String PARTITION_TABLE = "partitionTable";
   public static final String BUCKET_TABLE = "bucketTable";
   public static final String KEY_TABLE = "keyTable";
   public static final String DELETED_TABLE = "deletedTable";
@@ -170,6 +178,8 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   private Table volumeTable;
   private Table databaseTable;
   private Table metaTable;
+  private Table partitionTable;
+  private Table tabletTable;
   private Table bucketTable;
   private Table keyTable;
   private Table deletedTable;
@@ -258,6 +268,11 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   }
 
   @Override
+  public Table<String, OmTabletInfo> getTabletTable() {
+    return tabletTable;
+  }
+
+    @Override
   public Table<String, OmKeyInfo> getKeyTable() {
     return keyTable;
   }
@@ -364,6 +379,8 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
         .addTable(VOLUME_TABLE)
         .addTable(DATABASE_TABLE)
         .addTable(META_TABLE)
+        .addTable(TABLET_TABLE)
+        .addTable(PARTITION_TABLE)
         .addTable(BUCKET_TABLE)
         .addTable(KEY_TABLE)
         .addTable(DELETED_TABLE)
@@ -421,11 +438,22 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
         this.store.getTable(BUCKET_TABLE, String.class, OmBucketInfo.class,
             cacheType);
 
+    checkTableStatus(bucketTable, BUCKET_TABLE);
+
     metaTable =
             this.store.getTable(META_TABLE, String.class, OmTableInfo.class,
                     cacheType);
+    checkTableStatus(metaTable, META_TABLE);
 
-    checkTableStatus(bucketTable, BUCKET_TABLE);
+    partitionTable =
+            this.store.getTable(PARTITION_TABLE, String.class, OmPartitionInfo.class,
+                    cacheType);
+    checkTableStatus(partitionTable, PARTITION_TABLE);
+
+    tabletTable =
+            this.store.getTable(TABLET_TABLE, String.class, OmTabletInfo.class,
+                    cacheType);
+    checkTableStatus(tabletTable, TABLET_TABLE);
 
     keyTable = this.store.getTable(KEY_TABLE, String.class, OmKeyInfo.class);
     checkTableStatus(keyTable, KEY_TABLE);
@@ -561,9 +589,30 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   }
 
   @Override
+  public String getOzoneTablet(String database, String table, String tablet) {
+    StringBuilder builder = new StringBuilder()
+            .append(OM_KEY_PREFIX).append(database);
+    // TODO : Throw if the Bable is null?
+    builder.append(OM_KEY_PREFIX).append(table);
+    if (StringUtil.isNotBlank(tablet)) {
+      builder.append(OM_KEY_PREFIX);
+      if (!tablet.equals(OM_KEY_PREFIX)) {
+        builder.append(tablet);
+      }
+    }
+    return builder.toString();
+  }
+
+  @Override
   public String getOzoneDirKey(String volume, String bucket, String key) {
     key = OzoneFSUtils.addTrailingSlashIfNeeded(key);
     return getOzoneKey(volume, bucket, key);
+  }
+
+  @Override
+  public String getOzoneDirTablet(String database, String table, String tablet) {
+    tablet = OzoneFSUtils.addTrailingSlashIfNeeded(tablet);
+    return getOzoneTablet(database, table, tablet);
   }
 
   @Override
@@ -1479,5 +1528,112 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
               + "metadata might be corrupted", e,
               ResultCodes.METADATA_ERROR);
     }
+  }
+
+  @Override
+  public String getPartitionKey(String databaseName, String tableName, String partitionName) {
+    StringBuilder builder =
+            new StringBuilder().append(OM_KEY_PREFIX).append(databaseName);
+
+    if (StringUtils.isNotBlank(tableName)) {
+      builder.append(OM_KEY_PREFIX).append(tableName);
+    }
+    if (StringUtils.isNoneBlank(partitionName)) {
+      builder.append(OM_KEY_PREFIX).append(partitionName);
+    }
+    return builder.toString();
+  }
+
+  @Override
+  public Table<String, OmPartitionInfo> getPartitionTable() {
+    return partitionTable;
+  }
+
+  @Override
+  public boolean isPartitionEmpty(String databaseName, String tableName, String partitionName) throws IOException {
+    String keyPrefix = getPartitionKey(databaseName, tableName, partitionName);
+    // TODO is partition empty
+    return true;
+  }
+
+  @Override
+  public List<OmPartitionInfo> listPartitions(String databaseName, String tableName,
+            String startPartition, String partitionPrefix, int maxNumOfTables) throws IOException {
+    List<OmPartitionInfo> result = new ArrayList<>();
+    if (Strings.isNullOrEmpty(databaseName)) {
+      throw new OMException("Database name is required.",
+              ResultCodes.DATABASE_NOT_FOUND);
+    }
+
+    if (Strings.isNullOrEmpty(tableName)) {
+      throw new OMException("Table name is required.",
+              ResultCodes.TABLE_NOT_FOUND);
+    }
+
+    String databaseNameBytes = getDatabaseKey(databaseName);
+    if (databaseTable.get(databaseNameBytes) == null) {
+      throw new OMException("Database " + databaseName + " not found.",
+              ResultCodes.DATABASE_NOT_FOUND);
+    }
+
+    String tableNameBytes = getMetaTableKey(databaseName, tableName);
+    if (metaTable.get(tableNameBytes) == null) {
+      throw new OMException("Table " + tableName + " not found.",
+              ResultCodes.TABLE_NOT_FOUND);
+    }
+
+    String startKey;
+    boolean skipStartKey = false;
+    if (StringUtil.isNotBlank(startPartition)) {
+      // if the user has specified a start key, we need to seek to that key
+      // and avoid that key in the response set.
+      startKey = getPartitionKey(databaseName, tableName, startPartition);
+      skipStartKey = true;
+    } else {
+      // If the user has specified a prefix key, we need to get to the first
+      // of the keys with the prefix match. We can leverage RocksDB to do that.
+      // However, if the user has specified only a prefix, we cannot skip
+      // the first prefix key we see, the boolean skipStartKey allows us to
+      // skip the startkey or not depending on what patterns are specified.
+      startKey = getPartitionKey(databaseName, tableName, partitionPrefix);
+    }
+
+    String seekPrefix;
+    if (StringUtil.isNotBlank(partitionPrefix)) {
+      seekPrefix = getPartitionKey(databaseName, tableName, partitionPrefix);
+    } else {
+      seekPrefix = getMetaTableKey(databaseName, tableName + OM_KEY_PREFIX);
+    }
+    int currentCount = 0;
+
+
+    // For Table it is full cache, so we can just iterate in-memory table
+    // cache.
+    Iterator<Map.Entry<CacheKey<String>, CacheValue<OmPartitionInfo>>> iterator =
+            partitionTable.cacheIterator();
+
+
+    while (currentCount < maxNumOfTables && iterator.hasNext()) {
+      Map.Entry<CacheKey<String>, CacheValue<OmPartitionInfo>> entry =
+              iterator.next();
+
+      String key = entry.getKey().getCacheKey();
+      OmPartitionInfo omPartitionInfo = entry.getValue().getCacheValue();
+      // Making sure that entry in cache is not for delete table request.
+
+      if (omPartitionInfo != null) {
+        if (key.equals(startKey) && skipStartKey) {
+          continue;
+        }
+
+        // We should return only the keys, whose keys match with prefix and
+        // the keys after the startTable.
+        if (key.startsWith(seekPrefix) && key.compareTo(startKey) >= 0) {
+          result.add(omPartitionInfo);
+          currentCount++;
+        }
+      }
+    }
+    return result;
   }
 }
