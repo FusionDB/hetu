@@ -48,6 +48,8 @@ final class OzoneManagerLockUtil {
       return OM_KEY_PREFIX + resourceName;
     } else if (resource == OzoneManagerLock.Resource.DATABASE_LOCK) {
       return OM_KEY_PREFIX + resourceName;
+    } else if (resource == OzoneManagerLock.Resource.PARTITION_LOCK) {
+      return OM_KEY_PREFIX + resourceName;
     } else if (resource == OzoneManagerLock.Resource.USER_LOCK) {
       return OM_USER_PREFIX + resourceName;
     } else if (resource == OzoneManagerLock.Resource.S3_SECRET_LOCK) {
@@ -85,4 +87,16 @@ final class OzoneManagerLockUtil {
 
   }
 
+  /**
+   * Generate partition lock name.
+   * @param databaseName
+   * @param tableName
+   * @param partitionName
+   */
+  public static String generatePartitionLockName(String databaseName,
+                                                 String tableName,
+                                                 String partitionName) {
+    return OM_KEY_PREFIX + databaseName + OM_KEY_PREFIX + tableName + OM_KEY_PREFIX + partitionName;
+
+  }
 }

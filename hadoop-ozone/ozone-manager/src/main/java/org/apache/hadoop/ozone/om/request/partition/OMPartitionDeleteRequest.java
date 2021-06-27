@@ -90,6 +90,8 @@ public class OMPartitionDeleteRequest extends OMClientRequest {
     IOException exception = null;
 
     boolean acquiredPartitionLock = false;
+    boolean acquiredDatabaseLock = false;
+    boolean acquiredTableLock = false;
     boolean success = true;
     OMClientResponse omClientResponse = null;
     try {
@@ -101,8 +103,15 @@ public class OMPartitionDeleteRequest extends OMClientRequest {
       }
 
       // acquire lock
+      // acquire lock
+      acquiredDatabaseLock =
+              omMetadataManager.getLock().acquireReadLock(DATABASE_LOCK, databaseName);
+      acquiredTableLock =
+              omMetadataManager.getLock().acquireReadLock(TABLE_LOCK,
+                      databaseName, tableName);
       acquiredPartitionLock =
-          omMetadataManager.getLock().acquireReadLock(PARTITION_LOCK, partitionName);
+          omMetadataManager.getLock().acquireWriteLock(PARTITION_LOCK, databaseName,
+                  tableName, partitionName);
 
       // No need to check table exists here, as table cannot be created
       // with out table creation. Check if partition exists
@@ -150,7 +159,14 @@ public class OMPartitionDeleteRequest extends OMClientRequest {
           ozoneManagerDoubleBufferHelper);
       if (acquiredPartitionLock) {
         omMetadataManager.getLock().releaseWriteLock(PARTITION_LOCK, databaseName,
+                tableName, partitionName);
+      }
+      if (acquiredTableLock) {
+        omMetadataManager.getLock().releaseReadLock(TABLE_LOCK, databaseName,
                 tableName);
+      }
+      if (acquiredDatabaseLock) {
+        omMetadataManager.getLock().releaseReadLock(DATABASE_LOCK, databaseName);
       }
     }
 

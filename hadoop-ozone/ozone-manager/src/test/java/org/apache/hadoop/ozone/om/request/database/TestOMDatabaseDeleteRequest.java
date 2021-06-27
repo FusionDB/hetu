@@ -132,10 +132,9 @@ public class TestOMDatabaseDeleteRequest extends TestOMDatabaseRequest {
             "varchar(4)",
             "varcher",
             0,
-             ColumnKey.NO_KEY,
             "",
             "",
-            "用户",
+            "城市",
             true);
 
     ColumnSchema col2 = new ColumnSchema(
@@ -143,15 +142,14 @@ public class TestOMDatabaseDeleteRequest extends TestOMDatabaseRequest {
             "Long",
             "Long",
             1,
-            ColumnKey.PRIMARY_KEY,
             "",
             "",
             "ID",
             true);
 
     OzoneManagerProtocolProtos.TableInfo.PartitionsProto partitionsProto = OzoneManagerProtocolProtos.TableInfo.PartitionsProto.newBuilder()
-            .setPartitionNumber(10)
-            .setPartitionType(OzoneManagerProtocolProtos.TableInfo.PartitionType.HASH)
+            .addAllFields(Arrays.asList("city"))
+            .setPartitionType(OzoneManagerProtocolProtos.TableInfo.Type.HASH)
             .build();
 
     OmTableInfo omTableInfo = OmTableInfo.newBuilder()
@@ -159,7 +157,6 @@ public class TestOMDatabaseDeleteRequest extends TestOMDatabaseRequest {
         .setTableName(tableName)
         .setColumns(Arrays.asList(col1, col2))
         .setPartitions(partitionsProto)
-        .setComment("test")
         .build();
     TestOMRequestUtils.addMetaTableToOM(omMetadataManager, omTableInfo);
 

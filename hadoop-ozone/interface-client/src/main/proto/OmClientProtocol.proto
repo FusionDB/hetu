@@ -108,12 +108,20 @@ enum Type {
   InfoTable = 124;
   ListTable = 125;
 
-  // Table Option
-  CreateTablet = 131;
-  DeleteTablet = 132;
-  DeleteTablets = 133;
-  AllocateTablet = 134;
-  ListTablets = 135;
+  // Partition Option
+  CreatePartition = 131;
+  DeletePartition = 132;
+  DeletePartitions = 133;
+  InfoPartition = 134;
+  ListPartitions = 135;
+  SetPartitionProperty = 136;
+
+  // Tablet Option
+  CreateTablet = 141;
+  DeleteTablet = 142;
+  DeleteTablets = 143;
+  AllocateTablet = 144;
+  ListTablets = 145;
 }
 
 message OMRequest {
@@ -215,6 +223,7 @@ message OMRequest {
   optional DeleteTabletsRequest             deleteTabletsRequest = 143;
   optional AllocateTabletRequest            allocateTabletRequest = 144;
   optional ListTabletsRequest               listTabletsRequest = 145;
+  optional CommitTabletRequest              commitTabletRequest = 146;
 }
 
 message OMResponse {
@@ -314,6 +323,7 @@ message OMResponse {
   optional DeleteTabletsResponse             deleteTabletsResponse = 143;
   optional AllocateTabletResponse            allocateTabletResponse = 144;
   optional ListTabletsResponse               listTabletsResponse = 145;
+  optional CommitTabletResponse              commitTabletResponse = 146;
 }
 
 enum Status {
@@ -417,6 +427,14 @@ enum Status {
   TABLE_NOT_FOUND = 75;
 
   TABLE_NOT_EMPTY = 76;
+
+  INVALID_PARTITION_NAME = 77;
+
+  PARTITION_ALREADY_EXISTS = 78;
+
+  PARTITION_NOT_FOUND = 79;
+
+  PARTITION_NOT_EMPTY = 80;
 }
 
 /**
@@ -498,13 +516,13 @@ message TableInfo {
     repeated string fields = 2;
   }
 
-  message DistributedProto {
-    required Type distributedType = 1 [default = HASH];
+  message DistributedKeyProto {
+    required Type distributedKeyType = 1 [default = HASH];
     required int32 buckets = 2 [default = 8];
     repeated string fields = 3;
   }
 
-  enum ColumnKeyType {
+  enum ColumnKeyTypeProto {
     PRIMARY_KEY = 1;
     UNIQUE_KEY = 2;
     AGGREGATE_KEY = 3;
@@ -512,7 +530,7 @@ message TableInfo {
   }
 
   message ColumnKeyProto {
-    optional ColumnKeyType columnKeyType = 1;
+    optional ColumnKeyTypeProto columnKeyType = 1;
     repeated string fields = 2;
   }
 
@@ -526,7 +544,7 @@ message TableInfo {
   optional uint64 creationTime = 8;
   repeated hadoop.hdds.KeyValue metadata = 9;
   required PartitionsProto partitions = 10;
-  required DistributedProto distributed = 11;
+  required DistributedKeyProto distributedKey = 11;
   required ColumnKeyProto columnKey = 12;
   optional uint64 objectID = 13;
   optional uint64 updateID = 14;
@@ -565,21 +583,19 @@ message ColumnSchemaProto {
 message TabletInfo {
   required string databaseName = 1;
   required string tableName = 2;
-  required string tabletName = 3;
-  required uint64 dataSize = 4;
-  required hadoop.hdds.ReplicationType type = 5;
-  required hadoop.hdds.ReplicationFactor factor = 6;
-  repeated TabletLocationList tabletLocationList = 7;
-  optional uint64 latestVersion = 8;
-  required bool isVersionEnabled = 9 [default = false];
+  required string partitionName = 3;
+  required string tabletName = 4;
+  required uint64 dataSize = 5;
+  required hadoop.hdds.ReplicationType type = 6;
+  required hadoop.hdds.ReplicationFactor factor = 7;
+  repeated TabletLocationList tabletLocationList = 8;
+  optional uint64 latestVersion = 9;
   optional uint64 creationTime = 10;
   optional uint64 modificationTime = 11;
-  required StorageTypeProto storageType = 12 [default = DISK];
-  repeated hadoop.hdds.KeyValue metadata = 13;
-  optional uint64 usedCapacityInBytes = 14;
-  optional FileEncryptionInfoProto fileEncryptionInfo = 15;
-  optional uint64 objectID = 16;
-  optional uint64 updateID = 17;
+  repeated hadoop.hdds.KeyValue metadata = 12;
+  optional FileEncryptionInfoProto fileEncryptionInfo = 13;
+  optional uint64 objectID = 14;
+  optional uint64 updateID = 15;
 }
 
 /**
@@ -1158,17 +1174,21 @@ message KeyLocation {
 message TabletArgs {
   required string databaseName = 1;
   required string tableName = 2;
-  required string tabletName = 3;
-  optional uint64 dataSize = 4;
-  optional hadoop.hdds.ReplicationType type = 5;
-  optional hadoop.hdds.ReplicationFactor factor = 6;
-  repeated TabletLocation tabletLocations = 7;
-  repeated hadoop.hdds.KeyValue metadata = 8;
+  required string partitionName = 3;
+  required string tabletName = 4;
+  optional uint64 dataSize = 5;
+  optional hadoop.hdds.ReplicationType type = 6;
+  optional hadoop.hdds.ReplicationFactor factor = 7;
+  repeated TabletLocation tabletLocations = 8;
+  repeated hadoop.hdds.KeyValue metadata = 9;
   // This will be set when the request is received in pre-Execute. This
   // value is used in setting creation/modification time depending on the
   // request type.
-  optional uint64 modificationTime = 9;
-  optional bool sortDatanodes = 10;
+  optional uint64 modificationTime = 10;
+  optional bool sortDatanodes = 11;
+  optional bool isMultipartTablet = 12 [default = false];
+  optional uint32 multipartNumber = 13;
+//  optional string multipartUploadID = 14;
 }
 
 message TabletLocation {
@@ -1187,6 +1207,8 @@ message TabletLocation {
   optional hadoop.hdds.Pipeline pipeline = 7;
 
   optional int32 partNumber = 9 [default = -1];
+  optional uint64 startKey = 10;
+  optional uint64 endKey = 11;
 }
 
 message KeyLocationList {
@@ -1198,7 +1220,8 @@ message KeyLocationList {
 
 message TabletLocationList {
   optional uint64 version = 1;
-  repeated TabletLocation tabletLocations = 2;
+  repeated TabletLocation tabletLocation = 2;
+  optional bool isMultipartTablet = 3 [default = false];
 }
 
 message KeyInfo {
@@ -1221,6 +1244,10 @@ message KeyInfo {
 
 message RepeatedKeyInfo {
   repeated KeyInfo keyInfo = 1;
+}
+
+message RepeatedTabletInfo {
+  repeated TabletInfo tabletInfo = 1;
 }
 
 message OzoneFileStatusProto {
@@ -1499,6 +1526,15 @@ message CommitKeyRequest {
 }
 
 message CommitKeyResponse {
+
+}
+
+message CommitTabletRequest {
+  required TabletArgs tabletArgs = 1;
+  required uint64 clientID = 2;
+}
+
+message CommitTabletResponse {
 
 }
 

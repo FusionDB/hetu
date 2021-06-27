@@ -11,7 +11,6 @@ public class ColumnSchema {
     private String columnName;
     private String dataType;
     private int ordinalPosition;
-    private ColumnKey columnKey;
     private String columnDefault;
     private String extra;
     private String columnComment;
@@ -21,7 +20,6 @@ public class ColumnSchema {
                         String columnType,
                         String dataType,
                         int ordinalPosition,
-                        ColumnKey columnKey,
                         String columnDefault,
                         String extra,
                         String columnComment,
@@ -32,7 +30,6 @@ public class ColumnSchema {
         this.columnType = columnType;
         this.dataType = dataType;
         this.ordinalPosition = ordinalPosition;
-        this.columnKey = columnKey;
         this.extra = extra;
         this.isNullable = isNullable;
     }
@@ -43,7 +40,6 @@ public class ColumnSchema {
                 .setColumnName(columnSchema.getColumnName())
                 .setDataType(columnSchema.getDataType())
                 .setOrdinalPosition(columnSchema.getOrdinalPosition())
-                .setColumnKey(columnSchema.getColumnKey().toProto())
                 .setColumnDefault(columnSchema.getColumnDefault())
                 .setExtra(columnSchema.getExtra())
                 .setColumnComment(columnSchema.getColumnComment())
@@ -56,7 +52,6 @@ public class ColumnSchema {
                 columnSchemaProto.getColumnType(),
                 columnSchemaProto.getDataType(),
                 columnSchemaProto.getOrdinalPosition(),
-                ColumnKey.valueOf(columnSchemaProto.getColumnKey().name()),
                 columnSchemaProto.getColumnDefault(),
                 columnSchemaProto.getExtra(),
                 columnSchemaProto.getColumnComment(),
@@ -93,14 +88,6 @@ public class ColumnSchema {
 
     public void setOrdinalPosition(int ordinalPosition) {
         this.ordinalPosition = ordinalPosition;
-    }
-
-    public ColumnKey getColumnKey() {
-        return columnKey;
-    }
-
-    public void setColumnKey(ColumnKey columnKey) {
-        this.columnKey = columnKey;
     }
 
     public String getColumnDefault() {
@@ -145,7 +132,6 @@ public class ColumnSchema {
                 columnName.equals(that.columnName) &&
                 dataType.equals(that.dataType) &&
                 ordinalPosition == that.ordinalPosition &&
-                columnKey == that.columnKey &&
                 columnDefault.equals(that.columnDefault) &&
                 extra.equals(that.extra) &&
                 columnComment.equals(that.columnComment);
@@ -154,8 +140,8 @@ public class ColumnSchema {
     @Override
     public int hashCode() {
         return Objects.hash(columnType, columnName, dataType,
-                ordinalPosition, columnKey, columnDefault,
-                extra, columnComment, isNullable);
+                ordinalPosition, columnDefault, extra,
+                columnComment, isNullable);
     }
 
     @Override
@@ -165,7 +151,6 @@ public class ColumnSchema {
                 ", columnName='" + columnName + '\'' +
                 ", dataType='" + dataType + '\'' +
                 ", ordinalPosition='" + ordinalPosition + '\'' +
-                ", columnKey=" + columnKey +
                 ", columnDefault='" + columnDefault + '\'' +
                 ", extra='" + extra + '\'' +
                 ", columnComment='" + columnComment + '\'' +

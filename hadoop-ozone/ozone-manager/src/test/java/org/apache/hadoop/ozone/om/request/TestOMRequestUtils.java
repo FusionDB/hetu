@@ -28,6 +28,7 @@ import java.util.UUID;
 
 import com.google.common.base.Optional;
 import org.apache.hadoop.hdds.client.BlockID;
+import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
@@ -42,6 +43,7 @@ import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
+import org.apache.hadoop.ozone.om.helpers.OmPartitionInfo;
 import org.apache.hadoop.ozone.om.helpers.OmTableInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
@@ -392,7 +394,6 @@ public final class TestOMRequestUtils {
             "varchar(4)",
             "varcher",
             0,
-            ColumnKey.NO_KEY,
             "",
             "",
             "用户",
@@ -403,7 +404,6 @@ public final class TestOMRequestUtils {
             "Long",
             "Long",
             1,
-            ColumnKey.PRIMARY_KEY,
             "",
             "",
             "ID",
@@ -416,8 +416,8 @@ public final class TestOMRequestUtils {
             .setTableName(tableName)
             .setColumns(Arrays.asList(col1, col2))
             .setPartitions(partitionsProto)
+            .setColumnKey(ColumnKey.fromProtobuf(getColumnKeyProto()))
             .setCreationTime(Time.now())
-            .setComment("test")
             .setUsedCapacityInBytes(0L).build();
 
     // Add to cache.
@@ -429,8 +429,8 @@ public final class TestOMRequestUtils {
   @NotNull
   public static OzoneManagerProtocolProtos.TableInfo.PartitionsProto getPartitionsProto() {
     return OzoneManagerProtocolProtos.TableInfo.PartitionsProto.newBuilder()
-            .setPartitionNumber(10)
-            .setPartitionType(OzoneManagerProtocolProtos.TableInfo.PartitionType.HASH)
+            .addAllFields(Arrays.asList("city"))
+            .setPartitionType(OzoneManagerProtocolProtos.TableInfo.Type.RANGE)
             .build();
   }
 
@@ -472,7 +472,6 @@ public final class TestOMRequestUtils {
             "varchar(4)",
             "varcher",
             0,
-            ColumnKey.NO_KEY,
             "",
             "",
             "用户",
@@ -483,7 +482,6 @@ public final class TestOMRequestUtils {
             "Long",
             "Long",
             1,
-            ColumnKey.PRIMARY_KEY,
             "",
             "",
             "ID",
@@ -495,15 +493,40 @@ public final class TestOMRequestUtils {
             .setDatabaseName(databaseName)
             .setTableName(tableName)
             .setColumns(Arrays.asList(col1, col2))
+            .setColumnKey(ColumnKey.fromProtobuf(getColumnKeyProto()))
             .setPartitions(partitionsProto)
             .setCreationTime(Time.now())
-            .setComment("test")
+            .setDistributedKey(getDistributedKeyProto())
             .setUsedCapacityInBytes(usedCapacityInBytes).build();
 
     // Add to cache.
     omMetadataManager.getMetaTable().addCacheEntry(
             new CacheKey<>(omMetadataManager.getMetaTableKey(databaseName, tableName)),
             new CacheValue<>(Optional.of(omTableInfo), 1L));
+  }
+
+  public static void addPartitionToDB(String databaseName, String tableName,
+                                      String partitionName, OMMetadataManager omMetadataManager) {
+    OmPartitionInfo omPartitionInfo = OmPartitionInfo.newBuilder()
+            .setStorageType(StorageType.DISK)
+            .setDatabaseName(databaseName)
+            .setTableName(tableName)
+            .setPartitionName(partitionName)
+            .setSizeInBytes(0L)
+            .setBuckets(10)
+            .setRows(0)
+            .setIsVersionEnabled(false)
+            .setUpdateID(1)
+            .setObjectID(1)
+            .setCreationTime(System.currentTimeMillis())
+            .setModificationTime(System.currentTimeMillis())
+            .setPartitionValue("20100120")
+            .build();
+
+    // Add to cache
+    omMetadataManager.getPartitionTable().addCacheEntry(
+            new CacheKey<>(omMetadataManager.getPartitionKey(databaseName, tableName, partitionName)),
+            new CacheValue<>(Optional.of(omPartitionInfo), 1L));
   }
 
   public static OzoneManagerProtocolProtos.OMRequest createBucketRequest(
@@ -533,16 +556,22 @@ public final class TestOMRequestUtils {
 
     OzoneManagerProtocolProtos.TableInfo.PartitionsProto partitionsProto = getPartitionsProto();
 
+    OzoneManagerProtocolProtos.TableInfo.ColumnKeyProto columnKeyProto = getColumnKeyProto();
+
+    OzoneManagerProtocolProtos.TableInfo.DistributedKeyProto distributedKeyProto = getDistributedKeyProto();
+
     OzoneManagerProtocolProtos.TableInfo tableInfo =
             OzoneManagerProtocolProtos.TableInfo.newBuilder()
                     .setTableName(tableName)
                     .setDatabaseName(databaseName)
                     .setIsVersionEnabled(isVersionEnabled)
                     .setStorageType(storageTypeProto)
-                    .setStorageEngine(OzoneManagerProtocolProtos.TableInfo.StorageEngineProto.LUCENE)
+                    .setStorageEngine(OzoneManagerProtocolProtos.TableInfo.StorageEngineProto.LSTORE)
                     .setNumReplicas(3)
                     .setPartitions(partitionsProto)
                     .addAllColumns(columnSchemaProtos)
+                    .setColumnKey(columnKeyProto)
+                    .setDistributedKey(distributedKeyProto)
                     .addAllMetadata(getMetadataList()).build();
     OzoneManagerProtocolProtos.CreateTableRequest.Builder req =
             OzoneManagerProtocolProtos.CreateTableRequest.newBuilder();
@@ -550,6 +579,52 @@ public final class TestOMRequestUtils {
     return OzoneManagerProtocolProtos.OMRequest.newBuilder()
             .setCreateTableRequest(req)
             .setCmdType(OzoneManagerProtocolProtos.Type.CreateTable)
+            .setClientId(UUID.randomUUID().toString()).build();
+  }
+
+  @NotNull
+  public static OzoneManagerProtocolProtos.TableInfo.DistributedKeyProto getDistributedKeyProto() {
+    return OzoneManagerProtocolProtos.TableInfo.DistributedKeyProto
+            .newBuilder()
+            .setDistributedKeyType(OzoneManagerProtocolProtos.TableInfo.Type.HASH)
+            .setBuckets(8)
+            .addAllFields(Arrays.asList("id"))
+            .build();
+  }
+
+  @NotNull
+  public static OzoneManagerProtocolProtos.TableInfo.ColumnKeyProto getColumnKeyProto() {
+    return OzoneManagerProtocolProtos.TableInfo.ColumnKeyProto
+            .newBuilder()
+            .setColumnKeyType(OzoneManagerProtocolProtos.TableInfo.ColumnKeyTypeProto.PRIMARY_KEY)
+            .addAllFields(Arrays.asList("id"))
+            .build();
+  }
+
+  public static OzoneManagerProtocolProtos.OMRequest createPartitionRequest(
+          String tableName, String databaseName, String partitionName, boolean isVersionEnabled,
+          OzoneManagerProtocolProtos.StorageTypeProto storageTypeProto) {
+
+    OzoneManagerProtocolProtos.PartitionInfo partitionInfo =
+            OzoneManagerProtocolProtos.PartitionInfo.newBuilder()
+            .setDatabaseName(databaseName)
+            .setTableName(tableName)
+            .setIsVersionEnabled(isVersionEnabled)
+            .setPartitionName(partitionName)
+            .setPartitionValue("201010")
+            .setStorageType(storageTypeProto)
+            .setBuckets(8)
+            .setRows(0)
+            .setSizeInBytes(0L)
+            .addAllMetadata(getMetadataList())
+            .build();
+
+    OzoneManagerProtocolProtos.CreatePartitionRequest.Builder req =
+            OzoneManagerProtocolProtos.CreatePartitionRequest.newBuilder();
+    req.setPartitionInfo(partitionInfo);
+    return OzoneManagerProtocolProtos.OMRequest.newBuilder()
+            .setCreatePartitionRequest(req)
+            .setCmdType(OzoneManagerProtocolProtos.Type.CreatePartition)
             .setClientId(UUID.randomUUID().toString()).build();
   }
 
@@ -568,7 +643,6 @@ public final class TestOMRequestUtils {
             "varchar(4)",
             "varcher",
             0,
-            ColumnKey.NO_KEY,
             "",
             "",
             "用户",
@@ -579,7 +653,6 @@ public final class TestOMRequestUtils {
             "Long",
             "Long",
             1,
-            ColumnKey.PRIMARY_KEY,
             "",
             "",
             "ID",

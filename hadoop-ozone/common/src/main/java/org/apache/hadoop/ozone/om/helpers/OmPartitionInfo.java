@@ -265,7 +265,12 @@ public final class OmPartitionInfo extends WithObjectID implements Auditable {
         .setObjectID(objectID)
         .setUpdateID(updateID)
         .addAllMetadata(metadata)
+        .setStorageType(storageType)
         .setSizeInBytes(sizeInBytes);
+  }
+
+  public void incrUsedBytes(long bytes) {
+        this.sizeInBytes += bytes;
   }
 
   /**
@@ -384,6 +389,7 @@ public final class OmPartitionInfo extends WithObjectID implements Auditable {
       Preconditions.checkNotNull(buckets);
       Preconditions.checkNotNull(rows);
       Preconditions.checkNotNull(isVersionEnabled);
+      Preconditions.checkNotNull(storageType);
 
       return new OmPartitionInfo(databaseName, tableName, partitionName,
           partitionValue, rows, buckets, isVersionEnabled,

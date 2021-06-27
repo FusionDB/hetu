@@ -44,6 +44,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numFSOps;
   private @Metric MutableCounterLong numTableOps;
   private @Metric MutableCounterLong numPartitionOps;
+  private @Metric MutableCounterLong numTabletOps;
 
   // OM op metrics
   private @Metric MutableCounterLong numVolumeCreates;
@@ -81,6 +82,9 @@ public class OMMetrics {
   private @Metric MutableCounterLong numPartitionCreates;
   private @Metric MutableCounterLong numPartitionDeletes;
   private @Metric MutableCounterLong numPartitionUpdates;
+  private @Metric MutableCounterLong numTabletAllocate;
+  private @Metric MutableCounterLong numTabletCommits;
+
 
   private @Metric MutableCounterLong numGetFileStatus;
   private @Metric MutableCounterLong numCreateDirectory;
@@ -139,6 +143,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numDatabaseUpdateFails;
   private @Metric MutableCounterLong numPartitionDeleteFails;
   private @Metric MutableCounterLong numPartitionUpdateFails;
+  private @Metric MutableCounterLong numTabletCommitFails;
 
   private @Metric MutableCounterLong numGetFileStatusFails;
   private @Metric MutableCounterLong numCreateDirectoryFails;
@@ -159,6 +164,7 @@ public class OMMetrics {
   // OM process was not shutdown cleanly. Key creations/deletions in the last
   // few minutes before restart may not be included in this count.
   private @Metric MutableCounterLong numKeys;
+  private @Metric MutableCounterLong numTablets;
 
   private @Metric MutableCounterLong numBucketS3Creates;
   private @Metric MutableCounterLong numBucketS3CreateFails;
@@ -259,6 +265,18 @@ public class OMMetrics {
 
   public void decNumKeys() {
     numKeys.incr(-1);
+  }
+
+  public void incNumTablets() {
+    numTablets.incr();
+  }
+
+  public void incNumTablets(int count) {
+    numTablets.incr(count);
+  }
+
+  public void decNumTablets() {
+    numTablets.incr(-1);
   }
 
   public void setNumDatabases(long val) {
@@ -588,8 +606,18 @@ public class OMMetrics {
     numKeyCommits.incr();
   }
 
+  public void incNumTabletCommits() {
+    numTabletOps.incr();
+    numTabletCommits.incr();
+  }
+
   public void incNumKeyCommitFails() {
     numKeyCommitFails.incr();
+  }
+
+
+  public void incNumTabletCommitFails() {
+    numTabletCommitFails.incr();
   }
 
   public void incNumBlockAllocateCalls() {
@@ -924,6 +952,11 @@ public class OMMetrics {
   }
 
   @VisibleForTesting
+  public long getNumTabletCommits() {
+    return numTabletCommits.value();
+  }
+
+  @VisibleForTesting
   public long getNumKeyCommitFails() {
     return numKeyCommitFails.value();
   }
@@ -1180,5 +1213,10 @@ public class OMMetrics {
 
   public void incNumDatabaseUpdateFails() {
     numDatabaseUpdateFails.incr();
+  }
+
+  public void incNumTabletAllocates() {
+    numTabletOps.incr();
+    numTabletAllocate.incr();
   }
 }

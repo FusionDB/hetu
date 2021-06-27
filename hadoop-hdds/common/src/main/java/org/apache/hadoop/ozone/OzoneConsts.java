@@ -333,7 +333,10 @@ public final class OzoneConsts {
   public static final String TABLE = "table";
   public static final String PARTITION = "partition";
   public static final String PARTITION_VALUE = "partition_value";
+  public static final String TABLET = "tablet";
   public static final String TABLE_SCHEMA = "schema";
+  public static final String COLUMN_KEY = "columnKey";
+  public static final String DISTRIBUTED_KEY = "distributedKey";
   public static final String STORAGE_ENGINE = "storageEngine";
   public static final String NUM_REPLICAS = "numReplicas";
   public static final String TABLE_PARTITIONS = "partitions";

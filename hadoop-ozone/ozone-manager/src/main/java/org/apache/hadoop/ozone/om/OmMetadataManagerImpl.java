@@ -53,8 +53,10 @@ import org.apache.hadoop.ozone.om.codec.OMTransactionInfoCodec;
 import org.apache.hadoop.ozone.om.codec.OmBucketInfoCodec;
 import org.apache.hadoop.ozone.om.codec.OmKeyInfoCodec;
 import org.apache.hadoop.ozone.om.codec.OmMultipartKeyInfoCodec;
+import org.apache.hadoop.ozone.om.codec.OmPartitionInfoCodec;
 import org.apache.hadoop.ozone.om.codec.OmPrefixInfoCodec;
 import org.apache.hadoop.ozone.om.codec.OmTableInfoCodec;
+import org.apache.hadoop.ozone.om.codec.OmTabletInfoCodec;
 import org.apache.hadoop.ozone.om.codec.OmVolumeArgsCodec;
 import org.apache.hadoop.ozone.om.codec.RepeatedOmKeyInfoCodec;
 import org.apache.hadoop.ozone.om.codec.S3SecretValueCodec;
@@ -156,6 +158,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   public static final String DATABASE_TABLE = "databaseTable";
   public static final String META_TABLE = "metaTable";
   public static final String TABLET_TABLE = "tabletTable";
+  public static final String OPEN_TABLET_TABLE = "openTabletTable";
   public static final String PARTITION_TABLE = "partitionTable";
   public static final String BUCKET_TABLE = "bucketTable";
   public static final String KEY_TABLE = "keyTable";
@@ -180,6 +183,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   private Table metaTable;
   private Table partitionTable;
   private Table tabletTable;
+  private Table openTabletTable;
   private Table bucketTable;
   private Table keyTable;
   private Table deletedTable;
@@ -288,6 +292,11 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   }
 
   @Override
+  public Table<String, OmTabletInfo> getOpenTabletTable() {
+    return openTabletTable;
+  }
+
+  @Override
   public Table<String, OmPrefixInfo> getPrefixTable() {
     return prefixTable;
   }
@@ -380,6 +389,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
         .addTable(DATABASE_TABLE)
         .addTable(META_TABLE)
         .addTable(TABLET_TABLE)
+        .addTable(OPEN_TABLET_TABLE)
         .addTable(PARTITION_TABLE)
         .addTable(BUCKET_TABLE)
         .addTable(KEY_TABLE)
@@ -391,6 +401,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
         .addTable(PREFIX_TABLE)
         .addTable(TRANSACTION_INFO_TABLE)
         .addCodec(OzoneTokenIdentifier.class, new TokenIdentifierCodec())
+        .addCodec(OmTabletInfo.class, new OmTabletInfoCodec(true))
         .addCodec(OmKeyInfo.class, new OmKeyInfoCodec(true))
         .addCodec(RepeatedOmKeyInfo.class,
             new RepeatedOmKeyInfoCodec(true))
@@ -398,6 +409,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
         .addCodec(OmVolumeArgs.class, new OmVolumeArgsCodec())
         .addCodec(HmDatabaseArgs.class, new HmDatabaseArgsCodec())
         .addCodec(OmTableInfo.class, new OmTableInfoCodec())
+        .addCodec(OmPartitionInfo.class, new OmPartitionInfoCodec())
         .addCodec(PersistedUserVolumeInfo.class, new UserVolumeInfoCodec())
         .addCodec(PersistedUserDatabaseInfo.class, new UserDatabaseInfoCodec())
         .addCodec(OmMultipartKeyInfo.class, new OmMultipartKeyInfoCodec())
@@ -454,6 +466,10 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
             this.store.getTable(TABLET_TABLE, String.class, OmTabletInfo.class,
                     cacheType);
     checkTableStatus(tabletTable, TABLET_TABLE);
+
+    openTabletTable =
+            this.store.getTable(OPEN_TABLET_TABLE, String.class, OmTabletInfo.class);
+    checkTableStatus(openTabletTable, OPEN_TABLET_TABLE);
 
     keyTable = this.store.getTable(KEY_TABLE, String.class, OmKeyInfo.class);
     checkTableStatus(keyTable, KEY_TABLE);
@@ -589,11 +605,12 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   }
 
   @Override
-  public String getOzoneTablet(String database, String table, String tablet) {
+  public String getOzoneTablet(String database, String table, String partition, String tablet) {
     StringBuilder builder = new StringBuilder()
             .append(OM_KEY_PREFIX).append(database);
-    // TODO : Throw if the Bable is null?
+    // TODO : Throw if the table is null?
     builder.append(OM_KEY_PREFIX).append(table);
+    builder.append(OM_KEY_PREFIX).append(partition);
     if (StringUtil.isNotBlank(tablet)) {
       builder.append(OM_KEY_PREFIX);
       if (!tablet.equals(OM_KEY_PREFIX)) {
@@ -610,9 +627,9 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   }
 
   @Override
-  public String getOzoneDirTablet(String database, String table, String tablet) {
+  public String getOzoneDirTablet(String database, String table, String partition, String tablet) {
     tablet = OzoneFSUtils.addTrailingSlashIfNeeded(tablet);
-    return getOzoneTablet(database, table, tablet);
+    return getOzoneTablet(database, table, partition, tablet);
   }
 
   @Override
@@ -620,6 +637,15 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
                            String key, long id) {
     String openKey = OM_KEY_PREFIX + volume + OM_KEY_PREFIX + bucket +
         OM_KEY_PREFIX + key + OM_KEY_PREFIX + id;
+    return openKey;
+  }
+
+  @Override
+  public String getOpenTablet(String database, String table,
+                           String partition, String tablet,
+                           long id) {
+    String openKey = OM_KEY_PREFIX + database + OM_KEY_PREFIX + table +
+            OM_KEY_PREFIX + partition + OM_KEY_PREFIX + tablet + OM_KEY_PREFIX + id;
     return openKey;
   }
 

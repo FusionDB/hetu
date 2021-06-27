@@ -139,12 +139,12 @@ public class OMPartitionCreateRequest extends OMClientRequest {
 //            databaseName, tableName, null);
       }
 
-      acquiredPartitionLock = metadataManager.getLock().acquireWriteLock(
-              PARTITION_LOCK, databaseName, tableName, partitionName);
-      acquiredTableLock = metadataManager.getLock().acquireWriteLock(
-              TABLE_LOCK, databaseName, tableName);
       acquiredDatabaseLock = metadataManager.getLock().acquireWriteLock(
               DATABASE_LOCK, databaseName);
+      acquiredTableLock = metadataManager.getLock().acquireWriteLock(
+              TABLE_LOCK, databaseName, tableName);
+      acquiredPartitionLock = metadataManager.getLock().acquireWriteLock(
+              PARTITION_LOCK, databaseName, tableName, partitionName);
 
       HmDatabaseArgs hmDatabaseArgs =
           metadataManager.getDatabaseTable().getReadCopy(databaseKey);

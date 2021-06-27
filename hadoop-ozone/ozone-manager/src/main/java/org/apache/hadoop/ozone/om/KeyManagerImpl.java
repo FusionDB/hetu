@@ -90,6 +90,9 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OmPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmPrefixInfo;
+import org.apache.hadoop.ozone.om.helpers.OmTabletInfo;
+import org.apache.hadoop.ozone.om.helpers.OmTabletLocationInfo;
+import org.apache.hadoop.ozone.om.helpers.OmTabletLocationInfoGroup;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.OzoneAclUtil;
 import org.apache.hadoop.ozone.om.helpers.OzoneFSUtils;
@@ -739,6 +742,42 @@ public class KeyManagerImpl implements KeyManager {
               containerWithPipelineMap.get(k.getContainerID());
           if (cp != null && !cp.getPipeline().equals(k.getPipeline())) {
             k.setPipeline(cp.getPipeline());
+          }
+        }
+      }
+    }
+  }
+
+  @VisibleForTesting
+  protected void refreshPipelineWithTablet(List<OmTabletInfo> tabletList) throws IOException {
+    if (tabletList == null || tabletList.isEmpty()) {
+      return;
+    }
+
+    Set<Long> containerIDs = new HashSet<>();
+    for (OmTabletInfo tabletInfo : tabletList) {
+      List<OmTabletLocationInfoGroup> locationInfoGroups =
+              tabletInfo.getTabletLocationVersions();
+
+      for (OmTabletLocationInfoGroup key : locationInfoGroups) {
+        for (OmTabletLocationInfo k : key.getLocationList()) {
+          containerIDs.add(k.getContainerID());
+        }
+      }
+    }
+
+    Map<Long, ContainerWithPipeline> containerWithPipelineMap =
+            refreshPipeline(containerIDs);
+
+    for (OmTabletInfo tabletInfo : tabletList) {
+      List<OmTabletLocationInfoGroup> locationInfoGroups =
+              tabletInfo.getTabletLocationVersions();
+      for (OmTabletLocationInfoGroup tablet : locationInfoGroups) {
+        for (OmTabletLocationInfo t : tablet.getLocationList()) {
+          ContainerWithPipeline cp =
+                  containerWithPipelineMap.get(t.getContainerID());
+          if (cp != null && !cp.getPipeline().equals(t.getPipeline())) {
+            t.setPipeline(cp.getPipeline());
           }
         }
       }
@@ -2001,6 +2040,16 @@ public class KeyManagerImpl implements KeyManager {
   public void refresh(OmKeyInfo key) throws IOException {
     Preconditions.checkNotNull(key, "Key info can not be null");
     refreshPipeline(Arrays.asList(key));
+  }
+
+  /**
+   * Refresh the tablet location information by get latest info from SCM.
+   * @param tablet
+   */
+  @Override
+  public void refresh(OmTabletInfo tablet) throws IOException {
+    Preconditions.checkNotNull(tablet, "Tablet info can not be null");
+    refreshPipelineWithTablet(Arrays.asList(tablet));
   }
 
   /**

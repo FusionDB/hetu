@@ -124,10 +124,11 @@ public interface OMMetadataManager {
    *
    * @param database - database name
    * @param table - table name
+   * @param partition - partition name
    * @param tablet    - tablet name
    * @return DB key as String.
    */
-  String getOzoneTablet(String database, String table, String tablet);
+  String getOzoneTablet(String database, String table, String partition, String tablet);
 
   /**
    * Given a volume, bucket and a key, return the corresponding DB directory
@@ -146,10 +147,11 @@ public interface OMMetadataManager {
    *
    * @param database - database name
    * @param table - table name
+   * @param partition - partition name
    * @param tablet    - tablet name
    * @return DB directory key as String.
    */
-  String getOzoneDirTablet(String database, String table, String tablet);
+  String getOzoneDirTablet(String database, String table, String partition, String tablet);
 
 
   /**
@@ -163,6 +165,19 @@ public interface OMMetadataManager {
    * @return bytes of DB key.
    */
   String getOpenKey(String volume, String bucket, String key, long id);
+
+  /**
+   * Returns the DB key name of a open tablet key in OM metadata store. Should be
+   * #open# prefix followed by actual tablet key name.
+   *
+   * @param database - database name
+   * @param table - table name
+   * @param partition - partition name
+   * @param tablet - tablet name
+   * @param id - the id for this open
+   * @return bytes of DB tablet key.
+   */
+  String getOpenTablet(String database, String table, String partition, String tablet, long id);
 
   /**
    * Given a volume, check if it is empty, i.e there are no buckets inside it.
@@ -338,6 +353,13 @@ public interface OMMetadataManager {
   Table<String, OmKeyInfo> getOpenKeyTable();
 
   /**
+   * Gets the OpenTabletTable.
+   *
+   * @return Table.
+   */
+  Table<String, OmTabletInfo> getOpenTabletTable();
+
+  /**
    * Gets the DelegationTokenTable.
    *
    * @return Table.
@@ -361,7 +383,6 @@ public interface OMMetadataManager {
    */
   String getMultipartKey(String volume, String bucket, String key, String
       uploadId);
-
 
   /**
    * Gets the multipart info table which holds the information about

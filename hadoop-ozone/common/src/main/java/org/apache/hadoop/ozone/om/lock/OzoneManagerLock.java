@@ -197,9 +197,12 @@ public class OzoneManagerLock {
     } else if (resources.length == 2 && resource == Resource.TABLE_LOCK) {
       return OzoneManagerLockUtil.generateTableLockName(resources[0],
               resources[1]);
+    } else if (resources.length == 3 && resource == Resource.PARTITION_LOCK) {
+      return OzoneManagerLockUtil.generatePartitionLockName(resources[0],
+              resources[1], resources[2]);
     } else {
       throw new IllegalArgumentException("acquire lock is supported on single" +
-          " resource for all locks except for resource bucket");
+          " resource for all locks except for resource table");
     }
   }
 

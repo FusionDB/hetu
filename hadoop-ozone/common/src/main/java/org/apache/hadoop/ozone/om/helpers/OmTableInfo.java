@@ -22,6 +22,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.Auditable;
+import org.apache.hadoop.ozone.hm.meta.table.ColumnKey;
 import org.apache.hadoop.ozone.hm.meta.table.ColumnSchema;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
         .TableInfo;
@@ -29,6 +30,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
         .TableInfo.StorageEngineProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
         .TableInfo.PartitionsProto;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+        .TableInfo.DistributedKeyProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
         .ColumnSchemaProto;
 
@@ -92,6 +95,16 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
   private long usedCapacityInBytes;
 
   /**
+   * Table of column key
+   */
+  private ColumnKey columnKey;
+
+  /**
+   * Table of distributeKey
+   */
+  private DistributedKeyProto distributedKeyProto;
+
+  /**
    * Private constructor, constructed via builder.
    * @param databaseName - Database name.
    * @param tableName - Table name.
@@ -107,9 +120,11 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
                       boolean isVersionEnabled,
                       StorageType storageType,
                       List<ColumnSchema> columns,
+                      ColumnKey columnKey,
                       StorageEngineProto storageEngine,
                       int numReplicas,
                       PartitionsProto partitions,
+                      DistributedKeyProto distributedKeyProto,
                       long creationTime,
                       long modificationTime,
                       long objectID,
@@ -126,9 +141,11 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
     this.updateID = updateID;
     this.metadata = metadata;
     this.columns = columns;
+    this.columnKey = columnKey;
     this.storageEngine = storageEngine;
     this.numReplicas = numReplicas;
     this.partitions = partitions;
+    this.distributedKeyProto = distributedKeyProto;
     this.usedCapacityInBytes = usedCapacityInBytes;
   }
 
@@ -222,6 +239,22 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
   }
 
   /**
+   * Returns table column key
+   * @return
+   */
+  public ColumnKey getColumnKey() {
+    return columnKey;
+  }
+
+  /**
+   * Returns table distributed key
+   * @return
+   */
+  public DistributedKeyProto getDistributedKeyProto() {
+    return distributedKeyProto;
+  }
+
+  /**
    * Returns new builder class that builds a OmTableInfo.
    *
    * @return Builder
@@ -245,6 +278,8 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
     auditMap.put(OzoneConsts.MODIFICATION_TIME,
         String.valueOf(this.modificationTime));
     auditMap.put(OzoneConsts.TABLE_SCHEMA, String.valueOf(this.columns));
+    auditMap.put(OzoneConsts.COLUMN_KEY, columnKey.toString());
+    auditMap.put(OzoneConsts.DISTRIBUTED_KEY, this.distributedKeyProto.toString());
     auditMap.put(OzoneConsts.STORAGE_ENGINE, String.valueOf(this.storageEngine));
     auditMap.put(OzoneConsts.NUM_REPLICAS, String.valueOf(this.numReplicas));
     auditMap.put(OzoneConsts.TABLE_PARTITIONS, String.valueOf(this.partitions));
@@ -275,6 +310,8 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
         .setStorageEngine(storageEngine)
         .setNumReplicas(numReplicas)
         .setPartitions(partitions)
+        .setColumnKey(columnKey)
+        .setDistributedKey(distributedKeyProto)
         .setUsedCapacityInBytes(usedCapacityInBytes);
   }
 
@@ -285,6 +322,7 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
     private String databaseName;
     private String tableName;
     private List<ColumnSchema> columns;
+    private ColumnKey columnKey;
     private StorageEngineProto storageEngine;
     private Boolean isVersionEnabled;
     private StorageType storageType;
@@ -292,8 +330,8 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
     private long modificationTime;
     private int numReplicas;
     private PartitionsProto partitions;
+    private DistributedKeyProto distributedKey;
     private long usedCapacityInBytes;
-    private String comment;
     private long objectID;
     private long updateID;
     private Map<String, String> metadata;
@@ -342,6 +380,11 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
       return this;
     }
 
+    public Builder setColumnKey(ColumnKey columnKey) {
+      this.columnKey = columnKey;
+      return this;
+    }
+
     public Builder setUpdateID(long id) {
       this.updateID = id;
       return this;
@@ -384,6 +427,11 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
       return this;
     }
 
+    public Builder setDistributedKey(DistributedKeyProto distributedKey) {
+      this.distributedKey = distributedKey;
+      return this;
+    }
+
     /**
      * Constructs the OmBucketInfo.
      * @return instance of OmBucketInfo.
@@ -395,9 +443,10 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
       Preconditions.checkNotNull(isVersionEnabled);
       Preconditions.checkNotNull(storageType);
       Preconditions.checkNotNull(numReplicas);
+      Preconditions.checkNotNull(columnKey);
 
       return new OmTableInfo(databaseName, tableName, isVersionEnabled,
-          storageType, columns, storageEngine, numReplicas, partitions,
+          storageType, columns, columnKey, storageEngine, numReplicas, partitions, distributedKey,
           creationTime, modificationTime, objectID, updateID,
           metadata, usedCapacityInBytes);
     }
@@ -424,6 +473,8 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
         .setStorageEngine(storageEngine)
         .setNumReplicas(numReplicas)
         .setPartitions(partitions)
+        .setColumnKey(columnKey.toProtobuf())
+        .setDistributedKey(distributedKeyProto)
         .setUsedCapacityInBytes(usedCapacityInBytes);
     return bib.build();
   }
@@ -448,6 +499,8 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
         .setStorageEngine(tableInfo.getStorageEngine())
         .setNumReplicas(tableInfo.getNumReplicas())
         .setPartitions(tableInfo.getPartitions())
+        .setColumnKey(ColumnKey.fromProtobuf(tableInfo.getColumnKey()))
+        .setDistributedKey(tableInfo.getDistributedKey())
         .setUsedCapacityInBytes(tableInfo.getUsedCapacityInBytes());
 
     if (tableInfo.hasObjectID()) {
@@ -476,6 +529,7 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
         ", modificationTime=" + modificationTime +
         ", numReplicas=" + numReplicas +
         ", partitions=" + partitions +
+        ", distributedKey=" + distributedKeyProto +
         ", usedCapacityInBytes='" + usedCapacityInBytes + '\'' +
         '}';
   }
@@ -501,6 +555,7 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
         storageEngine == that.storageEngine &&
         numReplicas == that.numReplicas &&
         partitions == that.partitions &&
+        distributedKeyProto == this.distributedKeyProto &&
         usedCapacityInBytes == that.usedCapacityInBytes &&
         Objects.equals(metadata, that.metadata);
   }
@@ -516,6 +571,7 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
         "databaseName='" + databaseName + '\'' +
         ", tableName='" + tableName + '\'' +
         ", columns=" + columns +
+        ", columnKey=" + columnKey +
         ", storageEngine=" + storageEngine +
         ", isVersionEnabled=" + isVersionEnabled +
         ", storageType=" + storageType +
@@ -523,6 +579,7 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
         ", modificationTime=" + modificationTime +
         ", numReplicas=" + numReplicas +
         ", partitions=" + partitions +
+        ", distributedKey=" + distributedKeyProto +
         ", usedCapacityInBytes='" + usedCapacityInBytes + '\'' +
         '}';
   }

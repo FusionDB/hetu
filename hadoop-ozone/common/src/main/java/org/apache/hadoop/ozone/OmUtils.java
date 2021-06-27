@@ -552,7 +552,7 @@ public final class OmUtils {
       HddsClientUtils.verifyResourceName(partitionName);
     } catch (IllegalArgumentException e) {
       throw new OMException("Invalid partition name: " + partitionName,
-              OMException.ResultCodes.INVALID_TABLE_NAME);
+              OMException.ResultCodes.INVALID_PARTITION_NAME);
     }
   }
 

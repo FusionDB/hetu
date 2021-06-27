@@ -23,8 +23,10 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.audit.OMAction;
+import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.OzoneManager;
@@ -32,6 +34,8 @@ import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.KeyValueUtil;
 import org.apache.hadoop.ozone.om.helpers.OmPartitionArgs;
 import org.apache.hadoop.ozone.om.helpers.OmPartitionInfo;
+import org.apache.hadoop.ozone.om.helpers.OmTableArgs;
+import org.apache.hadoop.ozone.om.helpers.OmTableInfo;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.om.request.util.OmResponseUtil;
@@ -47,6 +51,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.List;
 
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.PARTITION_LOCK;
 
@@ -123,9 +128,18 @@ public class OMPartitionSetPropertyRequest extends OMClientRequest {
       if (partitionArgs.hasPartitionValue()) {
         partitionInfoBuilder.setPartitionValue(partitionArgs.getPartitionValue());
       }
-      if (partitionArgs.hasSizeInBytes()) {
-        partitionInfoBuilder.setSizeInBytes(partitionArgs.getSizeInBytes());
+
+      // Check sizeInBytes to update
+      String databaseKey = omMetadataManager.getDatabaseKey(databaseName);
+      HmDatabaseArgs hmDatabaseArgs = omMetadataManager.getDatabaseTable()
+              .get(databaseKey);
+      if (checkQuotaBytesValid(omMetadataManager, hmDatabaseArgs, omPartitionArgs)) {
+        partitionInfoBuilder.setSizeInBytes(omPartitionArgs.getSizeInBytes());
+      } else {
+        partitionInfoBuilder.setSizeInBytes(dbPartitionInfo.getSizeInBytes());
       }
+
+      // check Rows
       if (partitionArgs.hasRows()) {
         partitionInfoBuilder.setRows(partitionArgs.getRows());
       }
@@ -205,4 +219,45 @@ public class OMPartitionSetPropertyRequest extends OMClientRequest {
     }
   }
 
+  public boolean checkQuotaBytesValid(OMMetadataManager metadataManager,
+                                      HmDatabaseArgs hmDatabaseArgs,
+                                      OmPartitionArgs omPartitionArgs)
+          throws IOException {
+    long sizeInBytes = omPartitionArgs.getSizeInBytes();
+
+    if (sizeInBytes == OzoneConsts.USED_CAPACITY_IN_BYTES_RESET &&
+            hmDatabaseArgs.getQuotaInBytes() != OzoneConsts.QUOTA_RESET) {
+      throw new OMException("Can not clear table spaceQuota because" +
+              " database spaceQuota is not cleared.",
+              OMException.ResultCodes.QUOTA_ERROR);
+    }
+
+    if (sizeInBytes < OzoneConsts.USED_CAPACITY_IN_BYTES_RESET || sizeInBytes == 0) {
+      return false;
+    }
+
+    long totalTableQuota = 0;
+    long databaseQuotaInBytes = hmDatabaseArgs.getQuotaInBytes();
+
+    if (sizeInBytes > OzoneConsts.USED_CAPACITY_IN_BYTES_RESET) {
+      totalTableQuota = sizeInBytes;
+    }
+    List<OmTableInfo> tableList = metadataManager.listMetaTables(
+            hmDatabaseArgs.getName(), null, null, Integer.MAX_VALUE);
+    for(OmTableInfo tableInfo : tableList) {
+      long nextQuotaInBytes = tableInfo.getUsedCapacityInBytes();
+      if(nextQuotaInBytes > OzoneConsts.USED_CAPACITY_IN_BYTES_RESET) {
+        totalTableQuota += nextQuotaInBytes;
+      }
+    }
+
+    if(databaseQuotaInBytes < totalTableQuota &&
+            databaseQuotaInBytes != OzoneConsts.QUOTA_RESET) {
+      throw new IllegalArgumentException("Total tables quota in this database " +
+              "should not be greater than database quota : the total space quota is" +
+              " set to:" + totalTableQuota + ". But the database space quota is:" +
+              databaseQuotaInBytes);
+    }
+    return true;
+  }
 }
