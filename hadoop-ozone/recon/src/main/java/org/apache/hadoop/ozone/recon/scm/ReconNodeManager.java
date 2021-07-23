@@ -27,8 +27,11 @@ import java.util.UUID;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCommandProto.Type;
+import org.apache.hadoop.hdds.scm.ha.SCMContext;
 import org.apache.hadoop.hdds.scm.net.NetworkTopology;
+import org.apache.hadoop.hdds.scm.node.NodeStatus;
 import org.apache.hadoop.hdds.scm.node.SCMNodeManager;
 import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
 import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
@@ -69,7 +72,8 @@ public class ReconNodeManager extends SCMNodeManager {
                           EventPublisher eventPublisher,
                           NetworkTopology networkTopology,
                           Table<UUID, DatanodeDetails> nodeDB) {
-    super(conf, scmStorageConfig, eventPublisher, networkTopology);
+    super(conf, scmStorageConfig, eventPublisher, networkTopology,
+        SCMContext.emptyContext());
     this.nodeDB = nodeDB;
     loadExistingNodes();
   }
@@ -146,5 +150,23 @@ public class ReconNodeManager extends SCMNodeManager {
     super.getNodeStateManager().setNodeOperationalState(reportedDn,
         reportedDn.getPersistedOpState(),
         reportedDn.getPersistedOpStateExpiryEpochSec());
+  }
+
+  public void updateNodeOperationalStateFromScm(HddsProtos.Node scmNode,
+                                                DatanodeDetails dnDetails)
+      throws NodeNotFoundException {
+    NodeStatus nodeStatus = getNodeStatus(dnDetails);
+    HddsProtos.NodeOperationalState nodeOperationalStateFromScm =
+        scmNode.getNodeOperationalStates(0);
+    if (nodeOperationalStateFromScm != nodeStatus.getOperationalState()) {
+      LOG.info("Updating Node operational state for {}, in SCM = {}, in " +
+              "Recon = {}", dnDetails.getHostName(),
+          nodeOperationalStateFromScm,
+          nodeStatus.getOperationalState());
+
+      setNodeOperationalState(dnDetails, nodeOperationalStateFromScm);
+      DatanodeDetails scmDnd = getNodeByUuid(dnDetails.getUuidString());
+      scmDnd.setPersistedOpState(nodeOperationalStateFromScm);
+    }
   }
 }

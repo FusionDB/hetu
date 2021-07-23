@@ -96,7 +96,7 @@ public class TestLStoreBlockIterator {
     testRoot = GenericTestUtils.getRandomizedTestDir();
     conf = new OzoneConfiguration();
     conf.set(HDDS_DATANODE_DIR_KEY, testRoot.getAbsolutePath());
-    volumeSet = new MutableVolumeSet(UUID.randomUUID().toString(), conf);
+    volumeSet = new MutableVolumeSet(UUID.randomUUID().toString(), conf, null);
 
     containerData = new LStoreContainerData(105L,
             layout,

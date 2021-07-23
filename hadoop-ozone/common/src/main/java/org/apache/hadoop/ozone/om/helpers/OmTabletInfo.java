@@ -26,7 +26,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.TabletI
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.TabletLocationList;
 import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 import org.apache.hadoop.util.Time;
-import sun.tools.jconsole.Tab;
 
 import java.io.IOException;
 import java.util.ArrayList;

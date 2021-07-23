@@ -94,6 +94,9 @@ enum Type {
   ListTrash = 91;
   RecoverTrash = 92;
 
+  RevokeS3Secret = 93;
+
+
   // Database Option
   CreateDatabase = 111;
   ListDatabase = 112;
@@ -177,23 +180,26 @@ message OMRequest {
   optional UpdateGetDelegationTokenRequest updateGetDelegationTokenRequest = 64;
   optional UpdateRenewDelegationTokenRequest updatedRenewDelegationTokenRequest = 65;
 
-  optional GetFileStatusRequest             getFileStatusRequest = 70;
-  optional CreateDirectoryRequest           createDirectoryRequest = 71;
-  optional CreateFileRequest                createFileRequest = 72;
-  optional LookupFileRequest                lookupFileRequest = 73;
-  optional ListStatusRequest                listStatusRequest = 74;
-  optional AddAclRequest                    addAclRequest = 75;
-  optional RemoveAclRequest                 removeAclRequest = 76;
-  optional SetAclRequest                    setAclRequest = 77;
-  optional GetAclRequest                    getAclRequest = 78;
+  optional GetFileStatusRequest             getFileStatusRequest           = 70;
+  optional CreateDirectoryRequest           createDirectoryRequest         = 71;
+  optional CreateFileRequest                createFileRequest              = 72;
+  optional LookupFileRequest                lookupFileRequest              = 73;
+  optional ListStatusRequest                listStatusRequest              = 74;
+  optional AddAclRequest                    addAclRequest                  = 75;
+  optional RemoveAclRequest                 removeAclRequest               = 76;
+  optional SetAclRequest                    setAclRequest                  = 77;
+  optional GetAclRequest                    getAclRequest                  = 78;
 
-  optional PurgeKeysRequest                 purgeKeysRequest = 81;
+  optional PurgeKeysRequest                 purgeKeysRequest               = 81;
 
-  optional UpdateGetS3SecretRequest         updateGetS3SecretRequest = 82;
-  optional ListMultipartUploadsRequest      listMultipartUploadsRequest = 83;
+  optional UpdateGetS3SecretRequest         updateGetS3SecretRequest       = 82;
+  optional ListMultipartUploadsRequest      listMultipartUploadsRequest    = 83;
 
-  optional ListTrashRequest                 listTrashRequest = 91;
-  optional RecoverTrashRequest              RecoverTrashRequest = 92;
+  optional ListTrashRequest                 listTrashRequest               = 91;
+  optional RecoverTrashRequest              RecoverTrashRequest            = 92;
+
+  optional RevokeS3SecretRequest            RevokeS3SecretRequest          = 93;
+
 
   // Database option
   optional CreateDatabaseRequest            createDatabaseRequest = 111;
@@ -1577,10 +1583,12 @@ message DBUpdatesRequest {
 
 message ServiceListResponse {
 
-  repeated ServiceInfo serviceInfo = 2;
-  // When security is enabled, return SCM CA certificate to Ozone client
-  // to set up gRPC TLS for client to authenticate server(DN).
-  optional string caCertificate = 3;
+    repeated ServiceInfo serviceInfo = 2;
+    // When security is enabled, return SCM CA certificate to Ozone client
+    // to set up gRPC TLS for client to authenticate server(DN).
+    optional string caCertificate = 3;
+
+    repeated string caCerts = 4;
 }
 
 message DBUpdatesResponse {
@@ -1746,6 +1754,10 @@ message GetS3SecretRequest {
 
 message GetS3SecretResponse {
   required S3Secret s3Secret = 2;
+}
+
+message RevokeS3SecretRequest {
+    required string kerberosID = 1;
 }
 
 /**

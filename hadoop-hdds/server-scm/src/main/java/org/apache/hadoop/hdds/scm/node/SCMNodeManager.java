@@ -37,6 +37,7 @@ import org.apache.hadoop.hdds.scm.VersionInfo;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
+import org.apache.hadoop.hdds.scm.ha.SCMContext;
 import org.apache.hadoop.hdds.scm.net.NetworkTopology;
 import org.apache.hadoop.hdds.scm.node.states.NodeAlreadyExistsException;
 import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
@@ -57,6 +58,7 @@ import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.ozone.protocol.commands.SetNodeOperationalStateCommand;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.ratis.protocol.exceptions.NotLeaderException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -108,13 +110,14 @@ public class SCMNodeManager implements NodeManager {
       new ConcurrentHashMap<>();
   private final int numPipelinesPerMetadataVolume;
   private final int heavyNodeCriteria;
+  private final SCMContext scmContext;
 
   /**
    * Constructs SCM machine Manager.
    */
   public SCMNodeManager(OzoneConfiguration conf,
       SCMStorageConfig scmStorageConfig, EventPublisher eventPublisher,
-      NetworkTopology networkTopology) {
+      NetworkTopology networkTopology, SCMContext scmContext) {
     this.nodeStateManager = new NodeStateManager(conf, eventPublisher);
     this.version = VersionInfo.getLatestVersion();
     this.commandQueue = new CommandQueue();
@@ -140,6 +143,7 @@ public class SCMNodeManager implements NodeManager {
             ScmConfigKeys.OZONE_SCM_PIPELINE_PER_METADATA_VOLUME_DEFAULT);
     String dnLimit = conf.get(ScmConfigKeys.OZONE_DATANODE_PIPELINE_LIMIT);
     this.heavyNodeCriteria = dnLimit == null ? 0 : Integer.parseInt(dnLimit);
+    this.scmContext = scmContext;
   }
 
   private void registerMXBean() {
@@ -409,13 +413,19 @@ public class SCMNodeManager implements NodeManager {
   }
 
   /**
-   * If the operational state or expiry reported in the datanode heartbeat do
-   * not match those store in SCM, queue a command to update the state persisted
-   * on the datanode. Additionally, ensure the datanodeDetails stored in SCM
-   * match those reported in the heartbeat.
-   * This method should only be called when processing the
-   * heartbeat, and for a registered node, the information stored in SCM is the
-   * source of truth.
+   * This method should only be called when processing the heartbeat.
+   *
+   * On leader SCM, for a registered node, the information stored in SCM is
+   * the source of truth. If the operational state or expiry reported in the
+   * datanode heartbeat do not match those store in SCM, queue a command to
+   * update the state persisted on the datanode. Additionally, ensure the
+   * datanodeDetails stored in SCM match those reported in the heartbeat.
+   *
+   * On follower SCM, datanode notifies follower SCM its latest operational
+   * state or expiry via heartbeat. If the operational state or expiry
+   * reported in the datanode heartbeat do not match those stored in SCM,
+   * just update the state in follower SCM accordingly.
+   *
    * @param reportedDn The DatanodeDetails taken from the node heartbeat.
    * @throws NodeNotFoundException
    */
@@ -423,18 +433,37 @@ public class SCMNodeManager implements NodeManager {
       throws NodeNotFoundException {
     NodeStatus scmStatus = getNodeStatus(reportedDn);
     if (opStateDiffers(reportedDn, scmStatus)) {
-      LOG.info("Scheduling a command to update the operationalState " +
-          "persisted on {} as the reported value does not " +
-          "match the value stored in SCM ({}, {})",
-          reportedDn,
-          scmStatus.getOperationalState(),
-          scmStatus.getOpStateExpiryEpochSeconds());
+      if (scmContext.isLeader()) {
+        LOG.info("Scheduling a command to update the operationalState " +
+                "persisted on {} as the reported value does not " +
+                "match the value stored in SCM ({}, {})",
+            reportedDn,
+            scmStatus.getOperationalState(),
+            scmStatus.getOpStateExpiryEpochSeconds());
 
-      onMessage(new CommandForDatanode(reportedDn.getUuid(),
-          new SetNodeOperationalStateCommand(
-              Time.monotonicNow(), scmStatus.getOperationalState(),
-              scmStatus.getOpStateExpiryEpochSeconds())
-      ), null);
+        try {
+          SCMCommand<?> command = new SetNodeOperationalStateCommand(
+              Time.monotonicNow(),
+              scmStatus.getOperationalState(),
+              scmStatus.getOpStateExpiryEpochSeconds());
+          command.setTerm(scmContext.getTermOfLeader());
+          addDatanodeCommand(reportedDn.getUuid(), command);
+        } catch (NotLeaderException nle) {
+          LOG.warn("Skip sending SetNodeOperationalStateCommand,"
+              + " since current SCM is not leader.", nle);
+          return;
+        }
+      } else {
+        LOG.info("Update the operationalState saved in follower SCM " +
+                "for {} as the reported value does not " +
+                "match the value stored in SCM ({}, {})",
+            reportedDn,
+            scmStatus.getOperationalState(),
+            scmStatus.getOpStateExpiryEpochSeconds());
+
+        setNodeOperationalState(reportedDn, reportedDn.getPersistedOpState(),
+            reportedDn.getPersistedOpStateExpiryEpochSec());
+      }
     }
     DatanodeDetails scmDnd = nodeStateManager.getNode(reportedDn);
     scmDnd.setPersistedOpStateExpiryEpochSec(

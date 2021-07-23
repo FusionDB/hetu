@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.om.request.tablet;
 
 import org.apache.hadoop.hdds.client.ContainerBlockID;
+import org.apache.hadoop.hdds.client.StandaloneReplicationConfig;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
@@ -128,12 +129,12 @@ public class TestOMTabletRequest {
     when(ozoneManager.getKeyManager()).thenReturn(keyManager);
 
     Pipeline pipeline = Pipeline.newBuilder()
-        .setState(Pipeline.PipelineState.OPEN)
-        .setId(PipelineID.randomId())
-        .setType(HddsProtos.ReplicationType.STAND_ALONE)
-        .setFactor(HddsProtos.ReplicationFactor.ONE)
-        .setNodes(new ArrayList<>())
-        .build();
+            .setState(Pipeline.PipelineState.OPEN)
+            .setId(PipelineID.randomId())
+            .setReplicationConfig(
+                    new StandaloneReplicationConfig(HddsProtos.ReplicationFactor.ONE))
+            .setNodes(new ArrayList<>())
+            .build();
 
     AllocatedBlock allocatedBlock =
         new AllocatedBlock.Builder()

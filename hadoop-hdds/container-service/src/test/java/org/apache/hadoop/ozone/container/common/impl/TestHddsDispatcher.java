@@ -51,7 +51,7 @@ import org.apache.hadoop.ozone.container.common.volume.MutableVolumeSet;
 import org.apache.hadoop.ozone.container.keyvalue.ChunkLayoutTestInfo;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainer;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
-import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.ozone.test.GenericTestUtils;
 
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.junit.Assert;
@@ -101,7 +101,8 @@ public class TestHddsDispatcher {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.set(HDDS_DATANODE_DIR_KEY, testDir);
     DatanodeDetails dd = randomDatanodeDetails();
-    MutableVolumeSet volumeSet = new MutableVolumeSet(dd.getUuidString(), conf);
+    MutableVolumeSet volumeSet = new MutableVolumeSet(dd.getUuidString(), conf,
+        null);
 
     try {
       UUID scmId = UUID.randomUUID();
@@ -130,7 +131,7 @@ public class TestHddsDispatcher {
       }
       HddsDispatcher hddsDispatcher = new HddsDispatcher(
           conf, containerSet, volumeSet, handlers, context, metrics, null);
-      hddsDispatcher.setScmId(scmId.toString());
+      hddsDispatcher.setClusterId(scmId.toString());
       ContainerCommandResponseProto responseOne = hddsDispatcher
           .dispatch(getWriteChunkRequest(dd.getUuidString(), 1L, 1L), null);
       Assert.assertEquals(ContainerProtos.Result.SUCCESS,
@@ -277,7 +278,7 @@ public class TestHddsDispatcher {
   private HddsDispatcher createDispatcher(DatanodeDetails dd, UUID scmId,
       OzoneConfiguration conf) throws IOException {
     ContainerSet containerSet = new ContainerSet();
-    VolumeSet volumeSet = new MutableVolumeSet(dd.getUuidString(), conf);
+    VolumeSet volumeSet = new MutableVolumeSet(dd.getUuidString(), conf, null);
     DatanodeStateMachine stateMachine = Mockito.mock(
         DatanodeStateMachine.class);
     StateContext context = Mockito.mock(StateContext.class);
@@ -294,7 +295,7 @@ public class TestHddsDispatcher {
 
     HddsDispatcher hddsDispatcher = new HddsDispatcher(
         conf, containerSet, volumeSet, handlers, context, metrics, null);
-    hddsDispatcher.setScmId(scmId.toString());
+    hddsDispatcher.setClusterId(scmId.toString());
     return hddsDispatcher;
   }
 

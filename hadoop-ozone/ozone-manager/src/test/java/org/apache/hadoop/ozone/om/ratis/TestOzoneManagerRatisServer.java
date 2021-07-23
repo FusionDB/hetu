@@ -28,10 +28,12 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.utils.TransactionInfo;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.OMCertificateClient;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.common.ha.ratis.RatisSnapshotInfo;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.ha.OMNodeDetails;
@@ -40,7 +42,7 @@ import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
-import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.ozone.test.GenericTestUtils;
 import org.apache.ratis.protocol.RaftGroupId;
 import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.ratis.statemachine.SnapshotInfo;
@@ -108,7 +110,7 @@ public class TestOzoneManagerRatisServer {
     omMetadataManager = new OmMetadataManagerImpl(ozoneConfiguration);
     when(ozoneManager.getMetadataManager()).thenReturn(omMetadataManager);
     initialTermIndex = TermIndex.valueOf(0, 0);
-    OMRatisSnapshotInfo omRatisSnapshotInfo = new OMRatisSnapshotInfo();
+    RatisSnapshotInfo omRatisSnapshotInfo = new RatisSnapshotInfo();
     when(ozoneManager.getSnapshotInfo()).thenReturn(omRatisSnapshotInfo);
     secConfig = new SecurityConfig(conf);
     certClient = new OMCertificateClient(secConfig);
@@ -146,7 +148,7 @@ public class TestOzoneManagerRatisServer {
         snapshotInfo.getTerm(), snapshotInfo.getIndex() + 100);
 
     omMetadataManager.getTransactionInfoTable().put(TRANSACTION_INFO_KEY,
-        new OMTransactionInfo.Builder()
+        new TransactionInfo.Builder()
             .setCurrentTerm(snapshotInfo.getTerm())
             .setTransactionIndex(snapshotInfo.getIndex() + 100)
             .build());

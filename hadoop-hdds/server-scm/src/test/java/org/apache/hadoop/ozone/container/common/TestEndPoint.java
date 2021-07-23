@@ -55,7 +55,7 @@ import org.apache.hadoop.ozone.container.ozoneimpl.ContainerController;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.container.replication.ReplicationServer.ReplicationConfig;
 import org.apache.hadoop.ozone.protocol.commands.CommandStatus;
-import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.ozone.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Time;
 
@@ -186,8 +186,8 @@ public class TestEndPoint {
 
       // Now change server scmId, so datanode scmId  will be
       // different from SCM server response scmId
-      String newScmId = UUID.randomUUID().toString();
-      scmServerImpl.setScmId(newScmId);
+      String newClusterId = UUID.randomUUID().toString();
+      scmServerImpl.setClusterId(newClusterId);
       rpcEndPoint.setState(EndpointStateMachine.EndPointStates.GETVERSION);
       newState = versionTask.call();
       Assert.assertEquals(EndpointStateMachine.EndPointStates.SHUTDOWN,
@@ -195,11 +195,9 @@ public class TestEndPoint {
       List<HddsVolume> volumesList = ozoneContainer.getVolumeSet()
           .getFailedVolumesList();
       Assert.assertTrue(volumesList.size() == 1);
-      File expectedScmDir = new File(volumesList.get(0).getHddsRootDir(),
-          scmServerImpl.getScmId());
-      Assert.assertTrue(logCapturer.getOutput().contains("expected scm " +
-          "directory " + expectedScmDir.getAbsolutePath() + " does not " +
-          "exist"));
+      Assert.assertTrue(logCapturer.getOutput()
+          .contains("org.apache.hadoop.ozone.common" +
+              ".InconsistentStorageStateException: Mismatched ClusterIDs"));
       Assert.assertTrue(ozoneContainer.getVolumeSet().getVolumesList().size()
           == 0);
       Assert.assertTrue(ozoneContainer.getVolumeSet().getFailedVolumesList()
@@ -467,7 +465,7 @@ public class TestEndPoint {
 
     // Create a datanode state machine for stateConext used by endpoint task
     try (DatanodeStateMachine stateMachine = new DatanodeStateMachine(
-        randomDatanodeDetails(), conf, null, null);
+        randomDatanodeDetails(), conf, null, null, null);
         EndpointStateMachine rpcEndPoint =
             createEndpoint(conf, scmAddress, rpcTimeout)) {
       HddsProtos.DatanodeDetailsProto datanodeDetailsProto =

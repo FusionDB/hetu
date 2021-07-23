@@ -18,16 +18,17 @@
 package org.apache.hadoop.ozone.hm;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.Auditable;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.KeyValueUtil;
-import org.apache.hadoop.ozone.om.helpers.OmOzoneAclMap;
 import org.apache.hadoop.ozone.om.helpers.WithObjectID;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DatabaseInfo;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -228,7 +229,7 @@ public final class HmDatabaseArgs extends WithObjectID implements Auditable {
     private long quotaInNamespace;
     private long usedNamespace;
     private Map<String, String> metadata;
-    private OmOzoneAclMap aclMap;
+    private List<OzoneAcl> acls;
     private long objectID;
     private long updateID;
 

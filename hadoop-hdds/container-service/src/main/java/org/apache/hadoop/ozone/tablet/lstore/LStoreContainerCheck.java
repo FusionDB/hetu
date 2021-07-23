@@ -46,7 +46,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Arrays;
 
-import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB_TYPE_LEVELDB;
+import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB_TYPE_CSTORE;
+import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB_TYPE_LSTORE;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB_TYPE_ROCKSDB;
 
 /**
@@ -185,8 +186,9 @@ public class LStoreContainerCheck {
     }
 
     dbType = onDiskContainerData.getContainerDBType();
-    if (!dbType.equals(CONTAINER_DB_TYPE_ROCKSDB) &&
-        !dbType.equals(CONTAINER_DB_TYPE_LEVELDB)) {
+    if (!dbType.equals(CONTAINER_DB_TYPE_ROCKSDB) ||
+        !dbType.equals(CONTAINER_DB_TYPE_LSTORE) ||
+        !dbType.equals(CONTAINER_DB_TYPE_CSTORE)) {
       String errStr = "Unknown DBType [" + dbType
           + "] in Container File for  [" + containerID + "]";
       throw new IOException(errStr);

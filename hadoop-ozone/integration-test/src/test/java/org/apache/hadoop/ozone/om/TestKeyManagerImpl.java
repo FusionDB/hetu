@@ -37,6 +37,7 @@ import java.util.UUID;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.client.BlockID;
+import org.apache.hadoop.hdds.client.RatisReplicationConfig;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -49,6 +50,8 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes;
+import org.apache.hadoop.hdds.scm.ha.MockSCMHAManager;
+import org.apache.hadoop.hdds.scm.ha.SCMContext;
 import org.apache.hadoop.hdds.scm.net.NetworkTopology;
 import org.apache.hadoop.hdds.scm.net.NetworkTopologyImpl;
 import org.apache.hadoop.hdds.scm.net.NodeSchema;
@@ -85,8 +88,8 @@ import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.ozone.security.acl.OzoneObjInfo;
 import org.apache.hadoop.ozone.security.acl.RequestContext;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.ozone.test.GenericTestUtils;
+import org.apache.ozone.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.base.Optional;
@@ -170,6 +173,8 @@ public class TestKeyManagerImpl {
     SCMConfigurator configurator = new SCMConfigurator();
     configurator.setScmNodeManager(nodeManager);
     configurator.setNetworkTopology(clusterMap);
+    configurator.setSCMHAManager(MockSCMHAManager.getInstance(true));
+    configurator.setScmContext(SCMContext.emptyContext());
     scm = TestUtils.getScm(conf, configurator);
     scm.start();
     scm.exitSafeMode();
@@ -605,7 +610,7 @@ public class TestKeyManagerImpl {
         .setStoreType(OzoneObj.StoreType.OZONE)
         .build();
 
-
+    prefixManager.addAcl(ozPrefix1, ozAcl1);
     List<OzoneAcl> ozAclGet = prefixManager.getAcl(ozPrefix1);
     Assert.assertEquals(1, ozAclGet.size());
     Assert.assertEquals(ozAcl1, ozAclGet.get(0));
@@ -613,7 +618,7 @@ public class TestKeyManagerImpl {
     // get acl with invalid prefix name
     exception.expect(OMException.class);
     exception.expectMessage("Invalid prefix name");
-    Assert.assertEquals(null, ozAcl1);
+    prefixManager.getAcl(ozInvalidPrefix);
 
     // set acl with invalid prefix name
     List<OzoneAcl> ozoneAcls = new ArrayList<OzoneAcl>();
@@ -754,11 +759,15 @@ public class TestKeyManagerImpl {
     Assume.assumeFalse(nodeList.get(0).equals(nodeList.get(2)));
     // create a pipeline using 3 datanodes
     Pipeline pipeline = scm.getPipelineManager().createPipeline(
-        ReplicationType.RATIS, ReplicationFactor.THREE, nodeList);
+        new RatisReplicationConfig(ReplicationFactor.THREE), nodeList);
     List<OmKeyLocationInfo> locationInfoList = new ArrayList<>();
+    List<OmKeyLocationInfo> locationList =
+        keySession.getKeyInfo().getLatestVersionLocations().getLocationList();
+    Assert.assertEquals(1, locationList.size());
     locationInfoList.add(
         new OmKeyLocationInfo.Builder().setPipeline(pipeline)
-            .setBlockID(new BlockID(1L, 1L)).build());
+            .setBlockID(new BlockID(locationList.get(0).getContainerID(),
+                locationList.get(0).getLocalID())).build());
     keyArgs.setLocationInfoList(locationInfoList);
 
     keyManager.commitKey(keyArgs, keySession.getId());
@@ -1245,8 +1254,8 @@ public class TestKeyManagerImpl {
     return Pipeline.newBuilder()
         .setState(Pipeline.PipelineState.OPEN)
         .setId(PipelineID.randomId())
-        .setType(ReplicationType.RATIS)
-        .setFactor(ReplicationFactor.THREE)
+        .setReplicationConfig(
+            new RatisReplicationConfig(ReplicationFactor.THREE))
         .setNodes(new ArrayList<>())
         .build();
   }

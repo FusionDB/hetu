@@ -23,6 +23,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,6 +32,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
@@ -41,6 +43,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Sets;
 import com.google.protobuf.Descriptors.Descriptor;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.CRLStatusReport;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.CommandStatus.Status;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.CommandStatusReportsProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerAction;
@@ -87,6 +90,9 @@ public class StateContext {
   @VisibleForTesting
   static final String INCREMENTAL_CONTAINER_REPORT_PROTO_NAME =
       IncrementalContainerReportProto.getDescriptor().getFullName();
+  @VisibleForTesting
+  static final String CRL_STATUS_REPORT_PROTO_NAME =
+      CRLStatusReport.getDescriptor().getFullName();
   // Accepted types of reports that can be queued to incrementalReportsQueue
   private static final Set<String> ACCEPTED_INCREMENTAL_REPORT_TYPE_SET =
       Sets.newHashSet(COMMAND_STATUS_REPORTS_PROTO_NAME,
@@ -105,6 +111,7 @@ public class StateContext {
   private final AtomicReference<GeneratedMessage> containerReports;
   private final AtomicReference<GeneratedMessage> nodeReport;
   private final AtomicReference<GeneratedMessage> pipelineReports;
+  private final AtomicReference<GeneratedMessage> crlStatusReport;
   // Incremental reports are queued in the map below
   private final Map<InetSocketAddress, List<GeneratedMessage>>
       incrementalReportsQueue;
@@ -116,16 +123,28 @@ public class StateContext {
   private final AtomicLong threadPoolNotAvailableCount;
 
   /**
+   * term of latest leader SCM, extract from SCMCommand.
+   *
+   * Only leader SCM (both latest and stale) can send out SCMCommand,
+   * which will save its term in SCMCommand. Since latest leader SCM
+   * always has the highest term, term can be used to detect SCMCommand
+   * from stale leader SCM.
+   *
+   * For non-HA mode, term of SCMCommand will be 0.
+   */
+  private Optional<Long> termOfLeaderSCM = Optional.empty();
+
+  /**
    * Starting with a 2 sec heartbeat frequency which will be updated to the
    * real HB frequency after scm registration. With this method the
    * initial registration could be significant faster.
    */
-  private AtomicLong heartbeatFrequency = new AtomicLong(2000);
+  private final AtomicLong heartbeatFrequency = new AtomicLong(2000);
 
   /**
    * Constructs a StateContext.
    *
-   * @param conf   - Configration
+   * @param conf   - Configuration
    * @param state  - State
    * @param parent Parent State Machine
    */
@@ -141,6 +160,7 @@ public class StateContext {
     containerReports = new AtomicReference<>();
     nodeReport = new AtomicReference<>();
     pipelineReports = new AtomicReference<>();
+    crlStatusReport = new AtomicReference<>();
     endpoints = new HashSet<>();
     containerActions = new HashMap<>();
     pipelineActions = new HashMap<>();
@@ -254,6 +274,8 @@ public class StateContext {
           incrementalReportsQueue.get(endpoint).add(report);
         }
       }
+    } else if(reportType.equals(CRL_STATUS_REPORT_PROTO_NAME)) {
+      crlStatusReport.set(report);
     } else {
       throw new IllegalArgumentException(
           "Unidentified report message type: " + reportType);
@@ -329,6 +351,10 @@ public class StateContext {
       nonIncrementalReports.add(report);
     }
     report = pipelineReports.get();
+    if (report != null) {
+      nonIncrementalReports.add(report);
+    }
+    report = crlStatusReport.get();
     if (report != null) {
       nonIncrementalReports.add(report);
     }
@@ -586,6 +612,65 @@ public class StateContext {
   }
 
   /**
+   * After startup, datanode needs detect latest leader SCM before handling
+   * any SCMCommand, so that it won't be disturbed by stale leader SCM.
+   *
+   * The rule is: after majority SCMs are in HEARTBEAT state and has
+   * heard from leader SCMs (commandQueue is not empty), datanode will init
+   * termOfLeaderSCM with the max term found in commandQueue.
+   *
+   * The init process also works for non-HA mode. In that case, term of all
+   * SCMCommands will be 0.
+   */
+  private void initTermOfLeaderSCM() {
+    // only init once
+    if (termOfLeaderSCM.isPresent()) {
+      return;
+    }
+
+    AtomicInteger scmNum = new AtomicInteger(0);
+    AtomicInteger activeScmNum = new AtomicInteger(0);
+
+    getParent().getConnectionManager().getValues()
+        .forEach(endpoint -> {
+          if (endpoint.isPassive()) {
+            return;
+          }
+          scmNum.incrementAndGet();
+          if (endpoint.getState()
+              == EndpointStateMachine.EndPointStates.HEARTBEAT) {
+            activeScmNum.incrementAndGet();
+          }
+        });
+
+    // majority SCMs should be in HEARTBEAT state.
+    if (activeScmNum.get() < scmNum.get() / 2 + 1) {
+      return;
+    }
+
+    // if commandQueue is not empty, init termOfLeaderSCM
+    // with the largest term found in commandQueue
+    commandQueue.stream()
+        .mapToLong(SCMCommand::getTerm)
+        .max()
+        .ifPresent(term -> termOfLeaderSCM = Optional.of(term));
+  }
+
+  /**
+   * monotonically increase termOfLeaderSCM.
+   * Always record the latest term that has seen.
+   */
+  private void updateTermOfLeaderSCM(SCMCommand<?> command) {
+    if (!termOfLeaderSCM.isPresent()) {
+      LOG.error("should init termOfLeaderSCM before update it.");
+      return;
+    }
+
+    termOfLeaderSCM = Optional.of(
+        Long.max(termOfLeaderSCM.get(), command.getTerm()));
+  }
+
+  /**
    * Returns the next command or null if it is empty.
    *
    * @return SCMCommand or Null.
@@ -593,7 +678,26 @@ public class StateContext {
   public SCMCommand getNextCommand() {
     lock.lock();
     try {
-      return commandQueue.poll();
+      initTermOfLeaderSCM();
+      if (!termOfLeaderSCM.isPresent()) {
+        return null;      // not ready yet
+      }
+
+      while (true) {
+        SCMCommand<?> command = commandQueue.poll();
+        if (command == null) {
+          return null;
+        }
+
+        updateTermOfLeaderSCM(command);
+        if (command.getTerm() == termOfLeaderSCM.get()) {
+          return command;
+        }
+
+        LOG.warn("Detect and drop a SCMCommand {} from stale leader SCM," +
+            " stale term {}, latest term {}.",
+            command, command.getTerm(), termOfLeaderSCM.get());
+      }
     } finally {
       lock.unlock();
     }
@@ -712,5 +816,10 @@ public class StateContext {
   @VisibleForTesting
   public GeneratedMessage getPipelineReports() {
     return pipelineReports.get();
+  }
+
+  @VisibleForTesting
+  public GeneratedMessage getCRLStatusReport() {
+    return crlStatusReport.get();
   }
 }
