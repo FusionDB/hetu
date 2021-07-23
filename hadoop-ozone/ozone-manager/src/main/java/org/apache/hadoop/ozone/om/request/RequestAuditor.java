@@ -26,6 +26,8 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.AuditAction;
 import org.apache.hadoop.ozone.audit.AuditMessage;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+     .TabletArgs   ;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .KeyArgs;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .UserInfo;
@@ -54,6 +56,13 @@ public interface RequestAuditor {
   Map<String, String> buildVolumeAuditMap(String volume);
 
   /**
+   * Build auditMap with specified database.
+   * @param database
+   * @return auditMap.
+   */
+  Map<String, String> buildDatabaseAuditMap(String database);
+
+  /**
    * Build auditMap for KeyArgs.
    * @param keyArgs
    */
@@ -72,6 +81,30 @@ public interface RequestAuditor {
           (keyArgs.getType() != null) ? keyArgs.getType().name() : null);
       auditMap.put(OzoneConsts.REPLICATION_FACTOR,
           (keyArgs.getFactor() != null) ? keyArgs.getFactor().name() : null);
+      return auditMap;
+    }
+  }
+
+  /**
+   * Build auditMap for TabletArgs.
+   * @param tabletArgs
+   */
+  default Map<String, String> buildTabletArgsAuditMap(TabletArgs tabletArgs) {
+
+    if (tabletArgs == null) {
+      return new HashMap<>(0);
+    } else {
+      Map< String, String > auditMap = new LinkedHashMap<>();
+      auditMap.put(OzoneConsts.DATABASE, tabletArgs.getDatabaseName());
+      auditMap.put(OzoneConsts.TABLE, tabletArgs.getTableName());
+      auditMap.put(OzoneConsts.PARTITION, tabletArgs.getPartitionName());
+      auditMap.put(OzoneConsts.TABLET, tabletArgs.getTabletName());
+      auditMap.put(OzoneConsts.DATA_SIZE,
+              String.valueOf(tabletArgs.getDataSize()));
+      auditMap.put(OzoneConsts.REPLICATION_TYPE,
+              (tabletArgs.getType() != null) ? tabletArgs.getType().name() : null);
+      auditMap.put(OzoneConsts.REPLICATION_FACTOR,
+              (tabletArgs.getFactor() != null) ? tabletArgs.getFactor().name() : null);
       return auditMap;
     }
   }

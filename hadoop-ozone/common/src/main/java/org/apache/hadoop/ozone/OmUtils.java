@@ -475,6 +475,18 @@ public final class OmUtils {
   }
 
   /**
+   * Verify database name is a valid DNS name.
+   */
+  public static void validateDatabaseName(String databaseName) throws OMException {
+    try {
+      HddsClientUtils.verifyResourceName(databaseName);
+    } catch (IllegalArgumentException e) {
+      throw new OMException("Invalid database name: " + databaseName,
+              OMException.ResultCodes.INVALID_DATABASE_NAME);
+    }
+  }
+
+  /**
    * Verify bucket name is a valid DNS name.
    */
   public static void validateBucketName(String bucketName)
@@ -484,6 +496,32 @@ public final class OmUtils {
     } catch (IllegalArgumentException e) {
       throw new OMException("Invalid bucket name: " + bucketName,
           OMException.ResultCodes.INVALID_BUCKET_NAME);
+    }
+  }
+
+  /**
+   * Verify table name is a valid DNS name.
+   */
+  public static void validateTableName(String tableName)
+          throws OMException {
+    try {
+      HddsClientUtils.verifyResourceName(tableName);
+    } catch (IllegalArgumentException e) {
+      throw new OMException("Invalid table name: " + tableName,
+              OMException.ResultCodes.INVALID_TABLE_NAME);
+    }
+  }
+
+  /**
+   * Verify partition name is a valid DNS name.
+   */
+  public static void validatePartitionName(String partitionName)
+          throws OMException {
+    try {
+      HddsClientUtils.verifyResourceName(partitionName);
+    } catch (IllegalArgumentException e) {
+      throw new OMException("Invalid partition name: " + partitionName,
+              OMException.ResultCodes.INVALID_PARTITION_NAME);
     }
   }
 
@@ -561,6 +599,19 @@ public final class OmUtils {
     } catch (IllegalArgumentException e) {
       throw new OMException(e.getMessage(),
               OMException.ResultCodes.INVALID_KEY_NAME);
+    }
+  }
+
+  /**
+   * Verify tablet name is a valid name.
+   */
+  public static void validateTabletName(String tabletName)
+          throws OMException {
+    try {
+      HddsClientUtils.verifyTabletName(tabletName);
+    } catch (IllegalArgumentException e) {
+      throw new OMException(e.getMessage(),
+              OMException.ResultCodes.INVALID_TABLET_NAME);
     }
   }
 
@@ -664,5 +715,41 @@ public final class OmUtils {
     }
 
     return keyName;
+  }
+
+  /**
+   * Normalize the tablet name. This method used {@link Path} to
+   * normalize the tablet name.
+   * @param tabletName
+   * @param preserveTrailingSlash - if True preserves trailing slash, else
+   * does not preserve.
+   * @return normalized key name.
+   */
+  @SuppressFBWarnings("DMI_HARDCODED_ABSOLUTE_FILENAME")
+  public static String normalizeTablet(String tabletName,
+                                    boolean preserveTrailingSlash) {
+    // For empty strings do nothing, just return the same.
+    // Reason to check here is the Paths method fail with NPE.
+    if (!StringUtils.isBlank(tabletName)) {
+      String normalizedTabletName;
+      if (tabletName.startsWith(OM_KEY_PREFIX)) {
+        normalizedTabletName = new Path(tabletName).toUri().getPath();
+      } else {
+        normalizedTabletName = new Path(OM_KEY_PREFIX + tabletName)
+                .toUri().getPath();
+      }
+      if (!tabletName.equals(normalizedTabletName)) {
+        LOG.debug("Normalized tabletName {} to {} ", tabletName,
+                normalizedTabletName.substring(1));
+      }
+      if (preserveTrailingSlash) {
+        if (tabletName.endsWith("/")) {
+          return normalizedTabletName.substring(1) + "/";
+        }
+      }
+      return normalizedTabletName.substring(1);
+    }
+
+    return tabletName;
   }
 }

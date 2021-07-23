@@ -213,6 +213,23 @@ public final class HddsClientUtils {
   }
 
   /**
+   * verifies that tablet name is a valid name.
+   *
+   * @param tabletName tablet name to be validated
+   *
+   * @throws IllegalArgumentException
+   */
+  public static void verifyTabletName(String tabletName) {
+    if (tabletName == null) {
+      throw new IllegalArgumentException("tablet name is null");
+    }
+    if(!OzoneConsts.TABLET_NAME_ILLEGAL_CHARACTER_CHECK_REGEX
+            .matcher(tabletName).matches()){
+      throw new IllegalArgumentException("Invalid tablet name: " + tabletName);
+    }
+  }
+
+  /**
    * Checks that object parameters passed as reference is not null.
    *
    * @param references Array of object references to be checked.

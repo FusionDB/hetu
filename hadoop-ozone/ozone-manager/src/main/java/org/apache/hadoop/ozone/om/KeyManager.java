@@ -29,6 +29,7 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
+import org.apache.hadoop.ozone.om.helpers.OmTabletInfo;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.fs.OzoneManagerFS;
 import org.apache.hadoop.hdds.utils.BackgroundService;
@@ -273,4 +274,10 @@ public interface KeyManager extends OzoneManagerFS, IOzoneAcl {
    * @param key
    */
   void refresh(OmKeyInfo key) throws IOException;
+
+  /**
+   * Refresh the tablet location information by get latest info from SCM.
+   * @param tablet
+   */
+  void refresh(OmTabletInfo tablet) throws IOException;;
 }

@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.om.request;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -28,20 +29,28 @@ import java.util.UUID;
 import com.google.common.base.Optional;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
+import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.ozone.hm.meta.table.ColumnKey;
+import org.apache.hadoop.ozone.hm.meta.table.ColumnSchema;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
+import org.apache.hadoop.ozone.om.helpers.OmPartitionInfo;
+import org.apache.hadoop.ozone.om.helpers.OmTableInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+        .SetDatabasePropertyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .MultipartUploadAbortRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -71,6 +80,9 @@ import org.apache.hadoop.ozone.storage.proto.OzoneManagerStorageProtos;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
+import org.jetbrains.annotations.NotNull;
+
+import static java.util.stream.Collectors.toList;
 
 /**
  * Helper class to test OMClientRequest classes.
@@ -94,6 +106,22 @@ public final class TestOMRequestUtils {
     addVolumeToDB(volumeName, omMetadataManager);
 
     addBucketToDB(volumeName, bucketName, omMetadataManager);
+  }
+
+
+  /**
+   * Add's database and table creation entries to OM DB.
+   * @param databaseName
+   * @param tableName
+   * @param omMetadataManager
+   * @throws Exception
+   */
+  public static void addDatabaseAndTableToDB(String databaseName,
+                                            String tableName, OMMetadataManager omMetadataManager) throws Exception {
+
+    addDatabaseToDB(databaseName, omMetadataManager);
+
+    addMetaTableToDB(databaseName, tableName, omMetadataManager);
   }
 
   @SuppressWarnings("parameterNumber")
@@ -400,6 +428,61 @@ public final class TestOMRequestUtils {
   }
 
   /**
+   * Add table creation entry to OM DB.
+   * @param databaseName
+   * @param tableName
+   * @param omMetadataManager
+   * @throws Exception
+   */
+  public static void addMetaTableToDB(String databaseName, String tableName,
+                                   OMMetadataManager omMetadataManager) throws Exception {
+
+    ColumnSchema col1 = new ColumnSchema(
+            "city",
+            "varchar(4)",
+            "varcher",
+            0,
+            "",
+            "",
+            "用户",
+            true);
+
+    ColumnSchema col2 = new ColumnSchema(
+            "id",
+            "Long",
+            "Long",
+            1,
+            "",
+            "",
+            "ID",
+            true);
+
+    OzoneManagerProtocolProtos.TableInfo.PartitionsProto partitionsProto = getPartitionsProto();
+
+    OmTableInfo omTableInfo = OmTableInfo.newBuilder()
+            .setDatabaseName(databaseName)
+            .setTableName(tableName)
+            .setColumns(Arrays.asList(col1, col2))
+            .setPartitions(partitionsProto)
+            .setColumnKey(ColumnKey.fromProtobuf(getColumnKeyProto()))
+            .setCreationTime(Time.now())
+            .setUsedCapacityInBytes(0L).build();
+
+    // Add to cache.
+    omMetadataManager.getMetaTable().addCacheEntry(
+            new CacheKey<>(omMetadataManager.getMetaTableKey(databaseName, tableName)),
+            new CacheValue<>(Optional.of(omTableInfo), 1L));
+  }
+
+  @NotNull
+  public static OzoneManagerProtocolProtos.TableInfo.PartitionsProto getPartitionsProto() {
+    return OzoneManagerProtocolProtos.TableInfo.PartitionsProto.newBuilder()
+            .addAllFields(Arrays.asList("city"))
+            .setPartitionType(OzoneManagerProtocolProtos.TableInfo.Type.RANGE)
+            .build();
+  }
+
+  /**
    * Add bucket creation entry to OM DB.
    * @param volumeName
    * @param bucketName
@@ -421,6 +504,79 @@ public final class TestOMRequestUtils {
         new CacheValue<>(Optional.of(omBucketInfo), 1L));
   }
 
+  /**
+   * Add MetaTable creation entry to OM DB.
+   * @param databaseName
+   * @param tableName
+   * @param omMetadataManager
+   * @param usedCapacityInBytes
+   * @throws Exception
+   */
+  public static void addMetaTableToDB(String databaseName, String tableName,
+                                   OMMetadataManager omMetadataManager, long usedCapacityInBytes) throws Exception {
+
+    ColumnSchema col1 = new ColumnSchema(
+            "city",
+            "varchar(4)",
+            "varcher",
+            0,
+            "",
+            "",
+            "用户",
+            true);
+
+    ColumnSchema col2 = new ColumnSchema(
+            "id",
+            "Long",
+            "Long",
+            1,
+            "",
+            "",
+            "ID",
+            true);
+
+    OzoneManagerProtocolProtos.TableInfo.PartitionsProto partitionsProto = getPartitionsProto();
+
+    OmTableInfo omTableInfo = OmTableInfo.newBuilder()
+            .setDatabaseName(databaseName)
+            .setTableName(tableName)
+            .setColumns(Arrays.asList(col1, col2))
+            .setColumnKey(ColumnKey.fromProtobuf(getColumnKeyProto()))
+            .setPartitions(partitionsProto)
+            .setCreationTime(Time.now())
+            .setDistributedKey(getDistributedKeyProto())
+            .setUsedCapacityInBytes(usedCapacityInBytes).build();
+
+    // Add to cache.
+    omMetadataManager.getMetaTable().addCacheEntry(
+            new CacheKey<>(omMetadataManager.getMetaTableKey(databaseName, tableName)),
+            new CacheValue<>(Optional.of(omTableInfo), 1L));
+  }
+
+  public static void addPartitionToDB(String databaseName, String tableName,
+                                      String partitionName, OMMetadataManager omMetadataManager) {
+    OmPartitionInfo omPartitionInfo = OmPartitionInfo.newBuilder()
+            .setStorageType(StorageType.DISK)
+            .setDatabaseName(databaseName)
+            .setTableName(tableName)
+            .setPartitionName(partitionName)
+            .setSizeInBytes(0L)
+            .setBuckets(10)
+            .setRows(0)
+            .setIsVersionEnabled(false)
+            .setUpdateID(1)
+            .setObjectID(1)
+            .setCreationTime(System.currentTimeMillis())
+            .setModificationTime(System.currentTimeMillis())
+            .setPartitionValue("20100120")
+            .build();
+
+    // Add to cache
+    omMetadataManager.getPartitionTable().addCacheEntry(
+            new CacheKey<>(omMetadataManager.getPartitionKey(databaseName, tableName, partitionName)),
+            new CacheValue<>(Optional.of(omPartitionInfo), 1L));
+  }
+
   public static OzoneManagerProtocolProtos.OMRequest createBucketRequest(
       String bucketName, String volumeName, boolean isVersionEnabled,
       OzoneManagerProtocolProtos.StorageTypeProto storageTypeProto) {
@@ -439,6 +595,120 @@ public final class TestOMRequestUtils {
         .setCmdType(OzoneManagerProtocolProtos.Type.CreateBucket)
         .setClientId(UUID.randomUUID().toString()).build();
   }
+
+  public static OzoneManagerProtocolProtos.OMRequest createTableRequest(
+          String tableName, String databaseName, boolean isVersionEnabled,
+          OzoneManagerProtocolProtos.StorageTypeProto storageTypeProto) {
+
+    List<OzoneManagerProtocolProtos.ColumnSchemaProto> columnSchemaProtos = getColumnSchemaProtos();
+
+    OzoneManagerProtocolProtos.TableInfo.PartitionsProto partitionsProto = getPartitionsProto();
+
+    OzoneManagerProtocolProtos.TableInfo.ColumnKeyProto columnKeyProto = getColumnKeyProto();
+
+    OzoneManagerProtocolProtos.TableInfo.DistributedKeyProto distributedKeyProto = getDistributedKeyProto();
+
+    OzoneManagerProtocolProtos.TableInfo tableInfo =
+            OzoneManagerProtocolProtos.TableInfo.newBuilder()
+                    .setTableName(tableName)
+                    .setDatabaseName(databaseName)
+                    .setIsVersionEnabled(isVersionEnabled)
+                    .setStorageType(storageTypeProto)
+                    .setStorageEngine(OzoneManagerProtocolProtos.TableInfo.StorageEngineProto.LSTORE)
+                    .setNumReplicas(3)
+                    .setPartitions(partitionsProto)
+                    .addAllColumns(columnSchemaProtos)
+                    .setColumnKey(columnKeyProto)
+                    .setDistributedKey(distributedKeyProto)
+                    .addAllMetadata(getMetadataList()).build();
+    OzoneManagerProtocolProtos.CreateTableRequest.Builder req =
+            OzoneManagerProtocolProtos.CreateTableRequest.newBuilder();
+    req.setTableInfo(tableInfo);
+    return OzoneManagerProtocolProtos.OMRequest.newBuilder()
+            .setCreateTableRequest(req)
+            .setCmdType(OzoneManagerProtocolProtos.Type.CreateTable)
+            .setClientId(UUID.randomUUID().toString()).build();
+  }
+
+  @NotNull
+  public static OzoneManagerProtocolProtos.TableInfo.DistributedKeyProto getDistributedKeyProto() {
+    return OzoneManagerProtocolProtos.TableInfo.DistributedKeyProto
+            .newBuilder()
+            .setDistributedKeyType(OzoneManagerProtocolProtos.TableInfo.Type.HASH)
+            .setBuckets(8)
+            .addAllFields(Arrays.asList("id"))
+            .build();
+  }
+
+  @NotNull
+  public static OzoneManagerProtocolProtos.TableInfo.ColumnKeyProto getColumnKeyProto() {
+    return OzoneManagerProtocolProtos.TableInfo.ColumnKeyProto
+            .newBuilder()
+            .setColumnKeyType(OzoneManagerProtocolProtos.TableInfo.ColumnKeyTypeProto.PRIMARY_KEY)
+            .addAllFields(Arrays.asList("id"))
+            .build();
+  }
+
+  public static OzoneManagerProtocolProtos.OMRequest createPartitionRequest(
+          String tableName, String databaseName, String partitionName, boolean isVersionEnabled,
+          OzoneManagerProtocolProtos.StorageTypeProto storageTypeProto) {
+
+    OzoneManagerProtocolProtos.PartitionInfo partitionInfo =
+            OzoneManagerProtocolProtos.PartitionInfo.newBuilder()
+            .setDatabaseName(databaseName)
+            .setTableName(tableName)
+            .setIsVersionEnabled(isVersionEnabled)
+            .setPartitionName(partitionName)
+            .setPartitionValue("201010")
+            .setStorageType(storageTypeProto)
+            .setBuckets(8)
+            .setRows(0)
+            .setSizeInBytes(0L)
+            .addAllMetadata(getMetadataList())
+            .build();
+
+    OzoneManagerProtocolProtos.CreatePartitionRequest.Builder req =
+            OzoneManagerProtocolProtos.CreatePartitionRequest.newBuilder();
+    req.setPartitionInfo(partitionInfo);
+    return OzoneManagerProtocolProtos.OMRequest.newBuilder()
+            .setCreatePartitionRequest(req)
+            .setCmdType(OzoneManagerProtocolProtos.Type.CreatePartition)
+            .setClientId(UUID.randomUUID().toString()).build();
+  }
+
+  @NotNull
+  public static List<OzoneManagerProtocolProtos.ColumnSchemaProto> getColumnSchemaProtos() {
+    List<ColumnSchema> columnSchemaList = getColumnSchemas();
+    return columnSchemaList.stream()
+            .map(proto -> ColumnSchema.toProtobuf(proto))
+            .collect(toList());
+  }
+
+  @NotNull
+  public static List<ColumnSchema> getColumnSchemas() {
+    ColumnSchema col1 = new ColumnSchema(
+            "city",
+            "varchar(4)",
+            "varcher",
+            0,
+            "",
+            "",
+            "用户",
+            true);
+
+    ColumnSchema col2 = new ColumnSchema(
+            "id",
+            "Long",
+            "Long",
+            1,
+            "",
+            "",
+            "ID",
+            true);
+
+    return Arrays.asList(col1, col2);
+  }
+
 
   public static List< HddsProtos.KeyValue> getMetadataList() {
     List<HddsProtos.KeyValue> metadataList = new ArrayList<>();
@@ -481,6 +751,36 @@ public final class TestOMRequestUtils {
   }
 
   /**
+   * Add user to user table.
+   * @param databaseName
+   * @param ownerName
+   * @param omMetadataManager
+   * @throws Exception
+   */
+  public static void addDbUserToDB(String databaseName, String ownerName,
+                                 OMMetadataManager omMetadataManager) throws Exception {
+
+    OzoneManagerStorageProtos.PersistedUserDatabaseInfo userDatabaseInfo =
+            omMetadataManager.getUserTableDb().get(
+                    omMetadataManager.getUserKey(ownerName));
+    if (userDatabaseInfo == null) {
+      userDatabaseInfo = OzoneManagerStorageProtos.PersistedUserDatabaseInfo
+              .newBuilder()
+              .addDatabaseNames(databaseName)
+              .setObjectID(1)
+              .setUpdateID(1)
+              .build();
+    } else {
+      userDatabaseInfo = userDatabaseInfo.toBuilder()
+              .addDatabaseNames(databaseName)
+              .build();
+    }
+
+    omMetadataManager.getUserTableDb().put(
+            omMetadataManager.getUserKey(ownerName), userDatabaseInfo);
+  }
+
+  /**
    * Create OMRequest for set volume property request with owner set.
    * @param volumeName
    * @param newOwner
@@ -516,6 +816,57 @@ public final class TestOMRequestUtils {
     return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
         .setCmdType(OzoneManagerProtocolProtos.Type.SetVolumeProperty)
         .setSetVolumePropertyRequest(setVolumePropertyRequest).build();
+  }
+
+  /**
+   * Create OMRequest for set volume property request with owner set.
+   * @param databaseName
+   * @param newOwner
+   * @return OMRequest
+   */
+  public static OMRequest createSetDatabasePropertyRequest(String databaseName,
+                                                         String newOwner) {
+    OzoneManagerProtocolProtos.DatabaseInfo databaseInfo = OzoneManagerProtocolProtos.DatabaseInfo.newBuilder()
+            .setName(databaseName)
+            .setOwnerName(newOwner)
+            .setAdminName(newOwner)
+            .setModificationTime(Time.now())
+            .build();
+
+    SetDatabasePropertyRequest setDatabasePropertyRequest = SetDatabasePropertyRequest.newBuilder()
+            .setDatabaseInfo(databaseInfo)
+            .build();
+
+    return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
+            .setCmdType(OzoneManagerProtocolProtos.Type.SetDatabaseProperty)
+            .setSetDatabasePropertyRequest(setDatabasePropertyRequest).build();
+  }
+
+  /**
+   * Create OMRequest for set volume property request with quota set.
+   * @param databaseName
+   * @param quotaInBytes
+   * @param quotaInNamespace
+   * @return OMRequest
+   */
+  public static OMRequest createSetDatabasePropertyRequest(String databaseName,
+                                                         long quotaInBytes, long quotaInNamespace) {
+    OzoneManagerProtocolProtos.DatabaseInfo databaseInfo = OzoneManagerProtocolProtos.DatabaseInfo.newBuilder().setName(databaseName)
+            .setQuotaInBytes(quotaInBytes)
+            .setQuotaInNamespace(quotaInNamespace)
+            .setModificationTime(Time.now())
+            .setAdminName(databaseName)
+            .setOwnerName(databaseName)
+            .setName(databaseName)
+            .build();
+
+    SetDatabasePropertyRequest setDatabasePropertyRequest = SetDatabasePropertyRequest.newBuilder()
+                    .setDatabaseInfo(databaseInfo)
+                    .build();
+
+    return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
+            .setCmdType(OzoneManagerProtocolProtos.Type.SetDatabaseProperty)
+            .setSetDatabasePropertyRequest(setDatabasePropertyRequest).build();
   }
 
   public static OMRequest createVolumeAddAclRequest(String volumeName,
@@ -811,6 +1162,23 @@ public final class TestOMRequestUtils {
   }
 
   /**
+   * Add the table information to OzoneManager DB and cache.
+   * @param omMetadataManager
+   * @param omTableInfo
+   * @throws IOException
+   */
+  public static void addMetaTableToOM(OMMetadataManager omMetadataManager,
+                                   OmTableInfo omTableInfo) throws IOException {
+    String dbTableKey =
+            omMetadataManager.getMetaTableKey(omTableInfo.getDatabaseName(),
+                    omTableInfo.getTableName());
+    omMetadataManager.getMetaTable().put(dbTableKey, omTableInfo);
+    omMetadataManager.getMetaTable().addCacheEntry(
+            new CacheKey<>(dbTableKey),
+            new CacheValue<>(Optional.of(omTableInfo), 1L));
+  }
+
+  /**
    * Add the Volume information to OzoneManager DB and Cache.
    * @param omMetadataManager
    * @param omVolumeArgs
@@ -824,5 +1192,72 @@ public final class TestOMRequestUtils {
     omMetadataManager.getVolumeTable().addCacheEntry(
         new CacheKey<>(dbVolumeKey),
         new CacheValue<>(Optional.of(omVolumeArgs), 1L));
+  }
+
+  /**
+   * Add the Database information to OzoneManager DB and Cache.
+   * @param omMetadataManager
+   * @param hmDatabaseArgs
+   * @throws IOException
+   */
+  public static void addDatabaseToOM(OMMetadataManager omMetadataManager,
+                                   HmDatabaseArgs hmDatabaseArgs) throws IOException {
+    String dbDatabaseKey =
+            omMetadataManager.getDatabaseKey(hmDatabaseArgs.getName());
+    omMetadataManager.getDatabaseTable().put(dbDatabaseKey, hmDatabaseArgs);
+    omMetadataManager.getDatabaseTable().addCacheEntry(
+            new CacheKey<>(dbDatabaseKey),
+            new CacheValue<>(Optional.of(hmDatabaseArgs), 1L));
+  }
+
+  public static void addDatabaseToDB(String databaseName,
+                                     OMMetadataManager omMetadataManager) throws Exception {
+    addDatabaseToDB(databaseName, UUID.randomUUID().toString(), omMetadataManager);
+  }
+
+  /**
+   * Add databsae creation entry to OM DB.
+   * @param databaseName
+   * @param ownerName
+   * @param omMetadataManager
+   * @throws Exception
+   */
+  public static void addDatabaseToDB(String databaseName, String ownerName,
+                                   OMMetadataManager omMetadataManager) throws Exception {
+    HmDatabaseArgs hmDatabaseArgs =
+            HmDatabaseArgs.newBuilder().setCreationTime(Time.now())
+                    .setName(databaseName).setAdminName(ownerName)
+                    .setOwnerName(ownerName).setQuotaInBytes(Long.MAX_VALUE)
+                    .setQuotaInNamespace(10000L).build();
+    omMetadataManager.getDatabaseTable().put(
+            omMetadataManager.getVolumeKey(databaseName), hmDatabaseArgs);
+
+    // Add to cache.
+    omMetadataManager.getDatabaseTable().addCacheEntry(
+            new CacheKey<>(omMetadataManager.getVolumeKey(databaseName)),
+            new CacheValue<>(Optional.of(hmDatabaseArgs), 1L));
+  }
+
+  /**
+   * Add database creation entry to OM DB.
+   * @param databaseName
+   * @param omMetadataManager
+   * @param quotaInBytes
+   * @throws Exception
+   */
+  public static void addDatabaseToDB(String databaseName,
+                                   OMMetadataManager omMetadataManager, long quotaInBytes) throws Exception {
+    HmDatabaseArgs hmDatabaseArgs =
+            HmDatabaseArgs.newBuilder().setCreationTime(Time.now())
+                    .setName(databaseName).setAdminName(databaseName)
+                    .setOwnerName(databaseName).setQuotaInBytes(quotaInBytes)
+                    .setQuotaInNamespace(10000L).build();
+    omMetadataManager.getDatabaseTable().put(
+            omMetadataManager.getDatabaseKey(databaseName), hmDatabaseArgs);
+
+    // Add to cache.
+    omMetadataManager.getDatabaseTable().addCacheEntry(
+            new CacheKey<>(omMetadataManager.getDatabaseKey(databaseName)),
+            new CacheValue<>(Optional.of(hmDatabaseArgs), 1L));
   }
 }

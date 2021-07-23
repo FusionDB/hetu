@@ -49,6 +49,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INVALID_KEY_NAME;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INVALID_TABLET_NAME;
 
 /**
  * OMClientRequest provides methods which every write OM request should
@@ -341,6 +342,12 @@ public abstract class OMClientRequest implements RequestAuditor {
     return auditMap;
   }
 
+  @Override
+  public Map<String, String> buildDatabaseAuditMap(String database) {
+    Map<String, String> auditMap = new LinkedHashMap<>();
+    auditMap.put(OzoneConsts.DATABASE, database);
+    return auditMap;
+  }
 
   public static String validateAndNormalizeKey(boolean enableFileSystemPaths,
       String keyName) throws OMException {
@@ -349,6 +356,21 @@ public abstract class OMClientRequest implements RequestAuditor {
     } else {
       return keyName;
     }
+  }
+
+  public static String validateAndNormalizeTablet(boolean enableFileSystemPaths,
+                                               String tabletName) throws OMException {
+    if (enableFileSystemPaths) {
+      return validateAndNormalizeTablet(tabletName);
+    } else {
+      return tabletName;
+    }
+  }
+
+  public static String validateAndNormalizeTablet(String keyName)
+          throws OMException {
+    String normalizedKeyName = OmUtils.normalizeTablet(keyName, false);
+    return isValidTabletPath(normalizedKeyName);
   }
 
 
@@ -396,6 +418,47 @@ public abstract class OMClientRequest implements RequestAuditor {
       return path;
     } else {
       throw new OMException("Invalid KeyPath " + path, INVALID_KEY_NAME);
+    }
+  }
+
+  /**
+   * Whether the pathname is valid.  Check tablet names which contain a
+   * ":", ".", "..", "//", "". If it has any of these characters throws
+   * OMException, else return the path.
+   */
+  private static String isValidTabletPath(String path) throws OMException {
+    boolean isValid = true;
+
+    // If keyName is empty string throw error.
+    if (path.length() == 0) {
+      throw new OMException("Invalid tabletPath, empty tabletName" + path,
+              INVALID_TABLET_NAME);
+    } else if(path.startsWith("/")) {
+      isValid = false;
+    } else {
+      // Check for ".." "." ":" "/"
+      String[] components = StringUtils.split(path, '/');
+      for (int i = 0; i < components.length; i++) {
+        String element = components[i];
+        if (element.equals(".") ||
+                (element.contains(":")) ||
+                (element.contains("/") || element.equals(".."))) {
+          isValid = false;
+          break;
+        }
+
+        // The string may end with a /, but not have
+        // "//" in the middle.
+        if (element.isEmpty() && i != components.length - 1) {
+          isValid = false;
+        }
+      }
+    }
+
+    if (isValid) {
+      return path;
+    } else {
+      throw new OMException("Invalid tabletPath " + path, INVALID_TABLET_NAME);
     }
   }
 }

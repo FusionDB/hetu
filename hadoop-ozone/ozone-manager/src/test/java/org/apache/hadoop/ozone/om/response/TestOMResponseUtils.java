@@ -19,8 +19,17 @@
 
 package org.apache.hadoop.ozone.om.response;
 
+import org.apache.hadoop.hdds.protocol.StorageType;
+import org.apache.hadoop.ozone.hm.meta.table.ColumnKey;
+import org.apache.hadoop.ozone.hm.meta.table.ColumnSchema;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
+import org.apache.hadoop.ozone.om.helpers.OmPartitionInfo;
+import org.apache.hadoop.ozone.om.helpers.OmTableInfo;
+import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.util.Time;
+
+import java.util.Arrays;
 
 /**
  * Helper class to test OMClientResponse classes.
@@ -38,4 +47,34 @@ public final class TestOMResponseUtils {
 
   }
 
+  public static OmTableInfo createTable(String database, String table) {
+    return OmTableInfo.newBuilder().setDatabaseName(database).setTableName(table)
+            .setColumns(TestOMRequestUtils.getColumnSchemas())
+            .setStorageEngine(OzoneManagerProtocolProtos.TableInfo.StorageEngineProto.LSTORE)
+            .setNumReplicas(3)
+            .setPartitions(TestOMRequestUtils.getPartitionsProto())
+            .setDistributedKey(TestOMRequestUtils.getDistributedKeyProto())
+            .setColumnKey(ColumnKey.fromProtobuf(TestOMRequestUtils.getColumnKeyProto()))
+            .setCreationTime(Time.now()).setIsVersionEnabled(true).addMetadata(
+                    "key1", "value1").build();
+
+  }
+
+  public static OmPartitionInfo createPartition(String databaseName, String tableName,
+                                                String partitionName, String partitionValue) {
+      return OmPartitionInfo.newBuilder()
+              .setDatabaseName(databaseName)
+              .setTableName(tableName)
+              .setPartitionName(partitionName)
+              .setPartitionValue(partitionValue)
+              .setSizeInBytes(-1)
+              .setRows(0L)
+              .setBuckets(8)
+              .setCreationTime(Time.now())
+              .setModificationTime(Time.now())
+              .setStorageType(StorageType.DISK)
+              .setIsVersionEnabled(true)
+              .addMetadata("key1", "value1")
+              .build();
+  }
 }

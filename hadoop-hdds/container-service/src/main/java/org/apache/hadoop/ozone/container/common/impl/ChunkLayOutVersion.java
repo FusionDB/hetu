@@ -51,6 +51,13 @@ public enum ChunkLayOutVersion {
         ChunkInfo info) {
       return new File(chunkDir, blockID.getLocalID() + ".block");
     }
+  },
+  FILE_PER_SEGMENT(3, "One file per segment") {
+    @Override
+    public File getChunkFile(File chunkDir, BlockID blockID,
+                             ChunkInfo info) {
+      return new File(chunkDir, blockID.getLocalID() + ".segment");
+    }
   };
 
   private static final Logger LOG =
