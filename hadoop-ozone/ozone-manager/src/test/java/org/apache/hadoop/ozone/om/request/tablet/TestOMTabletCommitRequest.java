@@ -21,16 +21,17 @@ package org.apache.hadoop.ozone.om.request.tablet;
 
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
-import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
+import org.apache.hadoop.ozone.om.helpers.OmTabletInfo;
+import org.apache.hadoop.ozone.om.helpers.OmTabletLocationInfo;
+import org.apache.hadoop.ozone.om.helpers.OmTabletInfo;
 import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
-import org.apache.hadoop.ozone.om.request.key.OMKeyCommitRequest;
-import org.apache.hadoop.ozone.om.request.key.TestOMKeyRequest;
+import org.apache.hadoop.ozone.om.request.tablet.OMTabletCommitRequest;
+import org.apache.hadoop.ozone.om.request.tablet.TestOMTabletRequest;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CommitKeyRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyArgs;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyLocation;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CommitTabletRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.TabletArgs;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.TabletLocation;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -43,165 +44,165 @@ import java.util.stream.Collectors;
 /**
  * Class tests OMKeyCommitRequest class.
  */
-public class TestOMTabletCommitRequest extends TestOMKeyRequest {
+public class TestOMTabletCommitRequest extends TestOMTabletRequest {
 
   @Test
   public void testPreExecute() throws Exception {
-    doPreExecute(createCommitKeyRequest());
+    doPreExecute(createCommitTabletRequest());
   }
 
   @Test
   public void testValidateAndUpdateCache() throws Exception {
 
     OMRequest modifiedOmRequest =
-        doPreExecute(createCommitKeyRequest());
+        doPreExecute(createCommitTabletRequest());
 
-    OMKeyCommitRequest omKeyCommitRequest =
-        new OMKeyCommitRequest(modifiedOmRequest);
+    OMTabletCommitRequest omTabletCommitRequest =
+        new OMTabletCommitRequest(modifiedOmRequest);
 
-    TestOMRequestUtils.addVolumeAndBucketToDB(volumeName, bucketName,
-        omMetadataManager);
+    TestOMRequestUtils.addDatabaseAndTableToDB(databaseName, tableName, omMetadataManager);
+    TestOMRequestUtils.addPartitionToDB(databaseName, tableName, partitionName, omMetadataManager);
 
-    TestOMRequestUtils.addKeyToTable(true, volumeName, bucketName, keyName,
+    TestOMRequestUtils.addTabletToTable(true, databaseName, tableName, partitionName, tabletName,
         clientID, replicationType, replicationFactor, omMetadataManager);
 
-    String ozoneKey = omMetadataManager.getOzoneKey(volumeName, bucketName,
-        keyName);
+    String ozoneTablet = omMetadataManager.getOzoneTablet(databaseName, tableName,
+        partitionName, tabletName);
 
-    // Key should not be there in key table, as validateAndUpdateCache is
+    // Tablet should not be there in tablet table, as validateAndUpdateCache is
     // still not called.
-    OmKeyInfo omKeyInfo = omMetadataManager.getKeyTable().get(ozoneKey);
+    OmTabletInfo omTabletInfo = omMetadataManager.getTabletTable().get(ozoneTablet);
 
-    Assert.assertNull(omKeyInfo);
+    Assert.assertNull(omTabletInfo);
 
     OMClientResponse omClientResponse =
-        omKeyCommitRequest.validateAndUpdateCache(ozoneManager,
+        omTabletCommitRequest.validateAndUpdateCache(ozoneManager,
         100L, ozoneManagerDoubleBufferHelper);
 
     Assert.assertEquals(OzoneManagerProtocolProtos.Status.OK,
         omClientResponse.getOMResponse().getStatus());
 
-    // Entry should be deleted from openKey Table.
-    omKeyInfo = omMetadataManager.getOpenKeyTable().get(ozoneKey);
-    Assert.assertNull(omKeyInfo);
+    // Entry should be deleted from openTablet Table.
+    omTabletInfo = omMetadataManager.getOpenTabletTable().get(ozoneTablet);
+    Assert.assertNull(omTabletInfo);
 
-    // Now entry should be created in key Table.
-    omKeyInfo = omMetadataManager.getKeyTable().get(ozoneKey);
+    // Now entry should be created in tablet Table.
+    omTabletInfo = omMetadataManager.getTabletTable().get(ozoneTablet);
 
-    Assert.assertNotNull(omKeyInfo);
+    Assert.assertNotNull(omTabletInfo);
 
     // Check modification time
 
-    CommitKeyRequest commitKeyRequest = modifiedOmRequest.getCommitKeyRequest();
-    Assert.assertEquals(commitKeyRequest.getKeyArgs().getModificationTime(),
-        omKeyInfo.getModificationTime());
+    CommitTabletRequest commitTabletRequest = modifiedOmRequest.getCommitTabletRequest();
+    Assert.assertEquals(commitTabletRequest.getTabletArgs().getModificationTime(),
+        omTabletInfo.getModificationTime());
 
     // Check block location.
-    List<OmKeyLocationInfo> locationInfoListFromCommitKeyRequest =
-        commitKeyRequest.getKeyArgs()
-        .getKeyLocationsList().stream().map(OmKeyLocationInfo::getFromProtobuf)
+    List<OmTabletLocationInfo> locationInfoListFromCommitTabletRequest =
+        commitTabletRequest.getTabletArgs()
+        .getTabletLocationsList().stream().map(OmTabletLocationInfo::getFromProtobuf)
         .collect(Collectors.toList());
 
-    Assert.assertEquals(locationInfoListFromCommitKeyRequest,
-        omKeyInfo.getLatestVersionLocations().getLocationList());
+    Assert.assertEquals(locationInfoListFromCommitTabletRequest,
+        omTabletInfo.getLatestVersionLocations().getLocationList());
 
   }
 
   @Test
-  public void testValidateAndUpdateCacheWithVolumeNotFound() throws Exception {
+  public void testValidateAndUpdateCacheWithDatabaseNotFound() throws Exception {
 
     OMRequest modifiedOmRequest =
-        doPreExecute(createCommitKeyRequest());
+        doPreExecute(createCommitTabletRequest());
 
-    OMKeyCommitRequest omKeyCommitRequest =
-        new OMKeyCommitRequest(modifiedOmRequest);
+    OMTabletCommitRequest omTabletCommitRequest =
+        new OMTabletCommitRequest(modifiedOmRequest);
 
-    String ozoneKey = omMetadataManager.getOzoneKey(volumeName, bucketName,
-        keyName);
+    String ozoneTablet = omMetadataManager.getOzoneTablet(databaseName, tableName, partitionName,
+        tabletName);
 
-    // Key should not be there in key table, as validateAndUpdateCache is
+    // Tablet should not be there in tablet table, as validateAndUpdateCache is
     // still not called.
-    OmKeyInfo omKeyInfo = omMetadataManager.getKeyTable().get(ozoneKey);
+    OmTabletInfo omTabletInfo = omMetadataManager.getTabletTable().get(ozoneTablet);
 
-    Assert.assertNull(omKeyInfo);
+    Assert.assertNull(omTabletInfo);
 
     OMClientResponse omClientResponse =
-        omKeyCommitRequest.validateAndUpdateCache(ozoneManager,
+        omTabletCommitRequest.validateAndUpdateCache(ozoneManager,
             100L, ozoneManagerDoubleBufferHelper);
 
-    Assert.assertEquals(OzoneManagerProtocolProtos.Status.VOLUME_NOT_FOUND,
+    Assert.assertEquals(OzoneManagerProtocolProtos.Status.DATABASE_NOT_FOUND,
         omClientResponse.getOMResponse().getStatus());
 
-    omKeyInfo = omMetadataManager.getKeyTable().get(ozoneKey);
+    omTabletInfo = omMetadataManager.getTabletTable().get(ozoneTablet);
 
-    Assert.assertNull(omKeyInfo);
+    Assert.assertNull(omTabletInfo);
   }
 
   @Test
-  public void testValidateAndUpdateCacheWithBucketNotFound() throws Exception {
+  public void testValidateAndUpdateCacheWithTableNotFound() throws Exception {
 
     OMRequest modifiedOmRequest =
-        doPreExecute(createCommitKeyRequest());
+        doPreExecute(createCommitTabletRequest());
 
-    OMKeyCommitRequest omKeyCommitRequest =
-        new OMKeyCommitRequest(modifiedOmRequest);
+    OMTabletCommitRequest omTabletCommitRequest =
+        new OMTabletCommitRequest(modifiedOmRequest);
 
 
-    TestOMRequestUtils.addVolumeToDB(volumeName, OzoneConsts.OZONE,
+    TestOMRequestUtils.addDatabaseToDB(databaseName, OzoneConsts.OZONE,
         omMetadataManager);
-    String ozoneKey = omMetadataManager.getOzoneKey(volumeName, bucketName,
-        keyName);
+    String ozoneTablet = omMetadataManager.getOzoneTablet(databaseName, tabletName,
+        partitionName, tabletName);
 
-    // Key should not be there in key table, as validateAndUpdateCache is
+    // Tablet should not be there in tablet table, as validateAndUpdateCache is
     // still not called.
-    OmKeyInfo omKeyInfo = omMetadataManager.getKeyTable().get(ozoneKey);
+    OmTabletInfo omTabletInfo = omMetadataManager.getTabletTable().get(ozoneTablet);
 
-    Assert.assertNull(omKeyInfo);
+    Assert.assertNull(omTabletInfo);
 
     OMClientResponse omClientResponse =
-        omKeyCommitRequest.validateAndUpdateCache(ozoneManager,
+        omTabletCommitRequest.validateAndUpdateCache(ozoneManager,
             100L, ozoneManagerDoubleBufferHelper);
 
-    Assert.assertEquals(OzoneManagerProtocolProtos.Status.BUCKET_NOT_FOUND,
+    Assert.assertEquals(OzoneManagerProtocolProtos.Status.TABLE_NOT_FOUND,
         omClientResponse.getOMResponse().getStatus());
 
-    omKeyInfo = omMetadataManager.getKeyTable().get(ozoneKey);
+    omTabletInfo = omMetadataManager.getTabletTable().get(ozoneTablet);
 
-    Assert.assertNull(omKeyInfo);
+    Assert.assertNull(omTabletInfo);
   }
 
   @Test
-  public void testValidateAndUpdateCacheWithKeyNotFound() throws Exception {
+  public void testValidateAndUpdateCacheWithPartitionNotFound() throws Exception {
 
     OMRequest modifiedOmRequest =
-        doPreExecute(createCommitKeyRequest());
+        doPreExecute(createCommitTabletRequest());
 
-    OMKeyCommitRequest omKeyCommitRequest =
-        new OMKeyCommitRequest(modifiedOmRequest);
+    OMTabletCommitRequest omTabletCommitRequest =
+        new OMTabletCommitRequest(modifiedOmRequest);
 
 
-    TestOMRequestUtils.addVolumeAndBucketToDB(volumeName, bucketName,
+    TestOMRequestUtils.addDatabaseAndTableToDB(databaseName, tableName,
         omMetadataManager);
 
-    String ozoneKey = omMetadataManager.getOzoneKey(volumeName, bucketName,
-        keyName);
+    String ozoneTablet = omMetadataManager.getOzoneTablet(databaseName, tableName,
+        partitionName, tabletName);
 
-    // Key should not be there in key table, as validateAndUpdateCache is
+    // Tablet should not be there in tablet table, as validateAndUpdateCache is
     // still not called.
-    OmKeyInfo omKeyInfo = omMetadataManager.getKeyTable().get(ozoneKey);
+    OmTabletInfo omTabletInfo = omMetadataManager.getTabletTable().get(ozoneTablet);
 
-    Assert.assertNull(omKeyInfo);
+    Assert.assertNull(omTabletInfo);
 
     OMClientResponse omClientResponse =
-        omKeyCommitRequest.validateAndUpdateCache(ozoneManager,
+        omTabletCommitRequest.validateAndUpdateCache(ozoneManager,
             100L, ozoneManagerDoubleBufferHelper);
 
-    Assert.assertEquals(OzoneManagerProtocolProtos.Status.KEY_NOT_FOUND,
+    Assert.assertEquals(OzoneManagerProtocolProtos.Status.PARTITION_NOT_FOUND,
         omClientResponse.getOMResponse().getStatus());
 
-    omKeyInfo = omMetadataManager.getKeyTable().get(ozoneKey);
+    omTabletInfo = omMetadataManager.getTabletTable().get(ozoneTablet);
 
-    Assert.assertNull(omKeyInfo);
+    Assert.assertNull(omTabletInfo);
   }
 
   /**
@@ -212,83 +213,86 @@ public class TestOMTabletCommitRequest extends TestOMKeyRequest {
    */
   private OMRequest doPreExecute(OMRequest originalOMRequest) throws Exception {
 
-    OMKeyCommitRequest omKeyCommitRequest =
-        new OMKeyCommitRequest(originalOMRequest);
+    OMTabletCommitRequest omTabletCommitRequest =
+        new OMTabletCommitRequest(originalOMRequest);
 
-    OMRequest modifiedOmRequest = omKeyCommitRequest.preExecute(ozoneManager);
+    OMRequest modifiedOmRequest = omTabletCommitRequest.preExecute(ozoneManager);
 
-    Assert.assertTrue(modifiedOmRequest.hasCommitKeyRequest());
-    KeyArgs originalKeyArgs =
-        originalOMRequest.getCommitKeyRequest().getKeyArgs();
-    KeyArgs modifiedKeyArgs =
-        modifiedOmRequest.getCommitKeyRequest().getKeyArgs();
-    verifyKeyArgs(originalKeyArgs, modifiedKeyArgs);
+    Assert.assertTrue(modifiedOmRequest.hasCommitTabletRequest());
+    TabletArgs originalTabletArgs =
+        originalOMRequest.getCommitTabletRequest().getTabletArgs();
+    TabletArgs modifiedTabletArgs =
+        modifiedOmRequest.getCommitTabletRequest().getTabletArgs();
+    verifyTabletArgs(originalTabletArgs, modifiedTabletArgs);
     return modifiedOmRequest;
   }
 
   /**
-   * Verify KeyArgs.
-   * @param originalKeyArgs
-   * @param modifiedKeyArgs
+   * Verify TabletArgs.
+   * @param originalTabletArgs
+   * @param modifiedTabletArgs
    */
-  private void verifyKeyArgs(KeyArgs originalKeyArgs, KeyArgs modifiedKeyArgs) {
+  private void verifyTabletArgs(TabletArgs originalTabletArgs, TabletArgs modifiedTabletArgs) {
 
     // Check modification time is set or not.
-    Assert.assertTrue(modifiedKeyArgs.getModificationTime() > 0);
-    Assert.assertTrue(originalKeyArgs.getModificationTime() == 0);
+    Assert.assertTrue(modifiedTabletArgs.getModificationTime() > 0);
+    Assert.assertTrue(originalTabletArgs.getModificationTime() == 0);
 
-    Assert.assertEquals(originalKeyArgs.getVolumeName(),
-        modifiedKeyArgs.getVolumeName());
-    Assert.assertEquals(originalKeyArgs.getBucketName(),
-        modifiedKeyArgs.getBucketName());
-    Assert.assertEquals(originalKeyArgs.getKeyName(),
-        modifiedKeyArgs.getKeyName());
-    Assert.assertEquals(originalKeyArgs.getDataSize(),
-        modifiedKeyArgs.getDataSize());
-    Assert.assertEquals(originalKeyArgs.getKeyLocationsList(),
-        modifiedKeyArgs.getKeyLocationsList());
-    Assert.assertEquals(originalKeyArgs.getType(),
-        modifiedKeyArgs.getType());
-    Assert.assertEquals(originalKeyArgs.getFactor(),
-        modifiedKeyArgs.getFactor());
+    Assert.assertEquals(originalTabletArgs.getDatabaseName(),
+        modifiedTabletArgs.getDatabaseName());
+    Assert.assertEquals(originalTabletArgs.getTableName(),
+        modifiedTabletArgs.getTableName());
+    Assert.assertEquals(originalTabletArgs.getPartitionName(),
+        modifiedTabletArgs.getPartitionName());
+    Assert.assertEquals(originalTabletArgs.getTabletName(),
+            modifiedTabletArgs.getTabletName());
+    Assert.assertEquals(originalTabletArgs.getDataSize(),
+        modifiedTabletArgs.getDataSize());
+    Assert.assertEquals(originalTabletArgs.getTabletLocationsList(),
+        modifiedTabletArgs.getTabletLocationsList());
+    Assert.assertEquals(originalTabletArgs.getType(),
+        modifiedTabletArgs.getType());
+    Assert.assertEquals(originalTabletArgs.getFactor(),
+        modifiedTabletArgs.getFactor());
   }
 
   /**
-   * Create OMRequest which encapsulates CommitKeyRequest.
+   * Create OMRequest which encapsulates CommitTabletRequest.
    */
-  private OMRequest createCommitKeyRequest() {
-    KeyArgs keyArgs =
-        KeyArgs.newBuilder().setDataSize(dataSize).setVolumeName(volumeName)
-            .setKeyName(keyName).setBucketName(bucketName)
-            .setType(replicationType).setFactor(replicationFactor)
-            .addAllKeyLocations(getKeyLocation()).build();
+  private OMRequest createCommitTabletRequest() {
+    TabletArgs tabletArgs =
+        TabletArgs.newBuilder().setDataSize(dataSize).setDatabaseName(databaseName)
+            .setTableName(tableName).setPartitionName(partitionName)
+            .setTabletName(tabletName).setType(replicationType)
+            .setFactor(replicationFactor)
+            .addAllTabletLocations(getTabletLocation()).build();
 
-    CommitKeyRequest commitKeyRequest =
-        CommitKeyRequest.newBuilder().setKeyArgs(keyArgs)
+    CommitTabletRequest commitTabletRequest =
+        CommitTabletRequest.newBuilder().setTabletArgs(tabletArgs)
             .setClientID(clientID).build();
 
     return OMRequest.newBuilder()
-        .setCmdType(OzoneManagerProtocolProtos.Type.CommitKey)
-        .setCommitKeyRequest(commitKeyRequest)
+        .setCmdType(OzoneManagerProtocolProtos.Type.CommitTablet)
+        .setCommitTabletRequest(commitTabletRequest)
         .setClientId(UUID.randomUUID().toString()).build();
   }
 
   /**
-   * Create KeyLocation list.
+   * Create TabletLocation list.
    */
-  private List<KeyLocation> getKeyLocation() {
-    List<KeyLocation> keyLocations = new ArrayList<>();
+  private List<TabletLocation> getTabletLocation() {
+    List<TabletLocation> tabletLocations = new ArrayList<>();
 
     for (int i=0; i < 5; i++) {
-      KeyLocation keyLocation =
-          KeyLocation.newBuilder()
+      TabletLocation tabletLocation =
+          TabletLocation.newBuilder()
               .setBlockID(HddsProtos.BlockID.newBuilder()
                   .setContainerBlockID(HddsProtos.ContainerBlockID.newBuilder()
                       .setContainerID(i+1000).setLocalID(i+100).build()))
               .setOffset(0).setLength(200).build();
-      keyLocations.add(keyLocation);
+      tabletLocations.add(tabletLocation);
     }
-    return keyLocations;
+    return tabletLocations;
   }
 
 }

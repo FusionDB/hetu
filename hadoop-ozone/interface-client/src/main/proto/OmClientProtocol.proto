@@ -125,6 +125,7 @@ enum Type {
   DeleteTablets = 143;
   AllocateTablet = 144;
   ListTablets = 145;
+  CommitTablet = 146;
 }
 
 message OMRequest {

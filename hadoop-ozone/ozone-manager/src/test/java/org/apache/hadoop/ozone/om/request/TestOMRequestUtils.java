@@ -40,14 +40,7 @@ import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
 import org.apache.hadoop.ozone.hm.meta.table.ColumnKey;
 import org.apache.hadoop.ozone.hm.meta.table.ColumnSchema;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
-import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
-import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
-import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
-import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
-import org.apache.hadoop.ozone.om.helpers.OmPartitionInfo;
-import org.apache.hadoop.ozone.om.helpers.OmTableInfo;
-import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
-import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.*;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
         .SetDatabasePropertyRequest;
@@ -80,6 +73,7 @@ import org.apache.hadoop.ozone.storage.proto.OzoneManagerStorageProtos;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
+import org.checkerframework.checker.nullness.Opt;
 import org.jetbrains.annotations.NotNull;
 
 import static java.util.stream.Collectors.toList;
@@ -184,8 +178,32 @@ public final class TestOMRequestUtils {
   }
 
   /**
-   * Add key entry to KeyTable. if openKeyTable flag is true, add's entries
-   * to openKeyTable, else add's it to keyTable.
+   * Add tablet entry to tabletTable. if openTabletTable flag is true, add's entries
+   * to openTabletTable, else add's it to tabletTable.
+   * @param openTabletTable
+   * @param databaseName
+   * @param tableName
+   * @param partitionName
+   * @param tabletName
+   * @param clientID
+   * @param replicationType
+   * @param replicationFactor
+   * @param omMetadataManager
+   * @throws Exception
+   */
+  @SuppressWarnings("parameterNumber")
+  public static void addTabletToTable(boolean openTabletTable, String databaseName,
+                                      String tableName, String partitionName, String tabletName,
+                                      long clientID, HddsProtos.ReplicationType replicationType,
+                                      HddsProtos.ReplicationFactor replicationFactor,
+                                      OMMetadataManager omMetadataManager) throws Exception {
+    addTabletToTable(openTabletTable, false, databaseName, tableName, partitionName, tabletName,
+            clientID, replicationType, replicationFactor, 0L, omMetadataManager);
+  }
+
+  /**
+   * Add key entry to tabletTable. if openTabletTable flag is true, add's entries
+   * to openTabletTable, else add's it to tabletTable.
    * @throws Exception
    */
   @SuppressWarnings("parameternumber")
@@ -201,6 +219,27 @@ public final class TestOMRequestUtils {
     omKeyInfo.appendNewBlocks(locationList, false);
 
     addKeyToTable(openKeyTable, addToCache, omKeyInfo, clientID, trxnLogIndex,
+            omMetadataManager);
+  }
+
+  /**
+   * Add tablet entry to tabletTable. if openTabletTable flag is true, add's entries
+   * to openTabletTable, else add's it to tabletTable.
+   * @throws Exception
+   */
+  @SuppressWarnings("parameternumber")
+  public static void addTabletToTable(boolean openTabletTable, boolean addToCache,
+                                   String databaseName, String tableName, String partitionName,
+                                   String tabletName, long clientID, HddsProtos.ReplicationType replicationType,
+                                   HddsProtos.ReplicationFactor replicationFactor, long trxnLogIndex,
+                                   OMMetadataManager omMetadataManager,
+                                   List<OmTabletLocationInfo> locationList) throws Exception {
+
+    OmTabletInfo omTabletInfo = createOmTabletInfo(databaseName, tableName, partitionName, tabletName,
+            replicationType, replicationFactor, trxnLogIndex);
+    omTabletInfo.appendNewBlocks(locationList, false);
+
+    addTabletToTable(openTabletTable, addToCache, omTabletInfo, clientID, trxnLogIndex,
             omMetadataManager);
   }
 
@@ -221,6 +260,26 @@ public final class TestOMRequestUtils {
 
     addKeyToTable(openKeyTable, addToCache, omKeyInfo, clientID, trxnLogIndex,
         omMetadataManager);
+  }
+
+  /**
+   * Add tablet entry to tabletTable. if openTabletTable flag is true, add's entries
+   * to openTabletTable, else add's it to tabletTable.
+   * @throws Exception
+   */
+  @SuppressWarnings("parameternumber")
+  public static void addTabletToTable(boolean openTabletTable, boolean addToCache,
+                                   String databaseName, String tableName, String partitionName,
+                                   String tabletName, long clientID,
+                                   HddsProtos.ReplicationType replicationType,
+                                   HddsProtos.ReplicationFactor replicationFactor, long trxnLogIndex,
+                                   OMMetadataManager omMetadataManager) throws Exception {
+
+    OmTabletInfo omTabletInfo = createOmTabletInfo(databaseName, tableName, partitionName,
+            tabletName, replicationType, replicationFactor, trxnLogIndex);
+
+    addTabletToTable(openTabletTable, addToCache, omTabletInfo, clientID, trxnLogIndex,
+            omMetadataManager);
   }
 
   /**
@@ -255,6 +314,42 @@ public final class TestOMRequestUtils {
             new CacheValue<>(Optional.of(omKeyInfo), trxnLogIndex));
       }
       omMetadataManager.getKeyTable().put(ozoneKey, omKeyInfo);
+    }
+  }
+
+  /**
+   * Add tablet entry to tabletTable. if openTabletTable flag is true, add's entries
+   * to openTabletTable, else add's it to tabletTable.
+   * @throws Exception
+   */
+  public static void addTabletToTable(boolean openTabletTable, boolean addToCache,
+                                   OmTabletInfo omTabletInfo,  long clientID,
+                                   long trxnLogIndex,
+                                   OMMetadataManager omMetadataManager)
+          throws Exception {
+
+    String databaseName = omTabletInfo.getDatabaseName();
+    String tableName = omTabletInfo.getTableName();
+    String partitionName = omTabletInfo.getPartitionName();
+    String tabletName = omTabletInfo.getTabletName();
+
+    if (openTabletTable) {
+      String ozoneTablet = omMetadataManager.getOpenTablet(databaseName, tableName,
+              partitionName, tabletName, clientID);
+      if (addToCache) {
+        omMetadataManager.getOpenTabletTable().addCacheEntry(
+                new CacheKey<>(ozoneTablet),
+                new CacheValue<>(Optional.of(omTabletInfo), trxnLogIndex));
+      }
+      omMetadataManager.getOpenTabletTable().put(ozoneTablet, omTabletInfo);
+    } else {
+      String ozoneTablet = omMetadataManager.getOzoneTablet(databaseName, tableName,
+              partitionName, tabletName);
+      if (addToCache) {
+        omMetadataManager.getTabletTable().addCacheEntry(new CacheKey<>(ozoneTablet),
+                new CacheValue<>(Optional.of(omTabletInfo), trxnLogIndex));
+      }
+      omMetadataManager.getTabletTable().put(ozoneTablet, omTabletInfo);
     }
   }
 
@@ -328,6 +423,16 @@ public final class TestOMRequestUtils {
   }
 
   /**
+   * Create OmTabletInfo.
+   */
+  public static OmTabletInfo createOmTabletInfo(String databaseName, String tableName, String partitioname,
+                                          String tabletName, HddsProtos.ReplicationType replicationType,
+                                          HddsProtos.ReplicationFactor replicationFactor, long objectID) {
+    return createOmTabletInfo(databaseName, tableName, partitioname, tabletName, replicationType,
+            replicationFactor, objectID, Time.now());
+  }
+
+  /**
    * Create OmKeyInfo.
    */
   public static OmKeyInfo createOmKeyInfo(String volumeName, String bucketName,
@@ -348,6 +453,30 @@ public final class TestOMRequestUtils {
         .setObjectID(objectID)
         .setUpdateID(objectID)
         .build();
+  }
+
+  /**
+   * Create OmTetInfo.
+   */
+  public static OmTabletInfo createOmTabletInfo(String databaseName, String tableName, String partitionName,
+                                          String tabletName, HddsProtos.ReplicationType replicationType,
+                                          HddsProtos.ReplicationFactor replicationFactor, long objectID,
+                                          long creationTime) {
+    return new OmTabletInfo.Builder()
+            .setDatabaseName(databaseName)
+            .setTabletName(tableName)
+            .setPartitionName(partitionName)
+            .setTabletName(tabletName)
+            .setOmTabletLocationInfos(Collections.singletonList(
+                    new OmTabletLocationInfoGroup(0, new ArrayList<>())))
+            .setCreationTime(creationTime)
+            .setModificationTime(Time.now())
+            .setDataSize(1000L)
+            .setReplicationType(replicationType)
+            .setReplicationFactor(replicationFactor)
+            .setObjectID(objectID)
+            .setUpdateID(objectID)
+            .build();
   }
 
   /**
