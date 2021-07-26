@@ -464,7 +464,7 @@ public final class TestOMRequestUtils {
                                           long creationTime) {
     return new OmTabletInfo.Builder()
             .setDatabaseName(databaseName)
-            .setTabletName(tableName)
+            .setTableName(tableName)
             .setPartitionName(partitionName)
             .setTabletName(tabletName)
             .setOmTabletLocationInfos(Collections.singletonList(

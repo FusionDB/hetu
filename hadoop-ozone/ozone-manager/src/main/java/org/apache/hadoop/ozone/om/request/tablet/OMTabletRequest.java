@@ -22,6 +22,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.hdds.client.BlockID;
+import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
@@ -95,41 +96,6 @@ public abstract class OMTabletRequest extends OMClientRequest {
 
   public OMTabletRequest(OMRequest omRequest) {
     super(omRequest);
-  }
-
-  /**
-   * This methods avoids multiple rpc calls to SCM by allocating multiple tablets
-   * in one rpc call.
-   * @throws IOException
-   */
-  @SuppressWarnings("parameternumber")
-  protected List< TabletInfo > allocateTablet(ScmClient scmClient,
-      OzoneBlockTokenSecretManager secretManager,
-      HddsProtos.ReplicationType replicationType,
-      HddsProtos.ReplicationFactor replicationFactor,
-      ExcludeList excludeList, int preallocateTabletMax,
-      boolean grpcBlockTokenEnabled, String omID)
-      throws IOException {
-    // TODO allocate tablet
-    return null;
-  }
-
-  /**
-   * This methods avoids multiple rpc calls to SCM by allocating multiple blocks
-   * in one rpc call.
-   * @throws IOException
-   */
-  @SuppressWarnings("parameternumber")
-  protected List< OmTabletLocationInfo > allocateBlock(ScmClient scmClient,
-                                              OzoneBlockTokenSecretManager secretManager,
-                                              HddsProtos.ReplicationType replicationType,
-                                              HddsProtos.ReplicationFactor replicationFactor,
-                                              ExcludeList excludeList, int preallocateTabletMax,
-                                              TabletInfo tabletInfo, boolean grpcBlockTokenEnabled,
-                                              String omID)
-          throws IOException {
-    // TODO allocate block
-    return null;
   }
 
   /**
