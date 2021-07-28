@@ -144,6 +144,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numPartitionDeleteFails;
   private @Metric MutableCounterLong numPartitionUpdateFails;
   private @Metric MutableCounterLong numTabletCommitFails;
+  private @Metric MutableCounterLong numTabletDeleteFails;
 
   private @Metric MutableCounterLong numGetFileStatusFails;
   private @Metric MutableCounterLong numCreateDirectoryFails;
@@ -596,9 +597,18 @@ public class OMMetrics {
     numKeyDeleteFails.incr();
   }
 
+  public void incNumTabletDeleteFails() {
+    numTabletDeleteFails.incr();
+  }
+
   public void incNumKeyDeletes() {
     numKeyOps.incr();
     numKeyDeletes.incr();
+  }
+
+  public void incNumTabletDeletes() {
+    numTabletOps.incr();
+    numTabletDeletes.incr();
   }
 
   public void incNumKeyCommits() {
@@ -909,6 +919,11 @@ public class OMMetrics {
   @VisibleForTesting
   public long getNumKeyDeletesFails() {
     return numKeyDeleteFails.value();
+  }
+
+  @VisibleForTesting
+  public long getNumTabletDeletesFails() {
+    return numTabletDeleteFails.value();
   }
 
   @VisibleForTesting

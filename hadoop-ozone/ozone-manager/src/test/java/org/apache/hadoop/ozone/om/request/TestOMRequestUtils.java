@@ -413,6 +413,16 @@ public final class TestOMRequestUtils {
   }
 
   /**
+   * Create OmTabletInfo.
+   */
+  public static OmTabletInfo createOmTabletInfo(String databaseName, String tableName,
+                                          String partitionName, String tabletName, HddsProtos.ReplicationType replicationType,
+                                          HddsProtos.ReplicationFactor replicationFactor) {
+    return createOmTabletInfo(databaseName, tableName, partitionName, tabletName, replicationType,
+            replicationFactor, 0L);
+  }
+
+  /**
    * Create OmKeyInfo.
    */
   public static OmKeyInfo createOmKeyInfo(String volumeName, String bucketName,
@@ -425,10 +435,10 @@ public final class TestOMRequestUtils {
   /**
    * Create OmTabletInfo.
    */
-  public static OmTabletInfo createOmTabletInfo(String databaseName, String tableName, String partitioname,
+  public static OmTabletInfo createOmTabletInfo(String databaseName, String tableName, String partitionName,
                                           String tabletName, HddsProtos.ReplicationType replicationType,
                                           HddsProtos.ReplicationFactor replicationFactor, long objectID) {
-    return createOmTabletInfo(databaseName, tableName, partitioname, tabletName, replicationType,
+    return createOmTabletInfo(databaseName, tableName, partitionName, tabletName, replicationType,
             replicationFactor, objectID, Time.now());
   }
 

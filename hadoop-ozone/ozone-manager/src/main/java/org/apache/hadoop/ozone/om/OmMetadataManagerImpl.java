@@ -59,6 +59,7 @@ import org.apache.hadoop.ozone.om.codec.OmTableInfoCodec;
 import org.apache.hadoop.ozone.om.codec.OmTabletInfoCodec;
 import org.apache.hadoop.ozone.om.codec.OmVolumeArgsCodec;
 import org.apache.hadoop.ozone.om.codec.RepeatedOmKeyInfoCodec;
+import org.apache.hadoop.ozone.om.codec.RepeatedOmTabletInfoCodec;
 import org.apache.hadoop.ozone.om.codec.S3SecretValueCodec;
 import org.apache.hadoop.ozone.om.codec.TokenIdentifierCodec;
 import org.apache.hadoop.ozone.om.codec.UserDatabaseInfoCodec;
@@ -77,6 +78,7 @@ import org.apache.hadoop.ozone.om.helpers.OmTabletInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OzoneFSUtils;
 import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.RepeatedOmTabletInfo;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.lock.OzoneManagerLock;
 import org.apache.hadoop.hdds.utils.TransactionInfo;
@@ -163,6 +165,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   public static final String BUCKET_TABLE = "bucketTable";
   public static final String KEY_TABLE = "keyTable";
   public static final String DELETED_TABLE = "deletedTable";
+  public static final String DELETED_TABLET = "deletedTablet";
   public static final String OPEN_KEY_TABLE = "openKeyTable";
   public static final String MULTIPARTINFO_TABLE = "multipartInfoTable";
   public static final String S3_SECRET_TABLE = "s3SecretTable";
@@ -187,6 +190,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   private Table bucketTable;
   private Table keyTable;
   private Table deletedTable;
+  private Table deletedTablet;
   private Table openKeyTable;
   private Table<String, OmMultipartKeyInfo> multipartInfoTable;
   private Table s3SecretTable;
@@ -284,6 +288,11 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   @Override
   public Table<String, RepeatedOmKeyInfo> getDeletedTable() {
     return deletedTable;
+  }
+
+  @Override
+  public Table<String, RepeatedOmTabletInfo> getDeletedTablet() {
+    return deletedTablet;
   }
 
   @Override
@@ -394,6 +403,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
         .addTable(BUCKET_TABLE)
         .addTable(KEY_TABLE)
         .addTable(DELETED_TABLE)
+        .addTable(DELETED_TABLET)
         .addTable(OPEN_KEY_TABLE)
         .addTable(MULTIPARTINFO_TABLE)
         .addTable(DELEGATION_TOKEN_TABLE)
@@ -405,6 +415,8 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
         .addCodec(OmKeyInfo.class, new OmKeyInfoCodec(true))
         .addCodec(RepeatedOmKeyInfo.class,
             new RepeatedOmKeyInfoCodec(true))
+        .addCodec(RepeatedOmTabletInfo.class,
+            new RepeatedOmTabletInfoCodec(true))
         .addCodec(OmBucketInfo.class, new OmBucketInfoCodec())
         .addCodec(OmVolumeArgs.class, new OmVolumeArgsCodec())
         .addCodec(HmDatabaseArgs.class, new HmDatabaseArgsCodec())
@@ -463,8 +475,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     checkTableStatus(partitionTable, PARTITION_TABLE);
 
     tabletTable =
-            this.store.getTable(TABLET_TABLE, String.class, OmTabletInfo.class,
-                    cacheType);
+            this.store.getTable(TABLET_TABLE, String.class, OmTabletInfo.class);
     checkTableStatus(tabletTable, TABLET_TABLE);
 
     openTabletTable =
@@ -477,6 +488,10 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     deletedTable = this.store.getTable(DELETED_TABLE, String.class,
         RepeatedOmKeyInfo.class);
     checkTableStatus(deletedTable, DELETED_TABLE);
+
+    deletedTablet = this.store.getTable(DELETED_TABLET, String.class,
+            RepeatedOmTabletInfo.class);
+    checkTableStatus(deletedTablet, DELETED_TABLET);
 
     openKeyTable =
         this.store.getTable(OPEN_KEY_TABLE, String.class, OmKeyInfo.class);

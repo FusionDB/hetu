@@ -50,6 +50,7 @@ public enum OMAction implements AuditAction {
   UPDATE_PARTITION,
   ALLOCATE_TABLET,
   COMMIT_TABLET,
+  DELETE_TABLET,
 
 
   // READ Actions

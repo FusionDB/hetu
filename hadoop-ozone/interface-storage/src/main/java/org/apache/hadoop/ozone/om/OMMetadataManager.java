@@ -38,6 +38,7 @@ import org.apache.hadoop.ozone.om.helpers.OmTableInfo;
 import org.apache.hadoop.ozone.om.helpers.OmTabletInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.RepeatedOmTabletInfo;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.lock.OzoneManagerLock;
 import org.apache.hadoop.hdds.utils.TransactionInfo;
@@ -345,6 +346,12 @@ public interface OMMetadataManager extends DBStoreHAManager {
    * @return Deleted Table.
    */
   Table<String, RepeatedOmKeyInfo> getDeletedTable();
+
+  /**
+   * Get Deleted tablet
+   * @return Deleted Tablet Table.
+   */
+  Table<String, RepeatedOmTabletInfo> getDeletedTablet();
 
   /**
    * Gets the OpenKeyTable.

@@ -47,7 +47,9 @@ import org.apache.hadoop.ozone.conf.OMClientConfig;
 import org.apache.hadoop.ozone.ha.ConfUtils;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmTabletInfo;
 import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.RepeatedOmTabletInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.SecretManager;
@@ -460,6 +462,49 @@ public final class OmUtils {
     }
 
     return repeatedOmKeyInfo;
+  }
+
+  /**
+   * Prepares tablet info to be moved to deletedTablet.
+   * 1. It strips GDPR metadata from tablet info
+   * 2. For given object tablet, if the repeatedOmTabletInfo instance is null, it
+   * implies that no entry for the object tablet exists in deletedTablet so we
+   * create a new instance to include this tablet, else we update the existing
+   * repeatedOmTabletInfo instance.
+   * 3. Set the updateID to the transactionLogIndex.
+   * @param tabletInfo args supplied by client
+   * @param repeatedOmTabletInfo tablet details from deletedTablet
+   * @param trxnLogIndex For Multipart tablets, this is the transactionLogIndex
+   *                     of the MultipartUploadAbort request which needs to
+   *                     be set as the updateID of the partTabletInfos.
+   *                     For regular Tablet deletes, this value should be set to
+   *                     the same updaeID as is in tabletInfo.
+   * @return {@link RepeatedOmTabletInfo}
+   */
+  public static RepeatedOmTabletInfo prepareTabletForDelete(OmTabletInfo tabletInfo,
+                                                            RepeatedOmTabletInfo repeatedOmTabletInfo, long trxnLogIndex,
+                                                            boolean isRatisEnabled) {
+    // If this tablet is in a GDPR enforced bucket, then before moving
+    // TabletInfo to deletedTablet, remove the GDPR related metadata
+    // from TabletInfo.
+    if(Boolean.valueOf(tabletInfo.getMetadata().get(OzoneConsts.GDPR_FLAG))) {
+      tabletInfo.getMetadata().remove(OzoneConsts.GDPR_FLAG);
+      tabletInfo.getMetadata().remove(OzoneConsts.GDPR_ALGORITHM);
+      tabletInfo.getMetadata().remove(OzoneConsts.GDPR_SECRET);
+    }
+
+    // Set the updateID
+    tabletInfo.setUpdateID(trxnLogIndex, isRatisEnabled);
+
+    if(repeatedOmTabletInfo == null) {
+      //The tablet doesn't exist in deletedTablet, so create a new instance.
+      repeatedOmTabletInfo = new RepeatedOmTabletInfo(tabletInfo);
+    } else {
+      //The tablet exists in deletedTablet, so update existing instance.
+      repeatedOmTabletInfo.addOmTabletInfo(tabletInfo);
+    }
+
+    return repeatedOmTabletInfo;
   }
 
   /**

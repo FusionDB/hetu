@@ -233,7 +233,7 @@ public class OMException extends IOException {
 
     QUOTA_EXCEEDED,
 
-    QUOTA_ERROR,
+    QUOTA_ERROR, //64
 
     DATABASE_ALREADY_EXISTS,
 
