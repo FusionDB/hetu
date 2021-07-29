@@ -314,6 +314,10 @@ public class OMMetrics {
     this.numKeys.incr(-val);
   }
 
+  public void decNumTablets(long val) {
+    this.numTablets.incr(-val);
+  }
+
   public long getNumVolumes() {
     return numVolumes.value();
   }

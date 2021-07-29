@@ -1411,7 +1411,8 @@ message DeleteTabletsRequest {
 message DeleteTabletArgs {
   required string databaseName = 1;
   required string tableName = 2;
-  repeated string tablets = 3;
+  required string partitionName = 3;
+  repeated string tablets = 4;
 }
 
 message DeleteKeyArgs {

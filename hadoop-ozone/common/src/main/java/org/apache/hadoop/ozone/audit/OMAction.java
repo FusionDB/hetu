@@ -51,6 +51,7 @@ public enum OMAction implements AuditAction {
   ALLOCATE_TABLET,
   COMMIT_TABLET,
   DELETE_TABLET,
+  DELETE_TABLETS,
 
 
   // READ Actions

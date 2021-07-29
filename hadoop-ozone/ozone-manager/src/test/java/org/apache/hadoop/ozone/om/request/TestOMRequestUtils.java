@@ -379,6 +379,33 @@ public final class TestOMRequestUtils {
   }
 
   /**
+   * Add tablet entry to tablet table cache.
+   * @param databaseName
+   * @param tableName
+   * @param partitionName
+   * @param tabletName
+   * @param replicationType
+   * @param replicationFactor
+   * @param omMetadataManager
+   */
+  @SuppressWarnings("parameterNumber")
+  public static void addTabletToTableCache(String databaseName,
+                                        String tableName,
+                                        String partitionName,
+                                        String tabletName,
+                                        HddsProtos.ReplicationType replicationType,
+                                        HddsProtos.ReplicationFactor replicationFactor,
+                                        OMMetadataManager omMetadataManager) {
+
+    OmTabletInfo omTabletInfo = createOmTabletInfo(databaseName, tableName, partitionName, tabletName,
+            replicationType, replicationFactor);
+
+    omMetadataManager.getTabletTable().addCacheEntry(
+            new CacheKey<>(omMetadataManager.getOzoneTablet(databaseName, tableName, partitionName,
+                    tabletName)), new CacheValue<>(Optional.of(omTabletInfo), 1L));
+  }
+
+  /**
    * Adds one block to {@code keyInfo} with the provided size and offset.
    */
   public static void addKeyLocationInfo(

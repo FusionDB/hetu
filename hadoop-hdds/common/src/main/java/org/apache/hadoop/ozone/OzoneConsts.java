@@ -355,6 +355,8 @@ public final class OzoneConsts {
   public static final String SIZE_IN_BYTES = "size_in_bytes";
   public static final String ROWS = "rows";
   public static final String BUCKETS = "buckets";
+  public static final String DELETED_TABLETS_LIST = "deletedTabletsList";
+  public static final String UNDELETED_TABLETS_LIST = "unDeletedTabletsList";
 
 
   // For OM metrics saving to a file
