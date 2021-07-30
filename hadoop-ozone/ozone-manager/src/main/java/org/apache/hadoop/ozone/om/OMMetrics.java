@@ -84,6 +84,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numPartitionUpdates;
   private @Metric MutableCounterLong numTabletAllocate;
   private @Metric MutableCounterLong numTabletCommits;
+  private @Metric MutableCounterLong numTabletAllocations;
 
 
   private @Metric MutableCounterLong numGetFileStatus;
@@ -150,6 +151,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numTabletCommitFails;
   private @Metric MutableCounterLong numTabletDeleteFails;
   private @Metric MutableCounterLong numOpenTabletDeleteRequestFails;
+  private @Metric MutableCounterLong numTabletAllocationFails;
 
   private @Metric MutableCounterLong numGetFileStatusFails;
   private @Metric MutableCounterLong numCreateDirectoryFails;
@@ -643,8 +645,16 @@ public class OMMetrics {
     numBlockAllocations.incr();
   }
 
+  public void incNumTabletAllocateCalls() {
+    numTabletAllocations.incr();
+  }
+
   public void incNumBlockAllocateCallFails() {
     numBlockAllocationFails.incr();
+  }
+
+  public void incNumTabletAllocateCallFails() {
+    numTabletAllocationFails.incr();
   }
 
   public void incNumBucketListFails() {
@@ -1007,8 +1017,18 @@ public class OMMetrics {
   }
 
   @VisibleForTesting
+  public long getNumTabletAllocates() {
+    return numTabletAllocations.value();
+  }
+
+  @VisibleForTesting
   public long getNumBlockAllocateFails() {
     return numBlockAllocationFails.value();
+  }
+
+  @VisibleForTesting
+  public long getNumTabletAllocateFails() {
+    return numTabletAllocationFails.value();
   }
 
   @VisibleForTesting
