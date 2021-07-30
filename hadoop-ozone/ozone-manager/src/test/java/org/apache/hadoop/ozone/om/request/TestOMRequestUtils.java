@@ -430,6 +430,30 @@ public final class TestOMRequestUtils {
   }
 
   /**
+   * Adds one block to {@code tabletInfo} with the provided size and offset.
+   */
+  public static void addTabletLocationInfo(
+          OmTabletInfo tabletInfo, long offset, long keyLength) throws IOException {
+
+    Pipeline pipeline = Pipeline.newBuilder()
+            .setState(Pipeline.PipelineState.OPEN)
+            .setId(PipelineID.randomId())
+            .setReplicationConfig(ReplicationConfig
+                    .fromTypeAndFactor(tabletInfo.getType(), tabletInfo.getFactor()))
+            .setNodes(new ArrayList<>())
+            .build();
+
+    OmTabletLocationInfo locationInfo = new OmTabletLocationInfo.Builder()
+            .setBlockID(new BlockID(100L, 1000L))
+            .setOffset(offset)
+            .setLength(keyLength)
+            .setPipeline(pipeline)
+            .build();
+
+    tabletInfo.appendNewBlocks(Collections.singletonList(locationInfo), false);
+  }
+
+  /**
    * Create OmKeyInfo.
    */
   public static OmKeyInfo createOmKeyInfo(String volumeName, String bucketName,

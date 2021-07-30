@@ -126,6 +126,7 @@ enum Type {
   AllocateTablet = 144;
   ListTablets = 145;
   CommitTablet = 146;
+  DeleteOpenTablets = 147;
 }
 
 message OMRequest {
@@ -231,6 +232,7 @@ message OMRequest {
   optional AllocateTabletRequest            allocateTabletRequest = 144;
   optional ListTabletsRequest               listTabletsRequest = 145;
   optional CommitTabletRequest              commitTabletRequest = 146;
+  optional DeleteOpenTabletsRequest         deleteOpenTabletsRequest = 147;
 }
 
 message OMResponse {
@@ -1468,13 +1470,29 @@ message DeleteOpenKeysRequest {
   repeated OpenKeyBucket openKeysPerBucket = 1;
 }
 
+message DeleteOpenTabletsRequest {
+  repeated OpenTabletPartition openTabletsPerPartition = 1;
+}
+
 message OpenKeyBucket {
   required string volumeName = 1;
   required string bucketName = 2;
   repeated OpenKey keys = 3;
 }
 
+message OpenTabletPartition {
+  required string databaseName = 1;
+  required string tableName = 2;
+  required string partitionName = 3;
+  repeated OpenTablet tablets = 4;
+}
+
 message OpenKey {
+  required string name = 1;
+  required uint64 clientID = 2;
+}
+
+message OpenTablet {
   required string name = 1;
   required uint64 clientID = 2;
 }
