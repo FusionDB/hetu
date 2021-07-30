@@ -127,6 +127,7 @@ enum Type {
   ListTablets = 145;
   CommitTablet = 146;
   DeleteOpenTablets = 147;
+  PurgeTablets = 148;
 }
 
 message OMRequest {
@@ -233,6 +234,7 @@ message OMRequest {
   optional ListTabletsRequest               listTabletsRequest = 145;
   optional CommitTabletRequest              commitTabletRequest = 146;
   optional DeleteOpenTabletsRequest         deleteOpenTabletsRequest = 147;
+  optional PurgeTabletsRequest              purgeTabletsRequest = 148;
 }
 
 message OMResponse {
@@ -333,6 +335,7 @@ message OMResponse {
   optional AllocateTabletResponse            allocateTabletResponse = 144;
   optional ListTabletsResponse               listTabletsResponse = 145;
   optional CommitTabletResponse              commitTabletResponse = 146;
+  optional PurgeTabletsResponse              purgeTabletsResponse = 148;
 }
 
 enum Status {
@@ -1464,6 +1467,21 @@ message PurgeKeysRequest {
 
 message PurgeKeysResponse {
 
+}
+
+message PurgeTabletsRequest {
+  repeated DeletedTablets deletedTablets = 1;
+}
+
+message PurgeTabletsResponse {
+
+}
+
+message DeletedTablets {
+  required string databaseName = 1;
+  required string tableName = 2;
+  required string partitionName = 3;
+  repeated string tablets = 4;
 }
 
 message DeleteOpenKeysRequest {

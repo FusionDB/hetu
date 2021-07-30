@@ -23,7 +23,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import com.google.common.base.Optional;
@@ -537,7 +539,16 @@ public final class TestOMRequestUtils {
             .setReplicationFactor(replicationFactor)
             .setObjectID(objectID)
             .setUpdateID(objectID)
+            .addAllMetadata(getMetadataMap())
             .build();
+  }
+
+  private static Map<String, String> getMetadataMap() {
+    Map<String, String> map = new HashMap<>();
+    map.put("k1", "v1");
+    map.put("k2", "v2");
+    map.put(OzoneConsts.GDPR_FLAG, "false");
+    return map;
   }
 
   /**
@@ -1193,6 +1204,30 @@ public final class TestOMRequestUtils {
     omMetadataManager.getDeletedTable().put(ozoneKey, repeatedOmKeyInfo);
 
     return ozoneKey;
+  }
+
+  /**
+   * Deletes tablet from Tablet table and adds it to DeletedTablets table.
+   * @return the deletedTablet name
+   */
+  public static String deleteTablet(String ozoneTablet,
+                                 OMMetadataManager omMetadataManager, long trxnLogIndex)
+          throws IOException {
+    // Retrieve the tabletInfo
+    OmTabletInfo omTabletInfo = omMetadataManager.getTabletTable().get(ozoneTablet);
+
+    // Delete tablet from tabletTable and put in DeletedTabletTable
+    omMetadataManager.getTabletTable().delete(ozoneTablet);
+
+    RepeatedOmTabletInfo repeatedOmTabletInfo =
+            omMetadataManager.getDeletedTablet().get(ozoneTablet);
+
+    repeatedOmTabletInfo = OmUtils.prepareTabletForDelete(omTabletInfo,
+            repeatedOmTabletInfo, trxnLogIndex, true);
+
+    omMetadataManager.getDeletedTablet().put(ozoneTablet, repeatedOmTabletInfo);
+
+    return ozoneTablet;
   }
 
   /**
