@@ -25,7 +25,7 @@ import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.audit.OMAction;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.OzoneManager;
@@ -34,7 +34,6 @@ import org.apache.hadoop.ozone.om.request.util.OmResponseUtil;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.om.response.database.OMDatabaseSetOwnerResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DatabaseInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetDatabasePropertyRequest;
@@ -64,7 +63,7 @@ public class OMDatabaseSetOwnerRequest extends OMDatabaseRequest {
   public OMRequest preExecute(OzoneManager ozoneManager) throws IOException {
 
     long modificationTime = Time.now();
-    HmDatabaseArgs databaseArgs = HmDatabaseArgs.getFromProtobuf(getOmRequest().getCreateDatabaseRequest().getDatabaseInfo());
+    OmDatabaseArgs databaseArgs = OmDatabaseArgs.getFromProtobuf(getOmRequest().getCreateDatabaseRequest().getDatabaseInfo());
     databaseArgs.setModificationTime(modificationTime);
 
     SetDatabasePropertyRequest.Builder setPropertyRequestBuilder = getOmRequest()
@@ -123,12 +122,12 @@ public class OMDatabaseSetOwnerRequest extends OMDatabaseRequest {
       long maxUserDatabaseCount = ozoneManager.getMaxUserDatabaseCount();
       OzoneManagerStorageProtos.PersistedUserDatabaseInfo oldOwnerDatabaseList;
       OzoneManagerStorageProtos.PersistedUserDatabaseInfo newOwnerDatabaseList;
-      HmDatabaseArgs hmDatabaseArgs = null;
+      OmDatabaseArgs omDatabaseArgs = null;
 
       acquiredDatabaseLock = omMetadataManager.getLock().acquireWriteLock(
           DATABASE_LOCK, database);
-      hmDatabaseArgs = getDatabaseInfo(omMetadataManager, database);
-      oldOwner = hmDatabaseArgs.getOwnerName();
+      omDatabaseArgs = getDatabaseInfo(omMetadataManager, database);
+      oldOwner = omDatabaseArgs.getOwnerName();
 
       // Return OK immediately if newOwner is the same as oldOwner.
       if (oldOwner.equals(newOwner)) {
@@ -156,12 +155,12 @@ public class OMDatabaseSetOwnerRequest extends OMDatabaseRequest {
           maxUserDatabaseCount, transactionLogIndex);
 
       // Set owner with new owner name.
-      hmDatabaseArgs.setOwnerName(newOwner);
-      hmDatabaseArgs.setUpdateID(transactionLogIndex,
+      omDatabaseArgs.setOwnerName(newOwner);
+      omDatabaseArgs.setUpdateID(transactionLogIndex,
           ozoneManager.isRatisEnabled());
 
       // Update modificationTime.
-      hmDatabaseArgs.setModificationTime(
+      omDatabaseArgs.setModificationTime(
           setDatabasePropertyRequest.getDatabaseInfo().getModificationTime());
 
       // Update cache.
@@ -175,12 +174,12 @@ public class OMDatabaseSetOwnerRequest extends OMDatabaseRequest {
               transactionLogIndex));
       omMetadataManager.getDatabaseTable().addCacheEntry(
           new CacheKey<>(omMetadataManager.getDatabaseKey(database)),
-          new CacheValue<>(Optional.of(hmDatabaseArgs), transactionLogIndex));
+          new CacheValue<>(Optional.of(omDatabaseArgs), transactionLogIndex));
 
       omResponse.setSetDatabasePropertyResponse(
           SetDatabasePropertyResponse.newBuilder().setResponse(true).build());
       omClientResponse = new OMDatabaseSetOwnerResponse(omResponse.build(),
-          oldOwner, oldOwnerDatabaseList, newOwnerDatabaseList, hmDatabaseArgs);
+          oldOwner, oldOwnerDatabaseList, newOwnerDatabaseList, omDatabaseArgs);
     } catch (IOException ex) {
       exception = ex;
       omClientResponse = new OMDatabaseSetOwnerResponse(

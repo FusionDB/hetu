@@ -22,7 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.audit.OMAction;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.OzoneManager;
@@ -36,9 +36,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRespo
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateDatabaseRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateDatabaseResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DatabaseInfo;
-import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
-import org.apache.hadoop.ozone.security.acl.OzoneObj;
-import org.apache.hadoop.ozone.storage.proto.OzoneManagerStorageProtos;
 import org.apache.hadoop.ozone.storage.proto.OzoneManagerStorageProtos.PersistedUserDatabaseInfo;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
@@ -110,20 +107,20 @@ public class OMDatabaseCreateRequest extends OMDatabaseRequest {
     boolean acquiredUserLock = false;
     IOException exception = null;
     OMClientResponse omClientResponse = null;
-    HmDatabaseArgs hmDatabaseArgs = null;
+    OmDatabaseArgs omDatabaseArgs = null;
     Map<String, String> auditMap = new HashMap<>();
     try {
-      hmDatabaseArgs = HmDatabaseArgs.getFromProtobuf(databaseInfo);
+      omDatabaseArgs = OmDatabaseArgs.getFromProtobuf(databaseInfo);
       // when you create a database, we set both Object ID and update ID.
       // The Object ID will never change, but update
       // ID will be set to transactionID each time we update the object.
-      hmDatabaseArgs.setObjectID(
+      omDatabaseArgs.setObjectID(
           ozoneManager.getObjectIdFromTxId(transactionLogIndex));
-      hmDatabaseArgs.setUpdateID(transactionLogIndex,
+      omDatabaseArgs.setUpdateID(transactionLogIndex,
           ozoneManager.isRatisEnabled());
 
 
-      auditMap = hmDatabaseArgs.toAuditMap();
+      auditMap = omDatabaseArgs.toAuditMap();
 
       // check acl
       if (ozoneManager.getAclsEnabled()) {
@@ -143,7 +140,7 @@ public class OMDatabaseCreateRequest extends OMDatabaseRequest {
 
       PersistedUserDatabaseInfo databaseList = null;
       if (omMetadataManager.getDatabaseTable().isExist(dbDatabaseKey)) {
-        LOG.debug("Database:{} already exists", hmDatabaseArgs.getName());
+        LOG.debug("Database:{} already exists", omDatabaseArgs.getName());
         throw new OMException("Database already exists",
             OMException.ResultCodes.DATABASE_ALREADY_EXISTS);
       } else {
@@ -151,14 +148,14 @@ public class OMDatabaseCreateRequest extends OMDatabaseRequest {
         databaseList = omMetadataManager.getUserTableDb().get(dbUserKey);
         databaseList = addDatabaseToOwnerList(databaseList, database, owner,
             ozoneManager.getMaxUserDatabaseCount(), transactionLogIndex);
-        createDatabase(omMetadataManager, hmDatabaseArgs, databaseList, dbDatabaseKey,
+        createDatabase(omMetadataManager, omDatabaseArgs, databaseList, dbDatabaseKey,
             dbUserKey, transactionLogIndex);
 
         omResponse.setCreateDatabaseResponse(CreateDatabaseResponse.newBuilder()
             .build());
         omClientResponse = new OMDatabaseCreateResponse(omResponse.build(),
-            hmDatabaseArgs, databaseList);
-        LOG.debug("database:{} successfully created", hmDatabaseArgs.getName());
+                omDatabaseArgs, databaseList);
+        LOG.debug("database:{} successfully created", omDatabaseArgs.getName());
       }
 
     } catch (IOException ex) {

@@ -21,7 +21,7 @@ package org.apache.hadoop.ozone.om.response.database;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
 import org.apache.hadoop.hdds.utils.db.Table;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
@@ -82,11 +82,11 @@ public class TestOMDatabaseSetQuotaResponse {
         .setCreateDatabaseResponse(CreateDatabaseResponse.getDefaultInstance())
         .build();
 
-    HmDatabaseArgs hmDatabaseArgs = HmDatabaseArgs.newBuilder()
+    OmDatabaseArgs omDatabaseArgs = OmDatabaseArgs.newBuilder()
         .setOwnerName(userName).setAdminName(userName)
         .setName(databaseName).setCreationTime(Time.now()).build();
     OMDatabaseSetQuotaResponse omDatabaseSetQuotaResponse =
-        new OMDatabaseSetQuotaResponse(omResponse, hmDatabaseArgs);
+        new OMDatabaseSetQuotaResponse(omResponse, omDatabaseArgs);
 
     omDatabaseSetQuotaResponse.addToDBBatch(omMetadataManager, batchOperation);
 
@@ -96,12 +96,12 @@ public class TestOMDatabaseSetQuotaResponse {
     Assert.assertEquals(1,
         omMetadataManager.countRowsInTable(omMetadataManager.getDatabaseTable()));
 
-    Table.KeyValue<String, HmDatabaseArgs> keyValue =
+    Table.KeyValue<String, OmDatabaseArgs> keyValue =
         omMetadataManager.getDatabaseTable().iterator().next();
 
     Assert.assertEquals(omMetadataManager.getDatabaseKey(databaseName),
         keyValue.getKey());
-    Assert.assertEquals(hmDatabaseArgs, keyValue.getValue());
+    Assert.assertEquals(omDatabaseArgs, keyValue.getValue());
 
   }
 

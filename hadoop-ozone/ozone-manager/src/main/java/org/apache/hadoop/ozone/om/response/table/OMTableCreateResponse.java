@@ -19,7 +19,7 @@
 package org.apache.hadoop.ozone.om.response.table;
 
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmTableInfo;
 import org.apache.hadoop.ozone.om.response.CleanupTableInfo;
@@ -39,20 +39,20 @@ import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.META_TABLE;
 public final class OMTableCreateResponse extends OMClientResponse {
 
   private final OmTableInfo omTableInfo;
-  private final HmDatabaseArgs hmDatabaseArgs;
+  private final OmDatabaseArgs omDatabaseArgs;
 
   public OMTableCreateResponse(@Nonnull OMResponse omResponse,
-                               @Nonnull OmTableInfo omTableInfo, @Nonnull HmDatabaseArgs hmDatabaseArgs) {
+                               @Nonnull OmTableInfo omTableInfo, @Nonnull OmDatabaseArgs omDatabaseArgs) {
     super(omResponse);
     this.omTableInfo = omTableInfo;
-    this.hmDatabaseArgs = hmDatabaseArgs;
+    this.omDatabaseArgs = omDatabaseArgs;
   }
 
   public OMTableCreateResponse(@Nonnull OMResponse omResponse,
                                @Nonnull OmTableInfo omTableInfo) {
     super(omResponse);
     this.omTableInfo = omTableInfo;
-    this.hmDatabaseArgs = null;
+    this.omDatabaseArgs = null;
   }
 
   /**
@@ -63,7 +63,7 @@ public final class OMTableCreateResponse extends OMClientResponse {
     super(omResponse);
     checkStatusNotOK();
     omTableInfo = null;
-    hmDatabaseArgs = null;
+    omDatabaseArgs = null;
   }
 
   @Override
@@ -76,10 +76,10 @@ public final class OMTableCreateResponse extends OMClientResponse {
     omMetadataManager.getMetaTable().putWithBatch(batchOperation,
             dbTabletKey, omTableInfo);
     // update volume usedCapacityInBytes
-    if (hmDatabaseArgs != null) {
+    if (omDatabaseArgs != null) {
       omMetadataManager.getDatabaseTable().putWithBatch(batchOperation,
-              omMetadataManager.getDatabaseKey(hmDatabaseArgs.getName()),
-              hmDatabaseArgs);
+              omMetadataManager.getDatabaseKey(omDatabaseArgs.getName()),
+              omDatabaseArgs);
     }
   }
 

@@ -23,7 +23,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.hadoop.ozone.audit.OMAction;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.OzoneManager;
@@ -36,8 +36,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DeleteD
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DeleteDatabaseResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
-import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
-import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.ozone.storage.proto.OzoneManagerStorageProtos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -93,9 +91,9 @@ public class OMDatabaseDeleteRequest extends OMDatabaseRequest {
       acquiredDatabaseLock = omMetadataManager.getLock().acquireWriteLock(
           DATABASE_LOCK, database);
 
-      HmDatabaseArgs hmDatabaseArgs = getDatabaseInfo(omMetadataManager, database);
+      OmDatabaseArgs omDatabaseArgs = getDatabaseInfo(omMetadataManager, database);
 
-      owner = hmDatabaseArgs.getOwnerName();
+      owner = omDatabaseArgs.getOwnerName();
       acquiredUserLock = omMetadataManager.getLock().acquireWriteLock(USER_LOCK,
           owner);
 

@@ -36,7 +36,7 @@ import java.util.Objects;
 /**
  * A class that encapsulates the OmVolumeArgs Args.
  */
-public final class HmDatabaseArgs extends WithObjectID implements Auditable {
+public final class OmDatabaseArgs extends WithObjectID implements Auditable {
   private final String adminName;
   private String ownerName;
   private final String name;
@@ -62,7 +62,7 @@ public final class HmDatabaseArgs extends WithObjectID implements Auditable {
    */
   @SuppressWarnings({"checkstyle:ParameterNumber", "This is invoked from a " +
       "builder."})
-  private HmDatabaseArgs(String adminName, String ownerName, String database,
+  private OmDatabaseArgs(String adminName, String ownerName, String database,
                          long quotaInBytes, long quotaInNamespace, long usedNamespace,
                          Map<String, String> metadata, long creationTime,
                          long modificationTime, long objectID, long updateID) {
@@ -207,7 +207,7 @@ public final class HmDatabaseArgs extends WithObjectID implements Auditable {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    HmDatabaseArgs that = (HmDatabaseArgs) o;
+    OmDatabaseArgs that = (OmDatabaseArgs) o;
     return Objects.equals(this.objectID, that.objectID);
   }
 
@@ -319,11 +319,11 @@ public final class HmDatabaseArgs extends WithObjectID implements Auditable {
      * Constructs a CreateVolumeArgument.
      * @return CreateVolumeArgs.
      */
-    public HmDatabaseArgs build() {
+    public OmDatabaseArgs build() {
       Preconditions.checkNotNull(adminName);
       Preconditions.checkNotNull(ownerName);
       Preconditions.checkNotNull(name);
-      return new HmDatabaseArgs(adminName, ownerName, name, quotaInBytes,
+      return new OmDatabaseArgs(adminName, ownerName, name, quotaInBytes,
           quotaInNamespace, usedNamespace, metadata, creationTime,
           modificationTime, objectID, updateID);
     }
@@ -347,9 +347,9 @@ public final class HmDatabaseArgs extends WithObjectID implements Auditable {
         .build();
   }
 
-  public static HmDatabaseArgs getFromProtobuf(DatabaseInfo databaseInfo)
+  public static OmDatabaseArgs getFromProtobuf(DatabaseInfo databaseInfo)
       throws OMException {
-    return new HmDatabaseArgs(
+    return new OmDatabaseArgs(
         databaseInfo.getAdminName(),
         databaseInfo.getOwnerName(),
         databaseInfo.getName(),
@@ -378,13 +378,13 @@ public final class HmDatabaseArgs extends WithObjectID implements Auditable {
   /**
    * Return a new copy of the object.
    */
-  public HmDatabaseArgs copyObject() {
+  public OmDatabaseArgs copyObject() {
     Map<String, String> cloneMetadata = new HashMap<>();
     if (metadata != null) {
       metadata.forEach((k, v) -> cloneMetadata.put(k, v));
     }
 
-    return new HmDatabaseArgs(adminName, ownerName, name, quotaInBytes,
+    return new OmDatabaseArgs(adminName, ownerName, name, quotaInBytes,
         quotaInNamespace, usedNamespace, cloneMetadata,
         creationTime, modificationTime, objectID, updateID);
   }

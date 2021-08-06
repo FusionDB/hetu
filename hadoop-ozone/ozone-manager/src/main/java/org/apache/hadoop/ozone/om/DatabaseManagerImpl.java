@@ -19,7 +19,7 @@ package org.apache.hadoop.ozone.om;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.storage.proto.OzoneManagerStorageProtos.PersistedUserDatabaseInfo;
 import org.slf4j.Logger;
@@ -86,66 +86,66 @@ public class DatabaseManagerImpl implements DatabaseManager {
 
   /**
    * Creates a database.
-   * @param hmDatabaseArgs - HmDatabaseArgs.
+   * @param omDatabaseArgs - HmDatabaseArgs.
    */
   @Override
-  public void createDatabase(HmDatabaseArgs hmDatabaseArgs) throws IOException {
-    Preconditions.checkNotNull(hmDatabaseArgs);
+  public void createDatabase(OmDatabaseArgs omDatabaseArgs) throws IOException {
+    Preconditions.checkNotNull(omDatabaseArgs);
 
     boolean acquiredUserLock = false;
     metadataManager.getLock().acquireWriteLock(DATABASE_LOCK,
-            hmDatabaseArgs.getName());
+            omDatabaseArgs.getName());
     try {
       acquiredUserLock = metadataManager.getLock().acquireWriteLock(USER_LOCK,
-          hmDatabaseArgs.getOwnerName());
+          omDatabaseArgs.getOwnerName());
       String databaseKey = metadataManager.getDatabaseKey(
-          hmDatabaseArgs.getName());
+          omDatabaseArgs.getName());
       String dbUserKey = metadataManager.getUserKey(
-          hmDatabaseArgs.getOwnerName());
-      HmDatabaseArgs databaseInfo =
+          omDatabaseArgs.getOwnerName());
+      OmDatabaseArgs databaseInfo =
           metadataManager.getDatabaseTable().get(databaseKey);
 
       // Check of the database already exists
       if (databaseInfo != null) {
-        LOG.debug("database:{} already exists", hmDatabaseArgs.getName());
+        LOG.debug("database:{} already exists", omDatabaseArgs.getName());
         throw new OMException(ResultCodes.DATABASE_ALREADY_EXISTS);
       }
 
       PersistedUserDatabaseInfo databsaeList = addDatabaseToOwnerList(
-              hmDatabaseArgs.getName(), hmDatabaseArgs.getOwnerName());
+              omDatabaseArgs.getName(), omDatabaseArgs.getOwnerName());
 
       // Set creation time
-      hmDatabaseArgs.setCreationTime(System.currentTimeMillis());
+      omDatabaseArgs.setCreationTime(System.currentTimeMillis());
 
-      createDatabaseCommitToDB(hmDatabaseArgs, databsaeList, databaseKey,
+      createDatabaseCommitToDB(omDatabaseArgs, databsaeList, databaseKey,
             dbUserKey);
 
-      LOG.debug("created database:{} user:{}", hmDatabaseArgs.getName(),
-              hmDatabaseArgs.getOwnerName());
+      LOG.debug("created database:{} user:{}", omDatabaseArgs.getName(),
+              omDatabaseArgs.getOwnerName());
     } catch (IOException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Database creation failed for user:{} database:{}",
-                hmDatabaseArgs.getOwnerName(), hmDatabaseArgs.getName(), ex);
+                omDatabaseArgs.getOwnerName(), omDatabaseArgs.getName(), ex);
       }
       throw ex;
     } finally {
       if (acquiredUserLock) {
         metadataManager.getLock().releaseWriteLock(USER_LOCK,
-            hmDatabaseArgs.getOwnerName());
+            omDatabaseArgs.getOwnerName());
       }
       metadataManager.getLock().releaseWriteLock(DATABASE_LOCK,
-              hmDatabaseArgs.getName());
+              omDatabaseArgs.getName());
     }
   }
 
-  private void createDatabaseCommitToDB(HmDatabaseArgs hmDatabaseArgs,
-      PersistedUserDatabaseInfo databaseList, String dbDatabaseKey, String dbUserKey)
+  private void createDatabaseCommitToDB(OmDatabaseArgs omDatabaseArgs,
+                                        PersistedUserDatabaseInfo databaseList, String dbDatabaseKey, String dbUserKey)
       throws IOException {
     try (BatchOperation batch = metadataManager.getStore()
         .initBatchOperation()) {
       // Write the db info
       metadataManager.getDatabaseTable().putWithBatch(batch, dbDatabaseKey,
-          hmDatabaseArgs);
+              omDatabaseArgs);
       metadataManager.getUserTableDb().putWithBatch(batch, dbUserKey,
               databaseList);
       // Add db to user list
@@ -172,7 +172,7 @@ public class DatabaseManagerImpl implements DatabaseManager {
     metadataManager.getLock().acquireWriteLock(DATABASE_LOCK, database);
     try {
       String dbDatabaseKey = metadataManager.getDatabaseKey(database);
-      HmDatabaseArgs databaseArgs = metadataManager
+      OmDatabaseArgs databaseArgs = metadataManager
           .getDatabaseTable().get(dbDatabaseKey);
       if (databaseArgs == null) {
         LOG.debug("Changing database ownership failed for user:{} database:{}",
@@ -214,7 +214,7 @@ public class DatabaseManagerImpl implements DatabaseManager {
 
   private void setOwnerCommitToDB(PersistedUserDatabaseInfo oldOwnerDatabaseList,
                                   PersistedUserDatabaseInfo newOwnerDatabaseList,
-      HmDatabaseArgs newOwnerDatabaseArgs, String oldOwner) throws IOException {
+                                  OmDatabaseArgs newOwnerDatabaseArgs, String oldOwner) throws IOException {
     try (BatchOperation batch = metadataManager.getStore()
         .initBatchOperation()) {
       if (oldOwnerDatabaseList.getDatabaseNamesList().size() == 0) {
@@ -242,20 +242,20 @@ public class DatabaseManagerImpl implements DatabaseManager {
    * @throws IOException
    */
   @Override
-  public HmDatabaseArgs getDatabaseInfo(String database) throws IOException {
+  public OmDatabaseArgs getDatabaseInfo(String database) throws IOException {
     Preconditions.checkNotNull(database);
     metadataManager.getLock().acquireReadLock(DATABASE_LOCK, database);
     try {
       String dbDatabaseKey = metadataManager.getDatabaseKey(database);
-      HmDatabaseArgs hmDatabaseArgs =
+      OmDatabaseArgs omDatabaseArgs =
           metadataManager.getDatabaseTable().get(dbDatabaseKey);
-      if (hmDatabaseArgs == null) {
+      if (omDatabaseArgs == null) {
         LOG.debug("database:{} does not exist", database);
         throw new OMException("Database " + database + " is not found",
             ResultCodes.DATABASE_NOT_FOUND);
       }
 
-      return hmDatabaseArgs;
+      return omDatabaseArgs;
     } catch (IOException ex) {
       if (!(ex instanceof OMException)) {
         LOG.warn("Info database failed for database:{}", database, ex);
@@ -283,7 +283,7 @@ public class DatabaseManagerImpl implements DatabaseManager {
       acquiredUserLock = metadataManager.getLock().acquireWriteLock(USER_LOCK,
           owner);
       String dbDatabaseKey = metadataManager.getDatabaseKey(database);
-      HmDatabaseArgs databaseArgs =
+      OmDatabaseArgs databaseArgs =
           metadataManager.getDatabaseTable().get(dbDatabaseKey);
       if (databaseArgs == null) {
         LOG.debug("database:{} does not exist", database);
@@ -358,8 +358,8 @@ public class DatabaseManagerImpl implements DatabaseManager {
    * {@inheritDoc}
    */
   @Override
-  public List<HmDatabaseArgs> listDatabase(String userName,
-      String prefix, String startKey, int maxKeys) throws IOException {
+  public List<OmDatabaseArgs> listDatabase(String userName,
+                                           String prefix, String startKey, int maxKeys) throws IOException {
     metadataManager.getLock().acquireReadLock(USER_LOCK, userName);
     try {
       return metadataManager.listDatabase(userName, prefix, startKey, maxKeys);

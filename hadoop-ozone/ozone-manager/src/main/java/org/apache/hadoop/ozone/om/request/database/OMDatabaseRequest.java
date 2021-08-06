@@ -21,7 +21,7 @@ package org.apache.hadoop.ozone.om.request.database;
 import com.google.common.base.Optional;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
@@ -123,7 +123,7 @@ public abstract class OMDatabaseRequest extends OMClientRequest {
    * Create Hetu Database. This method should be called after acquiring user
    * and database Lock.
    * @param omMetadataManager
-   * @param hmDatabaseArgs
+   * @param omDatabaseArgs
    * @param databaseList
    * @param dbDatabaseKey
    * @param dbUserKey
@@ -131,7 +131,7 @@ public abstract class OMDatabaseRequest extends OMClientRequest {
    * @throws IOException
    */
   protected void createDatabase(
-      final OMMetadataManager omMetadataManager, HmDatabaseArgs hmDatabaseArgs,
+      final OMMetadataManager omMetadataManager, OmDatabaseArgs omDatabaseArgs,
       PersistedUserDatabaseInfo databaseList, String dbDatabaseKey,
       String dbUserKey, long transactionLogIndex) {
     // Update cache: Update user and database cache.
@@ -140,7 +140,7 @@ public abstract class OMDatabaseRequest extends OMClientRequest {
 
     omMetadataManager.getDatabaseTable().addCacheEntry(
         new CacheKey<>(dbDatabaseKey),
-        new CacheValue<>(Optional.of(hmDatabaseArgs), transactionLogIndex));
+        new CacheValue<>(Optional.of(omDatabaseArgs), transactionLogIndex));
   }
 
   /**
@@ -151,16 +151,16 @@ public abstract class OMDatabaseRequest extends OMClientRequest {
    * @return HmDatabaseArgs
    * @throws IOException
    */
-  protected HmDatabaseArgs getDatabaseInfo(OMMetadataManager omMetadataManager,
-      String database) throws IOException {
+  protected OmDatabaseArgs getDatabaseInfo(OMMetadataManager omMetadataManager,
+                                           String database) throws IOException {
 
     String dbDatabaseKey = omMetadataManager.getDatabaseKey(database);
-    HmDatabaseArgs hmDatabaseArgs =
+    OmDatabaseArgs omDatabaseArgs =
         omMetadataManager.getDatabaseTable().get(dbDatabaseKey);
-    if (hmDatabaseArgs == null) {
+    if (omDatabaseArgs == null) {
       throw new OMException("Database " + database + " is not found",
           OMException.ResultCodes.DATABASE_NOT_FOUND);
     }
-    return hmDatabaseArgs;
+    return omDatabaseArgs;
   }
 }

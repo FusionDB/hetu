@@ -90,9 +90,14 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
    */
   private PartitionsProto partitions;
   /**
-   * Table of usedCapacityInBytes
+   * Table of usedBytes
    */
-  private long usedCapacityInBytes;
+  private long usedInBytes;
+
+  /**
+   * Table of quotaInNamespace
+   */
+  public long quotaInNamespace;
 
   /**
    * Table of column key
@@ -130,7 +135,8 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
                       long objectID,
                       long updateID,
                       Map<String, String> metadata,
-                      long usedCapacityInBytes) {
+                      long usedBytes,
+                      long quotaInNamespace) {
     this.databaseName = databaseName;
     this.tableName = tableName;
     this.isVersionEnabled = isVersionEnabled;
@@ -146,7 +152,8 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
     this.numReplicas = numReplicas;
     this.partitions = partitions;
     this.distributedKeyProto = distributedKeyProto;
-    this.usedCapacityInBytes = usedCapacityInBytes;
+    this.usedInBytes = usedInBytes;
+    this.quotaInNamespace = quotaInNamespace;
   }
 
   /**
@@ -234,8 +241,12 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
    * Returns table used capacity in bytes
    * @return
    */
-  public long getUsedCapacityInBytes() {
-    return usedCapacityInBytes;
+  public long getUsedInBytes() {
+    return usedInBytes;
+  }
+
+  public long getQuotaInNamespace() {
+    return quotaInNamespace;
   }
 
   /**
@@ -283,7 +294,7 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
     auditMap.put(OzoneConsts.STORAGE_ENGINE, String.valueOf(this.storageEngine));
     auditMap.put(OzoneConsts.NUM_REPLICAS, String.valueOf(this.numReplicas));
     auditMap.put(OzoneConsts.TABLE_PARTITIONS, String.valueOf(this.partitions));
-    auditMap.put(OzoneConsts.USED_CAPACITY_IN_BYTES, String.valueOf(this.usedCapacityInBytes));
+    auditMap.put(OzoneConsts.USED_CAPACITY_IN_BYTES, String.valueOf(this.usedInBytes));
     return auditMap;
   }
 
@@ -312,10 +323,10 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
         .setPartitions(partitions)
         .setColumnKey(columnKey)
         .setDistributedKey(distributedKeyProto)
-        .setUsedCapacityInBytes(usedCapacityInBytes);
+        .setUsedInBytes(usedInBytes);
   }
 
-  /**
+    /**
    * Builder for OmBucketInfo.
    */
   public static class Builder {
@@ -331,7 +342,8 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
     private int numReplicas;
     private PartitionsProto partitions;
     private DistributedKeyProto distributedKey;
-    private long usedCapacityInBytes;
+    private long usedInBytes;
+    private long quotaInNamespace;
     private long objectID;
     private long updateID;
     private Map<String, String> metadata;
@@ -342,7 +354,7 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
       this.storageType = StorageType.DISK;
       this.storageEngine = StorageEngineProto.LSTORE;
       this.metadata = new HashMap<>();
-      this.usedCapacityInBytes = OzoneConsts.USED_CAPACITY_IN_BYTES_RESET;
+      this.usedInBytes = OzoneConsts.USED_CAPACITY_IN_BYTES_RESET;
     }
 
     public Builder setDatabaseName(String databaseName) {
@@ -422,13 +434,18 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
       return this;
     }
 
-    public Builder setUsedCapacityInBytes(long usedCapacityInBytes) {
-      this.usedCapacityInBytes = usedCapacityInBytes;
+    public Builder setUsedInBytes(long usedBytes) {
+      this.usedInBytes = usedInBytes;
       return this;
     }
 
     public Builder setDistributedKey(DistributedKeyProto distributedKey) {
       this.distributedKey = distributedKey;
+      return this;
+    }
+
+    public Builder setQuotaInNamespace(long quotaInNamespace) {
+      this.quotaInNamespace = quotaInNamespace;
       return this;
     }
 
@@ -448,7 +465,7 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
       return new OmTableInfo(databaseName, tableName, isVersionEnabled,
           storageType, columns, columnKey, storageEngine, numReplicas, partitions, distributedKey,
           creationTime, modificationTime, objectID, updateID,
-          metadata, usedCapacityInBytes);
+          metadata, usedInBytes, quotaInNamespace);
     }
   }
 
@@ -475,7 +492,7 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
         .setPartitions(partitions)
         .setColumnKey(columnKey.toProtobuf())
         .setDistributedKey(distributedKeyProto)
-        .setUsedCapacityInBytes(usedCapacityInBytes);
+        .setUsedCapacityInBytes(usedInBytes);
     return bib.build();
   }
 
@@ -501,7 +518,7 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
         .setPartitions(tableInfo.getPartitions())
         .setColumnKey(ColumnKey.fromProtobuf(tableInfo.getColumnKey()))
         .setDistributedKey(tableInfo.getDistributedKey())
-        .setUsedCapacityInBytes(tableInfo.getUsedCapacityInBytes());
+        .setUsedInBytes(tableInfo.getUsedCapacityInBytes());
 
     if (tableInfo.hasObjectID()) {
       obib.setObjectID(tableInfo.getObjectID());
@@ -530,7 +547,8 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
         ", numReplicas=" + numReplicas +
         ", partitions=" + partitions +
         ", distributedKey=" + distributedKeyProto +
-        ", usedCapacityInBytes='" + usedCapacityInBytes + '\'' +
+        ", usedInBytes='" + usedInBytes + '\'' +
+        ", quotaInNamespace='" + quotaInNamespace + '\'' +
         '}';
   }
 
@@ -556,7 +574,8 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
         numReplicas == that.numReplicas &&
         partitions == that.partitions &&
         distributedKeyProto == this.distributedKeyProto &&
-        usedCapacityInBytes == that.usedCapacityInBytes &&
+        usedInBytes == that.usedInBytes &&
+        quotaInNamespace == that.quotaInNamespace &&
         Objects.equals(metadata, that.metadata);
   }
 
@@ -580,7 +599,8 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
         ", numReplicas=" + numReplicas +
         ", partitions=" + partitions +
         ", distributedKey=" + distributedKeyProto +
-        ", usedCapacityInBytes='" + usedCapacityInBytes + '\'' +
+        ", usedInBytes='" + usedInBytes + '\'' +
+        ", quotaInNamespace='" + quotaInNamespace + '\'' +
         '}';
   }
 }

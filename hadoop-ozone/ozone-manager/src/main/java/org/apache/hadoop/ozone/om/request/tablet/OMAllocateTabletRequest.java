@@ -26,7 +26,7 @@ import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.audit.OMAction;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.OzoneManager;
@@ -192,14 +192,14 @@ public class OMAllocateTabletRequest extends OMTabletRequest {
 
       acquiredLock = omMetadataManager.getLock().acquireWriteLock(PARTITION_LOCK,
           databaseName, tableName, partitionName);
-      HmDatabaseArgs hmDatabaseArgs = getDatabaseInfo(omMetadataManager, databaseName);
+      OmDatabaseArgs omDatabaseArgs = getDatabaseInfo(omMetadataManager, databaseName);
       OmTableInfo omTableInfo = getTableInfo(omMetadataManager, databaseName, tableName);
       omPartitionInfo = getPartitionInfo(omMetadataManager, databaseName, tableName, partitionName);
       // check database quota
       long preAllocatedSpace = newLocationList.size()
           * ozoneManager.getScmBlockSize()
           * openTabletInfo.getFactor().getNumber();
-      checkTableQuotaInDatabase(hmDatabaseArgs, omTableInfo, preAllocatedSpace);
+      checkTableQuotaInDatabase(omDatabaseArgs, omTableInfo, preAllocatedSpace);
       // Append new tablet block
       openTabletInfo.appendNewBlocks(newLocationList, false);
 

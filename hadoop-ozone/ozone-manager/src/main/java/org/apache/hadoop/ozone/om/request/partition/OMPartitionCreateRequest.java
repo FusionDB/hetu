@@ -22,16 +22,14 @@ import com.google.common.base.Optional;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.hadoop.ozone.OmUtils;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.audit.OMAction;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmPartitionInfo;
-import org.apache.hadoop.ozone.om.helpers.OmTableArgs;
 import org.apache.hadoop.ozone.om.helpers.OmTableInfo;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
@@ -41,7 +39,6 @@ import org.apache.hadoop.ozone.om.response.partition.OMPartitionCreateResponse;
 import org.apache.hadoop.ozone.om.response.table.OMTableCreateResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreatePartitionRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreatePartitionResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.PartitionInfo;
@@ -50,11 +47,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.List;
 
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.DATABASE_NOT_FOUND;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.PARTITION_ALREADY_EXISTS;
-import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TABLE_ALREADY_EXISTS;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TABLE_NOT_FOUND;
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.DATABASE_LOCK;
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.PARTITION_LOCK;
@@ -146,10 +141,10 @@ public class OMPartitionCreateRequest extends OMClientRequest {
       acquiredPartitionLock = metadataManager.getLock().acquireWriteLock(
               PARTITION_LOCK, databaseName, tableName, partitionName);
 
-      HmDatabaseArgs hmDatabaseArgs =
+      OmDatabaseArgs omDatabaseArgs =
           metadataManager.getDatabaseTable().getReadCopy(databaseKey);
       //Check if the database exists
-      if (hmDatabaseArgs == null) {
+      if (omDatabaseArgs == null) {
         LOG.debug("database: {} not found ", databaseName);
         throw new OMException("Database doesn't exist", DATABASE_NOT_FOUND);
       }
@@ -180,7 +175,7 @@ public class OMPartitionCreateRequest extends OMClientRequest {
       omResponse.setCreatePartitionResponse(
           OzoneManagerProtocolProtos.CreatePartitionResponse.newBuilder().build());
       omClientResponse = new OMPartitionCreateResponse(omResponse.build(),
-          omPartitionInfo, omTableInfo, hmDatabaseArgs.copyObject());
+          omPartitionInfo, omTableInfo, omDatabaseArgs.copyObject());
     } catch (IOException ex) {
       exception = ex;
       omClientResponse = new OMTableCreateResponse(

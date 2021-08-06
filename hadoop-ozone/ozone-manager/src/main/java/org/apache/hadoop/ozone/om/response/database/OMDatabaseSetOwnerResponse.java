@@ -19,7 +19,7 @@
 package org.apache.hadoop.ozone.om.response.database;
 
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.response.CleanupTableInfo;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
@@ -40,13 +40,13 @@ public class OMDatabaseSetOwnerResponse extends OMClientResponse {
   private String oldOwner;
   private PersistedUserDatabaseInfo oldOwnerDatabaseList;
   private PersistedUserDatabaseInfo newOwnerDatabaseList;
-  private HmDatabaseArgs newOwnerDatabaseArgs;
+  private OmDatabaseArgs newOwnerDatabaseArgs;
 
   public OMDatabaseSetOwnerResponse(@Nonnull OMResponse omResponse,
                                     @Nonnull String oldOwner,
                                     @Nonnull PersistedUserDatabaseInfo oldOwnerDatabaseList,
                                     @Nonnull PersistedUserDatabaseInfo newOwnerDatabaseList,
-                                    @Nonnull HmDatabaseArgs newOwnerDatabaseArgs) {
+                                    @Nonnull OmDatabaseArgs newOwnerDatabaseArgs) {
     super(omResponse);
     this.oldOwner = oldOwner;
     this.oldOwnerDatabaseList = oldOwnerDatabaseList;

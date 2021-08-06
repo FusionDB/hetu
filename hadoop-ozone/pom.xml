@@ -45,6 +45,9 @@
     <module>csi</module>
     <module>fault-injection-test</module>
     <module>insight</module>
+    <!-- hetu storage -->
+    <module>hetu-client</module>
+    <module>hetu-manager</module>
   </modules>
 
   <repositories>

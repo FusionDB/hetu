@@ -20,7 +20,7 @@ package org.apache.hadoop.ozone.om.codec;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hdds.utils.db.Codec;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DatabaseInfo;
 
 import java.io.IOException;
@@ -28,22 +28,22 @@ import java.io.IOException;
 /**
  * Codec to encode HmDatabaseArgsCodec as byte array.
  */
-public class HmDatabaseArgsCodec implements Codec<HmDatabaseArgs> {
+public class HmDatabaseArgsCodec implements Codec<OmDatabaseArgs> {
 
   @Override
-  public byte[] toPersistedFormat(HmDatabaseArgs object) throws IOException {
+  public byte[] toPersistedFormat(OmDatabaseArgs object) throws IOException {
     Preconditions
         .checkNotNull(object, "Null object can't be converted to byte array.");
     return object.getProtobuf().toByteArray();
   }
 
   @Override
-  public HmDatabaseArgs fromPersistedFormat(byte[] rawData) throws IOException {
+  public OmDatabaseArgs fromPersistedFormat(byte[] rawData) throws IOException {
     Preconditions
         .checkNotNull(rawData,
             "Null byte array can't converted to real object.");
     try {
-      return HmDatabaseArgs.getFromProtobuf(DatabaseInfo.parseFrom(rawData));
+      return OmDatabaseArgs.getFromProtobuf(DatabaseInfo.parseFrom(rawData));
     } catch (InvalidProtocolBufferException e) {
       throw new IllegalArgumentException(
           "Can't encode the the raw data from the byte array", e);
@@ -51,7 +51,7 @@ public class HmDatabaseArgsCodec implements Codec<HmDatabaseArgs> {
   }
 
   @Override
-  public HmDatabaseArgs copyObject(HmDatabaseArgs hmDatabaseArgs) {
-    return hmDatabaseArgs.copyObject();
+  public OmDatabaseArgs copyObject(OmDatabaseArgs omDatabaseArgs) {
+    return omDatabaseArgs.copyObject();
   }
 }

@@ -20,11 +20,10 @@ package org.apache.hadoop.ozone.om.response.database;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
-import org.apache.hadoop.ozone.om.response.database.OMDatabaseCreateResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateDatabaseResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
@@ -85,7 +84,7 @@ public class TestOMDatabaseCreateResponse {
             .setCreateDatabaseResponse(CreateDatabaseResponse.getDefaultInstance())
         .build();
 
-    HmDatabaseArgs hmdatabaseArgs = HmDatabaseArgs.newBuilder()
+    OmDatabaseArgs hmdatabaseArgs = OmDatabaseArgs.newBuilder()
         .setOwnerName(userName).setAdminName(userName)
         .setName(databaseName).setCreationTime(Time.now()).build();
     OMDatabaseCreateResponse omDatabaseCreateResponse =

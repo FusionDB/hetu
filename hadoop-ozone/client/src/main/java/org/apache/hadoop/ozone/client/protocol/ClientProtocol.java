@@ -31,8 +31,6 @@ import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.client.BucketArgs;
-import org.apache.hadoop.ozone.client.DatabaseArgs;
-import org.apache.hadoop.ozone.client.HetuDatabase;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneKey;
 import org.apache.hadoop.ozone.client.OzoneKeyDetails;
@@ -736,17 +734,4 @@ public interface ClientProtocol {
   void setBucketQuota(String volumeName, String bucketName,
       long quotaInNamespace, long quotaInBytes) throws IOException;
 
-  void createDatabase(String databaseName, DatabaseArgs databaseArgs) throws IOException;
-
-  void createDatabase(String databaseName) throws IOException;
-
-  HetuDatabase getDatabaseDetails(String databaseName) throws IOException;
-
-  void deleteDatabase(String databaseName) throws IOException;
-
-  HetuDatabase updateDatabase(HetuDatabase hetuDatabase);
-
-  List<HetuDatabase> listDatabase(String user, String databasePrefix, String prevDatabase, int maxListResult) throws IOException;;
-
-  List<HetuDatabase> listDatabase(String databasePrefix, String prevDatabase, int maxListResult) throws IOException;
 }

@@ -19,10 +19,8 @@
 package org.apache.hadoop.ozone.om.response.tablet;
 
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
-import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
-import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmPartitionInfo;
 import org.apache.hadoop.ozone.om.helpers.OmTabletInfo;
 import org.apache.hadoop.ozone.om.response.CleanupTableInfo;
@@ -35,8 +33,6 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.List;
 
-import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.KEY_TABLE;
-import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.OPEN_KEY_TABLE;
 import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.OPEN_TABLET_TABLE;
 import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.TABLET_TABLE;
 
@@ -52,18 +48,18 @@ public class OMTabletCreateResponse extends OMClientResponse {
   private long openTabletSessionID;
   private List<OmTabletInfo> parentTabletInfos;
   private OmPartitionInfo omPartitionInfo;
-  private HmDatabaseArgs hmDatabaseArgs;
+  private OmDatabaseArgs omDatabaseArgs;
 
   public OMTabletCreateResponse(@Nonnull OMResponse omResponse,
                                 @Nonnull OmTabletInfo omTabletInfo, List<OmTabletInfo> parentTabletInfos,
                                 long openTabletSessionID, @Nonnull OmPartitionInfo omPartitionInfo,
-                                @Nonnull HmDatabaseArgs hmDatabaseArgs) {
+                                @Nonnull OmDatabaseArgs omDatabaseArgs) {
     super(omResponse);
     this.omTabletInfo = omTabletInfo;
     this.openTabletSessionID = openTabletSessionID;
     this.parentTabletInfos = parentTabletInfos;
     this.omPartitionInfo = omPartitionInfo;
-    this.hmDatabaseArgs = hmDatabaseArgs;
+    this.omDatabaseArgs = omDatabaseArgs;
   }
 
   /**
@@ -114,7 +110,7 @@ public class OMTabletCreateResponse extends OMClientResponse {
 
     // update database quota.
     omMetadataManager.getDatabaseTable().putWithBatch(batchOperation, omMetadataManager.getDatabaseKey(omTabletInfo.getDatabaseName()),
-            hmDatabaseArgs);
+            omDatabaseArgs);
   }
 }
 

@@ -19,7 +19,7 @@
 package org.apache.hadoop.ozone.om.response.database;
 
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.response.CleanupTableInfo;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
@@ -35,12 +35,12 @@ import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.DATABASE_TABLE;
  */
 @CleanupTableInfo(cleanupTables = {DATABASE_TABLE})
 public class OMDatabaseSetQuotaResponse extends OMClientResponse {
-  private HmDatabaseArgs hmDatabaseArgs;
+  private OmDatabaseArgs omDatabaseArgs;
 
   public OMDatabaseSetQuotaResponse(@Nonnull OMResponse omResponse,
-                                    @Nonnull HmDatabaseArgs hmDatabaseArgs) {
+                                    @Nonnull OmDatabaseArgs omDatabaseArgs) {
     super(omResponse);
-    this.hmDatabaseArgs = hmDatabaseArgs;
+    this.omDatabaseArgs = omDatabaseArgs;
   }
 
   /**
@@ -57,8 +57,8 @@ public class OMDatabaseSetQuotaResponse extends OMClientResponse {
       BatchOperation batchOperation) throws IOException {
 
     omMetadataManager.getDatabaseTable().putWithBatch(batchOperation,
-        omMetadataManager.getDatabaseKey(hmDatabaseArgs.getName()),
-        hmDatabaseArgs);
+        omMetadataManager.getDatabaseKey(omDatabaseArgs.getName()),
+            omDatabaseArgs);
   }
 
 }

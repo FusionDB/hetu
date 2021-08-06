@@ -38,7 +38,7 @@ import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
 import org.apache.hadoop.ozone.hm.meta.table.ColumnKey;
 import org.apache.hadoop.ozone.hm.meta.table.ColumnSchema;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
@@ -75,7 +75,6 @@ import org.apache.hadoop.ozone.storage.proto.OzoneManagerStorageProtos;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
-import org.checkerframework.checker.nullness.Opt;
 import org.jetbrains.annotations.NotNull;
 
 import static java.util.stream.Collectors.toList;
@@ -1422,17 +1421,17 @@ public final class TestOMRequestUtils {
   /**
    * Add the Database information to OzoneManager DB and Cache.
    * @param omMetadataManager
-   * @param hmDatabaseArgs
+   * @param omDatabaseArgs
    * @throws IOException
    */
   public static void addDatabaseToOM(OMMetadataManager omMetadataManager,
-                                   HmDatabaseArgs hmDatabaseArgs) throws IOException {
+                                   OmDatabaseArgs omDatabaseArgs) throws IOException {
     String dbDatabaseKey =
-            omMetadataManager.getDatabaseKey(hmDatabaseArgs.getName());
-    omMetadataManager.getDatabaseTable().put(dbDatabaseKey, hmDatabaseArgs);
+            omMetadataManager.getDatabaseKey(omDatabaseArgs.getName());
+    omMetadataManager.getDatabaseTable().put(dbDatabaseKey, omDatabaseArgs);
     omMetadataManager.getDatabaseTable().addCacheEntry(
             new CacheKey<>(dbDatabaseKey),
-            new CacheValue<>(Optional.of(hmDatabaseArgs), 1L));
+            new CacheValue<>(Optional.of(omDatabaseArgs), 1L));
   }
 
   public static void addDatabaseToDB(String databaseName,
@@ -1449,18 +1448,18 @@ public final class TestOMRequestUtils {
    */
   public static void addDatabaseToDB(String databaseName, String ownerName,
                                    OMMetadataManager omMetadataManager) throws Exception {
-    HmDatabaseArgs hmDatabaseArgs =
-            HmDatabaseArgs.newBuilder().setCreationTime(Time.now())
+    OmDatabaseArgs omDatabaseArgs =
+            OmDatabaseArgs.newBuilder().setCreationTime(Time.now())
                     .setName(databaseName).setAdminName(ownerName)
                     .setOwnerName(ownerName).setQuotaInBytes(Long.MAX_VALUE)
                     .setQuotaInNamespace(10000L).build();
     omMetadataManager.getDatabaseTable().put(
-            omMetadataManager.getVolumeKey(databaseName), hmDatabaseArgs);
+            omMetadataManager.getVolumeKey(databaseName), omDatabaseArgs);
 
     // Add to cache.
     omMetadataManager.getDatabaseTable().addCacheEntry(
             new CacheKey<>(omMetadataManager.getVolumeKey(databaseName)),
-            new CacheValue<>(Optional.of(hmDatabaseArgs), 1L));
+            new CacheValue<>(Optional.of(omDatabaseArgs), 1L));
   }
 
   /**
@@ -1472,17 +1471,17 @@ public final class TestOMRequestUtils {
    */
   public static void addDatabaseToDB(String databaseName,
                                    OMMetadataManager omMetadataManager, long quotaInBytes) throws Exception {
-    HmDatabaseArgs hmDatabaseArgs =
-            HmDatabaseArgs.newBuilder().setCreationTime(Time.now())
+    OmDatabaseArgs omDatabaseArgs =
+            OmDatabaseArgs.newBuilder().setCreationTime(Time.now())
                     .setName(databaseName).setAdminName(databaseName)
                     .setOwnerName(databaseName).setQuotaInBytes(quotaInBytes)
                     .setQuotaInNamespace(10000L).build();
     omMetadataManager.getDatabaseTable().put(
-            omMetadataManager.getDatabaseKey(databaseName), hmDatabaseArgs);
+            omMetadataManager.getDatabaseKey(databaseName), omDatabaseArgs);
 
     // Add to cache.
     omMetadataManager.getDatabaseTable().addCacheEntry(
             new CacheKey<>(omMetadataManager.getDatabaseKey(databaseName)),
-            new CacheValue<>(Optional.of(hmDatabaseArgs), 1L));
+            new CacheValue<>(Optional.of(omDatabaseArgs), 1L));
   }
 }

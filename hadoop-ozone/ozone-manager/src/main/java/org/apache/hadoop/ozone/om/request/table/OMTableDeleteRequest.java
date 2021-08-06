@@ -24,7 +24,7 @@ import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.audit.OMAction;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.OzoneManager;
@@ -130,21 +130,21 @@ public class OMTableDeleteRequest extends OMClientRequest {
 
       // update used namespace for database
       String databaseKey = omMetadataManager.getDatabaseKey(databaseName);
-      HmDatabaseArgs hmDatabaseArgs =
+      OmDatabaseArgs omDatabaseArgs =
           omMetadataManager.getDatabaseTable().getReadCopy(databaseKey);
-      if (hmDatabaseArgs == null) {
+      if (omDatabaseArgs == null) {
         throw new OMException("Database " + databaseName + " is not found",
             OMException.ResultCodes.DATABASE_NOT_FOUND);
       }
-      hmDatabaseArgs.incrUsedNamespace(-1L);
+      omDatabaseArgs.incrUsedNamespace(-1L);
       // Update table cache.
       omMetadataManager.getDatabaseTable().addCacheEntry(
           new CacheKey<>(databaseKey),
-          new CacheValue<>(Optional.of(hmDatabaseArgs), transactionLogIndex));
+          new CacheValue<>(Optional.of(omDatabaseArgs), transactionLogIndex));
 
       // Add to double buffer.
       omClientResponse = new OMTableDeleteResponse(omResponse.build(),
-          databaseName, tableName, hmDatabaseArgs.copyObject());
+          databaseName, tableName, omDatabaseArgs.copyObject());
     } catch (IOException ex) {
       success = false;
       exception = ex;

@@ -20,12 +20,10 @@ package org.apache.hadoop.ozone.om.response.database;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
-import org.apache.hadoop.ozone.om.response.database.OMDatabaseCreateResponse;
-import org.apache.hadoop.ozone.om.response.database.OMDatabaseDeleteResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateDatabaseResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
@@ -87,11 +85,11 @@ public class TestOMDatabaseDeleteResponse {
         .setCreateDatabaseResponse(CreateDatabaseResponse.getDefaultInstance())
         .build();
 
-    HmDatabaseArgs hmDatabaseArgs = HmDatabaseArgs.newBuilder()
+    OmDatabaseArgs omDatabaseArgs = OmDatabaseArgs.newBuilder()
         .setOwnerName(userName).setAdminName(userName)
         .setName(databaseName).setCreationTime(Time.now()).build();
     OMDatabaseCreateResponse omDatabaseCreateResponse =
-        new OMDatabaseCreateResponse(omResponse, hmDatabaseArgs, databaseList);
+        new OMDatabaseCreateResponse(omResponse, omDatabaseArgs, databaseList);
 
     // As we are deleting updated database list should be empty.
     PersistedUserDatabaseInfo updatedDatabaseList =

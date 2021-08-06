@@ -21,7 +21,7 @@ package org.apache.hadoop.ozone.om.response.database;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
 import org.apache.hadoop.hdds.utils.db.Table;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
@@ -87,11 +87,11 @@ public class TestOMDatabaseSetOwnerResponse {
         .setCreateDatabaseResponse(CreateDatabaseResponse.getDefaultInstance())
         .build();
 
-    HmDatabaseArgs hmDatabaseArgs = HmDatabaseArgs.newBuilder()
+    OmDatabaseArgs omDatabaseArgs = OmDatabaseArgs.newBuilder()
         .setOwnerName(oldOwner).setAdminName(oldOwner)
         .setName(databaseName).setCreationTime(Time.now()).build();
     OMDatabaseCreateResponse omDatabaseCreateResponse =
-        new OMDatabaseCreateResponse(omResponse, hmDatabaseArgs, databaseList);
+        new OMDatabaseCreateResponse(omResponse, omDatabaseArgs, databaseList);
 
 
 
@@ -106,9 +106,9 @@ public class TestOMDatabaseSetOwnerResponse {
         .setObjectID(2)
         .setUpdateID(2)
         .build();
-    HmDatabaseArgs newOwnerDatabaseArgs = HmDatabaseArgs.newBuilder()
+    OmDatabaseArgs newOwnerDatabaseArgs = OmDatabaseArgs.newBuilder()
         .setOwnerName(newOwner).setAdminName(newOwner)
-        .setName(databaseName).setCreationTime(hmDatabaseArgs.getCreationTime())
+        .setName(databaseName).setCreationTime(omDatabaseArgs.getCreationTime())
         .build();
 
     OMDatabaseSetOwnerResponse omDatabaseSetOwnerResponse =
@@ -125,7 +125,7 @@ public class TestOMDatabaseSetOwnerResponse {
     Assert.assertEquals(1,
         omMetadataManager.countRowsInTable(omMetadataManager.getDatabaseTable()));
 
-    Table.KeyValue<String, HmDatabaseArgs> keyValue =
+    Table.KeyValue<String, OmDatabaseArgs> keyValue =
         omMetadataManager.getDatabaseTable().iterator().next();
 
     Assert.assertEquals(omMetadataManager.getDatabaseKey(databaseName),

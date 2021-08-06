@@ -29,13 +29,14 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.OzoneAcl;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.DBUpdates;
 import org.apache.hadoop.ozone.om.helpers.KeyValueUtil;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmDeleteKeys;
+import org.apache.hadoop.ozone.om.helpers.OmDeleteTablets;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
@@ -46,10 +47,19 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
+import org.apache.hadoop.ozone.om.helpers.OmPartitionArgs;
+import org.apache.hadoop.ozone.om.helpers.OmPartitionInfo;
 import org.apache.hadoop.ozone.om.helpers.OmRenameKeys;
+import org.apache.hadoop.ozone.om.helpers.OmTableArgs;
+import org.apache.hadoop.ozone.om.helpers.OmTableInfo;
+import org.apache.hadoop.ozone.om.helpers.OmTabletArgs;
+import org.apache.hadoop.ozone.om.helpers.OmTabletInfo;
+import org.apache.hadoop.ozone.om.helpers.OmTabletLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.om.helpers.OpenTabletSession;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
+import org.apache.hadoop.ozone.om.helpers.OzoneTabletStatus;
 import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
@@ -60,11 +70,14 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AddAclR
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AddAclResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateBlockRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateBlockResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateTabletRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateTabletResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.BucketArgs;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.BucketInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CancelDelegationTokenResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CheckVolumeAccessRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CommitKeyRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CommitTabletRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateBucketRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateDirectoryRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateFileRequest;
@@ -91,6 +104,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.InfoBuc
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.InfoVolumeRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.InfoVolumeResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyArgs;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.TabletArgs;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ListBucketsRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ListBucketsResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ListKeysRequest;
@@ -142,16 +156,13 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Databas
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ListDatabaseRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ListDatabaseResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateDatabaseRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateDatabaseResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DeleteDatabaseRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DeleteDatabaseResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetDatabaseRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetDatabaseResponse;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetDatabasePropertyRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetDatabasePropertyResponse;
 import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
+import org.apache.hadoop.ozone.security.auth.HetuObj;
 import org.apache.hadoop.ozone.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
 import org.apache.hadoop.ozone.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
 import org.apache.hadoop.ozone.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
@@ -231,94 +242,6 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .build();
 
     return transport.submitRequest(payload);
-  }
-
-  @Override
-  public void createDatabase(HmDatabaseArgs args) throws IOException {
-    CreateDatabaseRequest.Builder req =
-            CreateDatabaseRequest.newBuilder();
-    DatabaseInfo databaseInfo = args.getProtobuf();
-    req.setDatabaseInfo(databaseInfo);
-
-    OMRequest omRequest = createOMRequest(Type.CreateDatabase)
-            .setCreateDatabaseRequest(req)
-            .build();
-
-    OMResponse omResponse = submitRequest(omRequest);
-    handleError(omResponse);
-  }
-
-  @Override
-  public HmDatabaseArgs getDatabaseInfo(String databaseName) throws IOException {
-    GetDatabaseRequest.Builder req = GetDatabaseRequest.newBuilder();
-    req.setName(databaseName);
-
-    OMRequest omRequest = createOMRequest(Type.GetDatabase)
-            .setGetDatabaseRequest(req)
-            .build();
-
-    GetDatabaseResponse resp =
-            handleError(submitRequest(omRequest)).getGetDatabaseResponse();
-
-
-    return HmDatabaseArgs.getFromProtobuf(resp.getDatabaseInfo());
-  }
-
-  @Override
-  public void deleteDatabase(String databaseName) throws IOException {
-    DeleteDatabaseRequest.Builder req = DeleteDatabaseRequest.newBuilder();
-    req.setName(databaseName);
-
-    OMRequest omRequest = createOMRequest(Type.DeleteDatabase)
-            .setDeleteDatabaseRequest(req)
-            .build();
-
-    handleError(submitRequest(omRequest));
-  }
-
-  @Override
-  public List<HmDatabaseArgs> listAllDatabases(String prefix, String prevKey, int maxKeys) throws IOException {
-    ListDatabaseRequest.Builder builder = ListDatabaseRequest.newBuilder();
-    if (!Strings.isNullOrEmpty(prefix)) {
-      builder.setPrefix(prefix);
-    }
-    if (!Strings.isNullOrEmpty(prevKey)) {
-      builder.setPrevKey(prevKey);
-    }
-    builder.setMaxKeys(maxKeys);
-    builder.setScope(ListDatabaseRequest.Scope.DATABASES_BY_CLUSTER);
-    return listDatabase(builder.build());
-  }
-
-  @Override
-  public List<HmDatabaseArgs> listDatabaseByUser(String userName, String prefix, String prevKey, int maxKeys) throws IOException {
-    ListDatabaseRequest.Builder builder = ListDatabaseRequest.newBuilder();
-    if (!Strings.isNullOrEmpty(prefix)) {
-      builder.setPrefix(prefix);
-    }
-    if (!Strings.isNullOrEmpty(prevKey)) {
-      builder.setPrevKey(prevKey);
-    }
-    builder.setMaxKeys(maxKeys);
-    builder.setUserName(userName);
-    builder.setScope(ListDatabaseRequest.Scope.DATABASES_BY_USER);
-    return listDatabase(builder.build());
-  }
-
-  private List<HmDatabaseArgs> listDatabase(ListDatabaseRequest request)
-          throws IOException {
-
-    OMRequest omRequest = createOMRequest(Type.ListDatabase)
-            .setListDatabaseRequest(request)
-            .build();
-
-    ListDatabaseResponse resp =
-            handleError(submitRequest(omRequest)).getListDatabaseResponse();
-    List<HmDatabaseArgs> list = new ArrayList<>(resp.getDatabaseInfoList().size());
-    for (DatabaseInfo info : resp.getDatabaseInfoList()) {
-      list.add(HmDatabaseArgs.getFromProtobuf(info));
-    }
-    return list;
   }
 
     /**
@@ -1616,5 +1539,268 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
   @VisibleForTesting
   public OmTransport getTransport() {
     return transport;
+  }
+
+  @Override
+  public void createDatabase(OmDatabaseArgs args) throws IOException {
+    CreateDatabaseRequest.Builder req =
+            CreateDatabaseRequest.newBuilder();
+    DatabaseInfo databaseInfo = args.getProtobuf();
+    req.setDatabaseInfo(databaseInfo);
+
+    OMRequest omRequest = createOMRequest(Type.CreateDatabase)
+            .setCreateDatabaseRequest(req)
+            .build();
+
+    OMResponse omResponse = submitRequest(omRequest);
+    handleError(omResponse);
+  }
+
+  @Override
+  public OmDatabaseArgs getDatabaseInfo(String databaseName) throws IOException {
+    GetDatabaseRequest.Builder req = GetDatabaseRequest.newBuilder();
+    req.setName(databaseName);
+
+    OMRequest omRequest = createOMRequest(Type.GetDatabase)
+            .setGetDatabaseRequest(req)
+            .build();
+
+    GetDatabaseResponse resp =
+            handleError(submitRequest(omRequest)).getGetDatabaseResponse();
+
+
+    return OmDatabaseArgs.getFromProtobuf(resp.getDatabaseInfo());
+  }
+
+  @Override
+  public void deleteDatabase(String databaseName) throws IOException {
+    DeleteDatabaseRequest.Builder req = DeleteDatabaseRequest.newBuilder();
+    req.setName(databaseName);
+
+    OMRequest omRequest = createOMRequest(Type.DeleteDatabase)
+            .setDeleteDatabaseRequest(req)
+            .build();
+
+    handleError(submitRequest(omRequest));
+  }
+
+  @Override
+  public boolean checkDatabaseAccess(String databaseName, OzoneAclInfo userAcl) throws IOException {
+    return false;
+  }
+
+  @Override
+  public List<OmDatabaseArgs> listAllDatabases(String prefix, String prevKey, int maxKeys) throws IOException {
+    ListDatabaseRequest.Builder builder = ListDatabaseRequest.newBuilder();
+    if (!Strings.isNullOrEmpty(prefix)) {
+      builder.setPrefix(prefix);
+    }
+    if (!Strings.isNullOrEmpty(prevKey)) {
+      builder.setPrevKey(prevKey);
+    }
+    builder.setMaxKeys(maxKeys);
+    builder.setScope(ListDatabaseRequest.Scope.DATABASES_BY_CLUSTER);
+    return listDatabase(builder.build());
+  }
+
+  @Override
+  public List<OmDatabaseArgs> listDatabaseByUser(String userName, String prefix, String prevKey, int maxKeys)
+          throws IOException {
+    ListDatabaseRequest.Builder builder = ListDatabaseRequest.newBuilder();
+    if (!Strings.isNullOrEmpty(prefix)) {
+      builder.setPrefix(prefix);
+    }
+    if (!Strings.isNullOrEmpty(prevKey)) {
+      builder.setPrevKey(prevKey);
+    }
+    builder.setMaxKeys(maxKeys);
+    builder.setUserName(userName);
+    builder.setScope(ListDatabaseRequest.Scope.DATABASES_BY_USER);
+    return listDatabase(builder.build());
+  }
+
+  private List<OmDatabaseArgs> listDatabase(ListDatabaseRequest request)
+          throws IOException {
+
+    OMRequest omRequest = createOMRequest(Type.ListDatabase)
+            .setListDatabaseRequest(request)
+            .build();
+
+    ListDatabaseResponse resp =
+            handleError(submitRequest(omRequest)).getListDatabaseResponse();
+    List<OmDatabaseArgs> list = new ArrayList<>(resp.getDatabaseInfoList().size());
+    for (DatabaseInfo info : resp.getDatabaseInfoList()) {
+      list.add(OmDatabaseArgs.getFromProtobuf(info));
+    }
+    return list;
+  }
+
+  @Override
+  public void createTable(OmTableInfo omTableInfo) throws IOException {
+
+  }
+
+  @Override
+  public void setTableProperty(OmTableArgs omTableArgs) throws IOException {
+
+  }
+
+  @Override
+  public void deleteTable(String databaseName, String tableName) throws IOException {
+
+  }
+
+  @Override
+  public OmTableInfo getTableInfo(String databaseName, String tableName)
+          throws IOException {
+    return null;
+  }
+
+  @Override
+  public List<OmTableInfo> listTables(String databaseName, String startKey, String prefix,
+                                      int maxNumOfTables) throws IOException {
+    return null;
+  }
+
+  @Override
+  public void createPartition(OmPartitionInfo omPartitionInfo) throws IOException {
+
+  }
+
+  @Override
+  public void setPartitionProperty(OmPartitionArgs omPartitionArgs) throws IOException {
+
+  }
+
+  @Override
+  public OmPartitionInfo getPartitionInfo(String databaseName, String tableName,
+                                          String partitionName) throws IOException {
+    return null;
+  }
+
+  @Override
+  public void deletePartition(String databaseName, String tableName, String partitionName)
+          throws IOException {
+
+  }
+
+  @Override
+  public List<OmPartitionInfo> listPartitions(String databaseName, String tableName,
+                                                 String startKey, String prefix,
+                                                 int maxNumOfPartitions)
+    throws IOException {
+
+    return null;
+  }
+
+  @Override
+  public OpenTabletSession openTablet(OmTabletArgs tabletArgs) throws IOException {
+    return null;
+  }
+
+  @Override
+  public void commitTablet(OmTabletArgs args, long clientId) throws IOException {
+    CommitTabletRequest.Builder req = CommitTabletRequest.newBuilder();
+    List<OmTabletLocationInfo> locationInfoList = args.getLocationInfoList();
+    Preconditions.checkNotNull(locationInfoList);
+    TabletArgs tabletArgs = TabletArgs.newBuilder()
+            .setDatabaseName(args.getDatabaseName())
+            .setTableName(args.getTableName())
+            .setPartitionName(args.getPartitionName())
+            .setTabletName(args.getTabletName())
+            .setDataSize(args.getDataSize())
+            .setType(args.getType())
+            .setFactor(args.getFactor())
+            .addAllTabletLocations(locationInfoList.stream()
+                    // TODO use OM version?
+                    .map(info -> info.getProtobuf(CURRENT_VERSION))
+                    .collect(Collectors.toList())).build();
+    req.setTabletArgs(tabletArgs);
+    req.setClientID(clientId);
+
+    OMRequest omRequest = createOMRequest(Type.CommitTablet)
+            .setCommitTabletRequest(req)
+            .build();
+
+    handleError(submitRequest(omRequest));
+  }
+
+  @Override
+  public OmTabletLocationInfo allocateTablet(OmTabletArgs args, long clientId, ExcludeList excludeList)
+          throws IOException {
+    AllocateTabletRequest.Builder req = AllocateTabletRequest.newBuilder();
+    TabletArgs.Builder tabletArgs = TabletArgs.newBuilder()
+            .setDatabaseName(args.getDatabaseName())
+            .setTableName(args.getTableName())
+            .setPartitionName(args.getPartitionName())
+            .setTabletName(args.getTabletName())
+            .setDataSize(args.getDataSize());
+
+    if (args.getFactor() != null) {
+      tabletArgs.setFactor(args.getFactor());
+    }
+
+    if (args.getType() != null) {
+      tabletArgs.setType(args.getType());
+    }
+
+    req.setTabletArgs(tabletArgs);
+    req.setClientID(clientId);
+    req.setExcludeList(excludeList.getProtoBuf());
+
+    OMRequest omRequest = createOMRequest(Type.AllocateTablet)
+            .setAllocateTabletRequest(req)
+            .build();
+
+    AllocateTabletResponse resp = handleError(submitRequest(omRequest))
+            .getAllocateTabletResponse();
+    return OmTabletLocationInfo.getFromProtobuf(resp.getTabletLocation());
+  }
+
+  @Override
+  public OmTabletInfo lookupTablet(OmTabletArgs tabletArgs) throws IOException {
+    return null;
+  }
+
+  @Override
+  public void deleteTablet(OmTabletArgs tabletArgs) throws IOException {
+
+  }
+
+  @Override
+  public void deleteTablets(OmDeleteTablets omDeleteTablets) throws IOException {
+
+  }
+
+  @Override
+  public List<OmTabletInfo> listTablets(String databaseName, String tableName, String partitionName,
+                                        String startKey, String prefix, int maxNumOfTablets)
+          throws IOException {
+    return null;
+  }
+
+  @Override
+  public OzoneTabletStatus getTabletStatus(OmTabletArgs tabletArgs) throws IOException {
+    return null;
+  }
+
+  @Override
+  public boolean addAuth(HetuObj obj, OzoneAcl acl) throws IOException {
+    return false;
+  }
+
+  @Override
+  public boolean removeAuth(HetuObj obj, OzoneAcl acl) throws IOException {
+    return false;
+  }
+
+  @Override
+  public boolean setAuth(HetuObj obj, List<OzoneAcl> acls) throws IOException {
+    return false;
+  }
+
+  @Override
+  public List<OzoneAcl> getAuth(HetuObj obj) throws IOException {
+    return null;
   }
 }

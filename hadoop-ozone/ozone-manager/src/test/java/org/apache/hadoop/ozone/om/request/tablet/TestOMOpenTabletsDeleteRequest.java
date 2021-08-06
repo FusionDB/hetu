@@ -21,7 +21,7 @@ package org.apache.hadoop.ozone.om.request.tablet;
 import com.google.common.base.Optional;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.helpers.OmTabletInfo;
 import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
@@ -388,28 +388,28 @@ public class TestOMOpenTabletsDeleteRequest extends TestOMTabletRequest {
         .setClientId(UUID.randomUUID().toString()).build();
   }
 
-  private void addDatabaseToCacheAndDB(HmDatabaseArgs hmDatabaseArgs) throws Exception {
-    String databaseKey = omMetadataManager.getDatabaseKey(hmDatabaseArgs.getName());
+  private void addDatabaseToCacheAndDB(OmDatabaseArgs omDatabaseArgs) throws Exception {
+    String databaseKey = omMetadataManager.getDatabaseKey(omDatabaseArgs.getName());
 
     omMetadataManager.getDatabaseTable().addCacheEntry(
         new CacheKey<>(databaseKey),
-        new CacheValue<>(Optional.of(hmDatabaseArgs), hmDatabaseArgs.getUpdateID())
+        new CacheValue<>(Optional.of(omDatabaseArgs), omDatabaseArgs.getUpdateID())
     );
 
-    omMetadataManager.getDatabaseTable().put(databaseKey, hmDatabaseArgs);
+    omMetadataManager.getDatabaseTable().put(databaseKey, omDatabaseArgs);
   }
 
-  private HmDatabaseArgs getDatabaseFromDB(String database) throws Exception {
+  private OmDatabaseArgs getDatabaseFromDB(String database) throws Exception {
     String databaseKey = omMetadataManager.getDatabaseKey(database);
     return omMetadataManager.getDatabaseTable().getSkipCache(databaseKey);
   }
 
-  private HmDatabaseArgs getDatabaseFromCache(String database) {
+  private OmDatabaseArgs getDatabaseFromCache(String database) {
     String databaseKey = omMetadataManager.getDatabaseKey(database);
-    CacheValue<HmDatabaseArgs> value = omMetadataManager.getDatabaseTable()
+    CacheValue<OmDatabaseArgs> value = omMetadataManager.getDatabaseTable()
         .getCacheValue(new CacheKey<>(databaseKey));
 
-    HmDatabaseArgs result = null;
+    OmDatabaseArgs result = null;
     if (value != null) {
       result = value.getCacheValue();
     }

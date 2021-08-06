@@ -19,7 +19,7 @@
 package org.apache.hadoop.ozone.om.response.partition;
 
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmPartitionInfo;
 import org.apache.hadoop.ozone.om.helpers.OmTableInfo;
@@ -31,7 +31,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 
-import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.META_TABLE;
 import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.PARTITION_TABLE;
 
 /**
@@ -42,16 +41,16 @@ public final class OMPartitionCreateResponse extends OMClientResponse {
 
   private final OmPartitionInfo omPartitionInfo;
   private final OmTableInfo omTableInfo;
-  private final HmDatabaseArgs hmDatabaseArgs;
+  private final OmDatabaseArgs omDatabaseArgs;
 
   public OMPartitionCreateResponse(@Nonnull OMResponse omResponse,
                                    @Nonnull OmPartitionInfo omPartitionInfo,
                                    @Nonnull OmTableInfo omTableInfo,
-                                   @Nonnull HmDatabaseArgs hmDatabaseArgs) {
+                                   @Nonnull OmDatabaseArgs omDatabaseArgs) {
     super(omResponse);
     this.omPartitionInfo = omPartitionInfo;
     this.omTableInfo = omTableInfo;
-    this.hmDatabaseArgs = hmDatabaseArgs;
+    this.omDatabaseArgs = omDatabaseArgs;
   }
 
   public OMPartitionCreateResponse(@Nonnull OMResponse omResponse,
@@ -60,7 +59,7 @@ public final class OMPartitionCreateResponse extends OMClientResponse {
     super(omResponse);
     this.omPartitionInfo = omPartitionInfo;
     this.omTableInfo = omTableInfo;
-    this.hmDatabaseArgs = null;
+    this.omDatabaseArgs = null;
   }
 
   /**
@@ -72,7 +71,7 @@ public final class OMPartitionCreateResponse extends OMClientResponse {
     checkStatusNotOK();
     omPartitionInfo = null;
     omTableInfo = null;
-    hmDatabaseArgs = null;
+    omDatabaseArgs = null;
   }
 
   @Override
@@ -91,10 +90,10 @@ public final class OMPartitionCreateResponse extends OMClientResponse {
               omTableInfo);
     }
     // update database usedCapacityInBytes
-    if (hmDatabaseArgs != null) {
+    if (omDatabaseArgs != null) {
       omMetadataManager.getDatabaseTable().putWithBatch(batchOperation,
-              omMetadataManager.getDatabaseKey(hmDatabaseArgs.getName()),
-              hmDatabaseArgs);
+              omMetadataManager.getDatabaseKey(omDatabaseArgs.getName()),
+              omDatabaseArgs);
     }
   }
 

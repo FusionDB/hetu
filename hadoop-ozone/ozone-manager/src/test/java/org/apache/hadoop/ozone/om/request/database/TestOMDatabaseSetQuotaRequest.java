@@ -18,11 +18,8 @@
 
 package org.apache.hadoop.ozone.om.request.database;
 
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
-import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
-import org.apache.hadoop.ozone.om.request.volume.OMVolumeSetQuotaRequest;
-import org.apache.hadoop.ozone.om.request.volume.TestOMVolumeRequest;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
@@ -78,12 +75,12 @@ public class TestOMDatabaseSetQuotaRequest extends TestOMDatabaseRequest {
     String databaseKey = omMetadataManager.getDatabaseKey(databaseName);
 
     // Get Quota before validateAndUpdateCache.
-    HmDatabaseArgs hmDatabaseArgs =
+    OmDatabaseArgs omDatabaseArgs =
         omMetadataManager.getDatabaseTable().get(databaseKey);
     // As request is valid database table should not have entry.
-    Assert.assertNotNull(hmDatabaseArgs);
-    long quotaBytesBeforeSet = hmDatabaseArgs.getQuotaInBytes();
-    long quotaNamespaceBeforeSet = hmDatabaseArgs.getQuotaInNamespace();
+    Assert.assertNotNull(omDatabaseArgs);
+    long quotaBytesBeforeSet = omDatabaseArgs.getQuotaInBytes();
+    long quotaNamespaceBeforeSet = omDatabaseArgs.getQuotaInNamespace();
 
     OMClientResponse omClientResponse =
         omDatabaseSetQuotaRequest.validateAndUpdateCache(ozoneManager, 1,
@@ -96,7 +93,7 @@ public class TestOMDatabaseSetQuotaRequest extends TestOMDatabaseRequest {
         omResponse.getStatus());
 
 
-    HmDatabaseArgs ova = omMetadataManager.getDatabaseTable().get(databaseKey);
+    OmDatabaseArgs ova = omMetadataManager.getDatabaseTable().get(databaseKey);
     long quotaBytesAfterSet = ova.getQuotaInBytes();
     long quotaNamespaceAfterSet = ova.getQuotaInNamespace();
     Assert.assertEquals(quotaInBytes, quotaBytesAfterSet);

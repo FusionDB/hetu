@@ -937,6 +937,25 @@ message OzoneObj {
   required string path = 3;
 }
 
+message HetuObj {
+  enum ObjectType {
+    DATABASE = 1;
+    TABLE = 2;
+    PARTITION = 3;
+    TABLET = 4;
+    PREFIX = 5;
+  }
+
+  enum StoreType {
+    OZONE = 1;
+    S3 = 2;
+    HETU = 3;
+  }
+  required ObjectType resType = 1;
+  required StoreType storeType = 2  [default = S3];
+  required string path = 3;
+}
+
 message OzoneAclInfo {
   enum OzoneAclType {
     USER = 1;
@@ -1270,6 +1289,12 @@ message OzoneFileStatusProto {
   optional KeyInfo keyInfo = 2;
   optional uint64 blockSize = 3;
   optional bool isDirectory = 4;
+
+}
+
+message OzoneTabletStatusProto {
+  optional TabletInfo tabletInfo = 2;
+  optional uint64 blockSize = 3;
 
 }
 

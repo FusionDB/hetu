@@ -103,7 +103,7 @@ import org.apache.hadoop.ozone.audit.AuditMessage;
 import org.apache.hadoop.ozone.audit.Auditor;
 import org.apache.hadoop.ozone.audit.OMAction;
 import org.apache.hadoop.ozone.common.Storage.StorageState;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.exceptions.OMLeaderNotReadyException;
@@ -124,6 +124,8 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OmRenameKeys;
+import org.apache.hadoop.ozone.om.helpers.OmTabletArgs;
+import org.apache.hadoop.ozone.om.helpers.OmTabletLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
@@ -1668,7 +1670,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   }
 
   @Override
-  public void createDatabase(HmDatabaseArgs args) throws IOException {
+  public void createDatabase(OmDatabaseArgs args) throws IOException {
     try {
       metrics.incNumVolumeCreates();
       databaseManager.createDatabase(args);
@@ -1686,7 +1688,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   }
 
   @Override
-  public HmDatabaseArgs getDatabaseInfo(String databaseName) throws IOException {
+  public OmDatabaseArgs getDatabaseInfo(String databaseName) throws IOException {
     if (isAclEnabled) {
 //      checkAcls(ResourceType.VOLUME, StoreType.OZONE, ACLType.READ, volume,
 //              null, null);
@@ -1717,7 +1719,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   }
 
   @Override
-  public List<HmDatabaseArgs> listAllDatabases(String databasePrefix, String prevDatabase, int maxKeys) throws IOException {
+  public List<OmDatabaseArgs> listAllDatabases(String databasePrefix, String prevDatabase, int maxKeys) throws IOException {
     boolean auditSuccess = true;
     Map<String, String> auditMap = new LinkedHashMap<>();
     auditMap.put(OzoneConsts.PREV_KEY, databasePrefix);
@@ -1750,7 +1752,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   }
 
   @Override
-  public List<HmDatabaseArgs> listDatabaseByUser(String userName, String databasePrefix, String prevDatabase, int maxKeys) throws IOException {
+  public List<OmDatabaseArgs> listDatabaseByUser(String userName, String databasePrefix, String prevDatabase, int maxKeys) throws IOException {
     UserGroupInformation remoteUserUgi =
             ProtobufRpcEngine.Server.getRemoteUser();
     if (isAclEnabled) {
@@ -1771,14 +1773,14 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       if (isAclEnabled) {
         // TODO not support acl
         // List all volumes first
-        List<HmDatabaseArgs> listAllDatabase = databaseManager.listDatabase(
+        List<OmDatabaseArgs> listAllDatabase = databaseManager.listDatabase(
                 null, databasePrefix, prevDatabase, maxKeys);
-        List<HmDatabaseArgs> result = new ArrayList<>();
+        List<OmDatabaseArgs> result = new ArrayList<>();
         // Filter all volumes by LIST ACL
-        for (HmDatabaseArgs hmDatabaseArgs : listAllDatabase) {
+        for (OmDatabaseArgs omDatabaseArgs : listAllDatabase) {
           if (hasAcls(userName, ResourceType.DATABASE, StoreType.OZONE,
-                  ACLType.LIST, hmDatabaseArgs.getName(), null, null)) {
-            result.add(hmDatabaseArgs);
+                  ACLType.LIST, omDatabaseArgs.getName(), null, null)) {
+            result.add(omDatabaseArgs);
           }
         }
         return result;
@@ -3965,4 +3967,14 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     this.minMultipartUploadPartSize = partSizeForTest;
   }
 
+  @Override
+  public void commitTablet(OmTabletArgs args, long clientID) throws IOException {
+    // TODO: commit tablet
+  }
+
+  @Override
+  public OmTabletLocationInfo allocateTablet(OmTabletArgs args, long clientID, ExcludeList excludeList) throws IOException {
+    // TODO: allocate tablet
+    return null;
+  }
 }

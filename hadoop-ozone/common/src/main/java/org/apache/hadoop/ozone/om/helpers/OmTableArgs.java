@@ -177,6 +177,8 @@ public final class OmTableArgs extends WithMetadata implements Auditable {
     private int numReplicas;
     private List<ColumnSchema> columns;
     private long usedCapacityInBytes;
+    private long quotaInBytes;
+    private long quotaInNamespace;
 
     /**
      * Constructs a builder.
@@ -225,6 +227,16 @@ public final class OmTableArgs extends WithMetadata implements Auditable {
       return this;
     }
 
+    public Builder setQuotaInBytes(long quotaInBytes) {
+      this.quotaInBytes = quotaInBytes;
+      return this;
+    }
+
+    public Builder setQuotaInNamespace(long quotaInNamespace) {
+      this.quotaInNamespace = quotaInNamespace;
+      return this;
+    }
+
     /**
      * Constructs the OmTableArgs.
      * @return instance of OmTableArgs.
@@ -237,6 +249,7 @@ public final class OmTableArgs extends WithMetadata implements Auditable {
       return new OmTableArgs(databaseName, tableName, isVersionEnabled,
           storageType, columns, numReplicas, metadata, usedCapacityInBytes);
     }
+
   }
 
   /**

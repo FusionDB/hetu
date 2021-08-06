@@ -28,7 +28,7 @@ import org.apache.hadoop.hdds.utils.db.TableIterator;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.hadoop.ozone.common.BlockGroup;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
@@ -465,7 +465,7 @@ public interface OMMetadataManager extends DBStoreHAManager {
    *
    * @return DatabaseTable.
    */
-  Table<String, HmDatabaseArgs> getDatabaseTable();
+  Table<String, OmDatabaseArgs> getDatabaseTable();
 
   /**
    * Given a database return the corresponding DB key.
@@ -490,10 +490,10 @@ public interface OMMetadataManager extends DBStoreHAManager {
    * @param startKey the start database name determines where to start listing
    * from, this key is excluded from the result.
    * @param maxKeys the maximum number of databases to return.
-   * @return a list of {@link HmDatabaseArgs}
+   * @return a list of {@link OmDatabaseArgs}
    * @throws IOException
    */
-  List<HmDatabaseArgs> listDatabase(String userName, String prefix, String startKey, int maxKeys) throws IOException;
+  List<OmDatabaseArgs> listDatabase(String userName, String prefix, String startKey, int maxKeys) throws IOException;
 
   /**
    * Given a table return the corresponding DB key.

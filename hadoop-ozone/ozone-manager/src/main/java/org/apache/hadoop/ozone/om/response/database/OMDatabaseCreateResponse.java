@@ -20,7 +20,7 @@ package org.apache.hadoop.ozone.om.response.database;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.response.CleanupTableInfo;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
@@ -39,13 +39,13 @@ import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.DATABASE_TABLE;
 public class OMDatabaseCreateResponse extends OMClientResponse {
 
   private PersistedUserDatabaseInfo userDatabaseInfo;
-  private HmDatabaseArgs hmDatabaseArgs;
+  private OmDatabaseArgs omDatabaseArgs;
 
   public OMDatabaseCreateResponse(@Nonnull OMResponse omResponse,
-                                  @Nonnull HmDatabaseArgs hmDatabaseArgs,
+                                  @Nonnull OmDatabaseArgs omDatabaseArgs,
                                   @Nonnull PersistedUserDatabaseInfo userDatabaseInfo) {
     super(omResponse);
-    this.hmDatabaseArgs = hmDatabaseArgs;
+    this.omDatabaseArgs = omDatabaseArgs;
     this.userDatabaseInfo = userDatabaseInfo;
   }
 
@@ -63,19 +63,19 @@ public class OMDatabaseCreateResponse extends OMClientResponse {
       BatchOperation batchOperation) throws IOException {
 
     String dbDatabaseKey =
-        omMetadataManager.getDatabaseKey(hmDatabaseArgs.getName());
+        omMetadataManager.getDatabaseKey(omDatabaseArgs.getName());
     String dbUserKey =
-        omMetadataManager.getUserKey(hmDatabaseArgs.getOwnerName());
+        omMetadataManager.getUserKey(omDatabaseArgs.getOwnerName());
 
     omMetadataManager.getDatabaseTable().putWithBatch(batchOperation,
-        dbDatabaseKey, hmDatabaseArgs);
+        dbDatabaseKey, omDatabaseArgs);
     omMetadataManager.getUserTableDb().putWithBatch(batchOperation, dbUserKey,
         userDatabaseInfo);
   }
 
   @VisibleForTesting
-  public HmDatabaseArgs getOmDatabaseArgs() {
-    return hmDatabaseArgs;
+  public OmDatabaseArgs getOmDatabaseArgs() {
+    return omDatabaseArgs;
   }
 
 }
