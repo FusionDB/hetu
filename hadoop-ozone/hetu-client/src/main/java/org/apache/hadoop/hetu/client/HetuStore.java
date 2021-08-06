@@ -16,27 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone.client;
+package org.apache.hadoop.hetu.client;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
-import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
+import org.apache.hadoop.hetu.client.protocol.ClientProtocol;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.ozone.OzoneAcl;
-import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
-import org.apache.hadoop.ozone.om.exceptions.OMException;
-import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
-import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 
 import java.io.IOException;
-import java.net.URI;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -111,8 +105,8 @@ public class HetuStore {
    * @return HetuDatabase
    * @throws IOException
    */
-  public HetuDatabase getDatabase(String databaseName) throws IOException {
-    HetuDatabase database = proxy.getDatabaseDetails(databaseName);
+  public OzoneDatabase getDatabase(String databaseName) throws IOException {
+    OzoneDatabase database = proxy.getDatabaseDetails(databaseName);
     return database;
   }
 
@@ -124,7 +118,7 @@ public class HetuStore {
    * @param databasePrefix Database prefix to match
    * @return {@code Iterator<OzoneVolume>}
    */
-  public Iterator<? extends HetuDatabase> listDatabase(String databasePrefix)
+  public Iterator<? extends OzoneDatabase> listDatabase(String databasePrefix)
       throws IOException {
     return listDatabase(databasePrefix, null);
   }
@@ -139,8 +133,8 @@ public class HetuStore {
    * @param prevDatabase Database will be listed after this database name
    * @return {@code Iterator<HetuDatabase>}
    */
-  public Iterator<? extends HetuDatabase> listDatabase(String databasePrefix,
-      String prevDatabase) throws IOException {
+  public Iterator<? extends OzoneDatabase> listDatabase(String databasePrefix,
+                                                        String prevDatabase) throws IOException {
     return new DatabaseIterator(null, databasePrefix, prevDatabase);
   }
 
@@ -160,8 +154,8 @@ public class HetuStore {
    * @param prevDatabase Volumes will be listed after this volume name
    * @return {@code Iterator<OzoneVolume>}
    */
-  public Iterator<? extends HetuDatabase> listDatabaseByUser(String user,
-      String databasePrefix, String prevDatabase)
+  public Iterator<? extends OzoneDatabase> listDatabaseByUser(String user,
+                                                              String databasePrefix, String prevDatabase)
       throws IOException {
     if(Strings.isNullOrEmpty(user)) {
       user = UserGroupInformation.getCurrentUser().getUserName();
@@ -179,24 +173,15 @@ public class HetuStore {
   }
 
   /**
-   * Deletes the database.
-   * @param hetuDatabase Name of the database.
-   * @throws IOException
+   * An Iterator to iterate over {@link OzoneDatabase} list.
    */
-  public HetuDatabase updateDatabase(HetuDatabase hetuDatabase) throws IOException {
-    return proxy.updateDatabase(hetuDatabase);
-  }
-
-  /**
-   * An Iterator to iterate over {@link OzoneVolume} list.
-   */
-  private class DatabaseIterator implements Iterator<HetuDatabase> {
+  private class DatabaseIterator implements Iterator<OzoneDatabase> {
 
     private String user = null;
     private String databasePrefix = null;
 
-    private Iterator<HetuDatabase> currentIterator;
-    private HetuDatabase currentDatabase;
+    private Iterator<OzoneDatabase> currentIterator;
+    private OzoneDatabase currentDatabase;
 
     /**
      * Creates an Iterator to iterate over all volumes after
@@ -218,14 +203,14 @@ public class HetuStore {
       // Removing this will break the listVolume call if we try to
       // list more than 1000 (ozone.client.list.cache ) volumes.
       if (!currentIterator.hasNext() && currentDatabase != null) {
-        currentIterator = getNextListOfDatabase(currentDatabase.getName())
+        currentIterator = getNextListOfDatabase(currentDatabase.getDatabaseName())
             .iterator();
       }
       return currentIterator.hasNext();
     }
 
     @Override
-    public HetuDatabase next() {
+    public OzoneDatabase next() {
       if(hasNext()) {
         currentDatabase = currentIterator.next();
         return currentDatabase;
@@ -238,7 +223,7 @@ public class HetuStore {
      * @param prevDatabase previous database, this will be excluded from the result
      * @return {@code List<OzoneVolume>}
      */
-    private List<HetuDatabase> getNextListOfDatabase(String prevDatabase) {
+    private List<OzoneDatabase> getNextListOfDatabase(String prevDatabase) {
       try {
         //if user is null, we do list of all volumes.
         if(user != null) {

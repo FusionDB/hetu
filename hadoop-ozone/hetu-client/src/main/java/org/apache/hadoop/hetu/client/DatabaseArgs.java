@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone.client;
+package org.apache.hadoop.hetu.client;
 
 import org.apache.hadoop.ozone.OzoneConsts;
 
