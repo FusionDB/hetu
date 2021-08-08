@@ -19,6 +19,7 @@ package org.apache.hadoop.hetu.om;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.utils.BackgroundService;
+import org.apache.hadoop.hetu.om.block.OzoneManagerTablet;
 import org.apache.hadoop.hetu.om.fs.OzoneManagerFS;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
@@ -46,7 +47,7 @@ import java.util.List;
 /**
  * Handles tablet level commands.
  */
-public interface TabletManager extends OzoneManagerFS, IOzoneAcl {
+public interface TabletManager extends OzoneManagerTablet, IOzoneAcl {
 
   /**
    * Start tablet manager.

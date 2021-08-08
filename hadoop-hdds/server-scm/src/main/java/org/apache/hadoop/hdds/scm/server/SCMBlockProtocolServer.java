@@ -270,6 +270,12 @@ public class SCMBlockProtocolServer implements
   }
 
   @Override
+  public List<DeleteBlockGroupResult> deleteTabletBlocks(List<BlockGroup> tabletBlocksInfoList) {
+    //TODO
+    return null;
+  }
+
+  @Override
   public ScmInfo getScmInfo() throws IOException {
     boolean auditSuccess = true;
     try{

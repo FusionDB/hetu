@@ -68,20 +68,7 @@ import org.apache.hadoop.ozone.om.codec.UserDatabaseInfoCodec;
 import org.apache.hadoop.ozone.om.codec.UserVolumeInfoCodec;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
-import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
-import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
-import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
-import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
-import org.apache.hadoop.ozone.om.helpers.OmMultipartUpload;
-import org.apache.hadoop.ozone.om.helpers.OmPartitionInfo;
-import org.apache.hadoop.ozone.om.helpers.OmPrefixInfo;
-import org.apache.hadoop.ozone.om.helpers.OmTableInfo;
-import org.apache.hadoop.ozone.om.helpers.OmTabletInfo;
-import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
-import org.apache.hadoop.ozone.om.helpers.OzoneFSUtils;
-import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
-import org.apache.hadoop.ozone.om.helpers.RepeatedOmTabletInfo;
-import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
+import org.apache.hadoop.ozone.om.helpers.*;
 import org.apache.hadoop.ozone.om.lock.OzoneManagerLock;
 import org.apache.hadoop.hdds.utils.TransactionInfo;
 import org.apache.hadoop.ozone.storage.proto
@@ -96,9 +83,7 @@ import com.google.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConsts.DB_TRANSIENT_MARKER;
-import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
-import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
+import static org.apache.hadoop.ozone.OzoneConsts.*;
 
 import org.apache.ratis.util.ExitUtils;
 import org.eclipse.jetty.util.StringUtil;
@@ -1133,6 +1118,137 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     return result;
   }
 
+  @Override
+  public List<OmTabletInfo> listTablets(String databaseName, String tableName, String partitionName,
+                                  String startTablet, String tabletPrefix, int maxNumTablets) throws IOException {
+
+    List<OmTabletInfo> result = new ArrayList<>();
+    if (maxNumTablets <= 0) {
+      return result;
+    }
+
+    if (Strings.isNullOrEmpty(databaseName)) {
+      throw new OMException("Database name is required.",
+              ResultCodes.DATABASE_NOT_FOUND);
+    }
+
+    if (Strings.isNullOrEmpty(tableName)) {
+      throw new OMException("Table name is required.",
+              ResultCodes.TABLE_NOT_FOUND);
+    }
+
+    if (Strings.isNullOrEmpty(partitionName)) {
+      throw new OMException("Partition name is required.",
+              ResultCodes.PARTITION_NOT_FOUND);
+    }
+
+    String partitionNameBytes = getPartitionKey(databaseName, tableName, partitionName);
+    if (getPartitionTable().get(partitionNameBytes) == null) {
+      throw new OMException("Partition " + partitionName + " not found.",
+              ResultCodes.PARTITION_NOT_FOUND);
+    }
+
+    String seekTablet;
+    boolean skipStartTablet = false;
+    if (StringUtil.isNotBlank(startTablet)) {
+      // Seek to the specified tablet.
+      seekTablet = getOzoneTablet(databaseName, tableName, partitionName, startTablet);
+      skipStartTablet = true;
+    } else {
+      // This allows us to seek directly to the first tablet with the right prefix.
+      seekTablet = getOzoneTablet(databaseName, tableName, partitionName,
+              StringUtil.isNotBlank(tabletPrefix) ? tabletPrefix : OM_TABLET_PREFIX);
+    }
+
+    String seekPrefix;
+    if (StringUtil.isNotBlank(tabletPrefix)) {
+      seekPrefix = getOzoneTablet(databaseName, tableName, partitionName, tabletPrefix);
+    } else {
+      seekPrefix = getPartitionKey(databaseName, tableName, partitionName + OM_TABLET_PREFIX);
+    }
+    int currentCount = 0;
+
+
+    TreeMap<String, OmTabletInfo> cacheTabletMap = new TreeMap<>();
+    Set<String> deletedTabletSet = new TreeSet<>();
+    Iterator<Map.Entry<CacheKey<String>, CacheValue<OmTabletInfo>>> iterator =
+            tabletTable.cacheIterator();
+
+    //TODO: We can avoid this iteration if table cache has stored entries in
+    // treemap. Currently HashMap is used in Cache. HashMap get operation is an
+    // constant time operation, where as for treeMap get is log(n).
+    // So if we move to treemap, the get operation will be affected. As get
+    // is frequent operation on table. So, for now in list we iterate cache map
+    // and construct treeMap which match with tabletPrefix and are greater than or
+    // equal to startTablet. Later we can revisit this, if list operation
+    // is becoming slow.
+    while (iterator.hasNext()) {
+      Map.Entry< CacheKey<String>, CacheValue<OmTabletInfo>> entry =
+              iterator.next();
+
+      String key = entry.getKey().getCacheKey();
+      OmTabletInfo omTabletInfo = entry.getValue().getCacheValue();
+      // Making sure that entry in cache is not for delete tablet request.
+
+      if (omTabletInfo != null) {
+        if (key.startsWith(seekPrefix) && key.compareTo(seekTablet) >= 0) {
+          cacheTabletMap.put(key, omTabletInfo);
+        }
+      } else {
+        deletedTabletSet.add(key);
+      }
+    }
+
+    // Get maxTablets from DB if it has.
+
+    try (TableIterator<String, ? extends KeyValue<String, OmTabletInfo>>
+                 keyIter = getTabletTable().iterator()) {
+      KeyValue< String, OmTabletInfo > kv;
+      keyIter.seek(seekTablet);
+      // we need to iterate maxTablets + 1 here because if skipStartTablet is true,
+      // we should skip that entry and return the result.
+      while (currentCount < maxNumTablets + 1 && keyIter.hasNext()) {
+        kv = keyIter.next();
+        if (kv != null && kv.getKey().startsWith(seekPrefix)) {
+
+          // Entry should not be marked for delete, consider only those
+          // entries.
+          if(!deletedTabletSet.contains(kv.getKey())) {
+            cacheTabletMap.put(kv.getKey(), kv.getValue());
+            currentCount++;
+          }
+        } else {
+          // The SeekPrefix does not match any more, we can break out of the
+          // loop.
+          break;
+        }
+      }
+    }
+
+    // Finally DB entries and cache entries are merged, then return the count
+    // of maxKeys from the sorted map.
+    currentCount = 0;
+
+    for (Map.Entry<String, OmTabletInfo>  cacheKey : cacheTabletMap.entrySet()) {
+      if (cacheKey.getKey().equals(seekTablet) && skipStartTablet) {
+        continue;
+      }
+
+      result.add(cacheKey.getValue());
+      currentCount++;
+
+      if (currentCount == maxNumTablets) {
+        break;
+      }
+    }
+
+    // Clear map and set.
+    cacheTabletMap.clear();
+    deletedTabletSet.clear();
+
+    return result;
+  }
+
   // TODO: HDDS-2419 - Complete stub below for core logic
   @Override
   public List<RepeatedOmKeyInfo> listTrash(String volumeName, String bucketName,
@@ -1289,6 +1405,36 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   }
 
   @Override
+  public List<BlockGroup> getPendingDeletionTablets(final int tabletCount)
+          throws IOException {
+    List<BlockGroup> tabletBlocksList = Lists.newArrayList();
+    try (TableIterator<String, ? extends KeyValue<String, RepeatedOmTabletInfo>>
+                 keyIter = getDeletedTablet().iterator()) {
+      int currentCount = 0;
+      while (keyIter.hasNext() && currentCount < tabletCount) {
+        KeyValue<String, RepeatedOmTabletInfo> kv = keyIter.next();
+        if (kv != null) {
+          RepeatedOmTabletInfo infoList = kv.getValue();
+          // Get block tablets as a list.
+          for(OmTabletInfo info : infoList.getOmTabletInfoList()){
+            OmTabletLocationInfoGroup latest = info.getLatestVersionLocations();
+            List<BlockID> item = latest.getLocationList().stream()
+                    .map(b -> new BlockID(b.getContainerID(), b.getLocalID()))
+                    .collect(Collectors.toList());
+            BlockGroup tabletBlocks = BlockGroup.newBuilder()
+                    .setKeyName(kv.getKey())
+                    .addAllBlockIDs(item)
+                    .build();
+            tabletBlocksList.add(tabletBlocks);
+            currentCount++;
+          }
+        }
+      }
+    }
+    return tabletBlocksList;
+  }
+
+  @Override
   public List<String> getExpiredOpenKeys(int count) throws IOException {
     // Only check for expired keys in the open key table, not its cache.
     // If a key expires while it is in the cache, it will be cleaned
@@ -1317,6 +1463,37 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     }
 
     return expiredKeys;
+  }
+
+  @Override
+  public List<String> getExpiredOpenTablets(int count) throws IOException {
+    // Only check for expired tablets in the open tablet table, not its cache.
+    // If a tablet expires while it is in the cache, it will be cleaned
+    // up after the cache is flushed.
+    final Duration expirationDuration =
+            Duration.of(openKeyExpireThresholdMS, ChronoUnit.MILLIS);
+    List<String> expiredTablets = Lists.newArrayList();
+
+    try (TableIterator<String, ? extends KeyValue<String, OmTabletInfo>>
+                 keyValueTableIterator = getOpenTabletTable().iterator()) {
+
+      while (keyValueTableIterator.hasNext() && expiredTablets.size() < count) {
+        KeyValue<String, OmTabletInfo> openTabletValue = keyValueTableIterator.next();
+        String openTablet = openTabletValue.getKey();
+        OmTabletInfo openTabletInfo = openTabletValue.getValue();
+
+        Duration openTabletAge =
+                Duration.between(
+                        Instant.ofEpochMilli(openTabletInfo.getCreationTime()),
+                        Instant.now());
+
+        if (openTabletAge.compareTo(expirationDuration) >= 0) {
+          expiredTablets.add(openTablet);
+        }
+      }
+    }
+
+    return expiredTablets;
   }
 
   @Override

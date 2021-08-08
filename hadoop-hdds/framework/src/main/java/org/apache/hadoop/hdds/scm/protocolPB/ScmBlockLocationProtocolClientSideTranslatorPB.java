@@ -238,6 +238,12 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
     return results;
   }
 
+  @Override
+  public List<DeleteBlockGroupResult> deleteTabletBlocks(List<BlockGroup> tabletBlocksInfoList) {
+    // TODO
+    return null;
+  }
+
   /**
    * Gets the cluster Id and Scm Id from SCM.
    * @return ScmInfo
