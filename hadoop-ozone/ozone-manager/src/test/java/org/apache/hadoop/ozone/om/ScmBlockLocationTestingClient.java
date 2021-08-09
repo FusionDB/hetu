@@ -195,6 +195,12 @@ public class ScmBlockLocationTestingClient implements ScmBlockLocationProtocol {
   }
 
   @Override
+  public List<DeleteBlockGroupResult> deleteTabletBlocks(List<BlockGroup> tabletBlocksInfoList) {
+    //TODO
+    return null;
+  }
+
+  @Override
   public void close() throws IOException {
 
   }

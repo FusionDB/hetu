@@ -1677,4 +1677,19 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     }
     return result;
   }
+
+  @Override
+  public List<OmTabletInfo> listTablets(String databaseName, String tableName, String partitionName, String startTablet, String tabletPrefix, int maxTablets) throws IOException {
+    return null;
+  }
+
+  @Override
+  public List<BlockGroup> getPendingDeletionTablets(int count) throws IOException {
+    return null;
+  }
+
+  @Override
+  public List<String> getExpiredOpenTablets(int count) throws IOException {
+    return null;
+  }
 }

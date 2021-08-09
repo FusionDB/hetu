@@ -119,7 +119,7 @@ import static org.apache.hadoop.ozone.security.acl.OzoneObj.ResourceType.KEY;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
 /**
- * Implementation of keyManager.
+ * Implementation of tabletManager.
  */
 public class TabletManagerImpl implements TabletManager {
   private static final Logger LOG =

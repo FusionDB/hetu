@@ -114,6 +114,7 @@ import org.apache.hadoop.ozone.om.helpers.DBUpdates;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmDeleteKeys;
+import org.apache.hadoop.ozone.om.helpers.OmDeleteTablets;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
@@ -123,12 +124,19 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
+import org.apache.hadoop.ozone.om.helpers.OmPartitionArgs;
+import org.apache.hadoop.ozone.om.helpers.OmPartitionInfo;
 import org.apache.hadoop.ozone.om.helpers.OmRenameKeys;
+import org.apache.hadoop.ozone.om.helpers.OmTableArgs;
+import org.apache.hadoop.ozone.om.helpers.OmTableInfo;
 import org.apache.hadoop.ozone.om.helpers.OmTabletArgs;
+import org.apache.hadoop.ozone.om.helpers.OmTabletInfo;
 import org.apache.hadoop.ozone.om.helpers.OmTabletLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.om.helpers.OpenTabletSession;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
+import org.apache.hadoop.ozone.om.helpers.OzoneTabletStatus;
 import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
@@ -148,6 +156,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyArgs
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRoleInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServicePort;
+import org.apache.hadoop.ozone.security.auth.HetuObj;
 import org.apache.hadoop.ozone.storage.proto.OzoneManagerStorageProtos.PersistedUserVolumeInfo;
 import org.apache.hadoop.ozone.protocolPB.OzoneManagerProtocolServerSideTranslatorPB;
 import org.apache.hadoop.ozone.security.OzoneBlockTokenSecretManager;
@@ -3975,6 +3984,111 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   @Override
   public OmTabletLocationInfo allocateTablet(OmTabletArgs args, long clientID, ExcludeList excludeList) throws IOException {
     // TODO: allocate tablet
+    return null;
+  }
+
+  @Override
+  public boolean checkDatabaseAccess(String databaseName, OzoneAclInfo userAcl) throws IOException {
+    return false;
+  }
+
+  @Override
+  public void createTable(OmTableInfo omTableInfo) throws IOException {
+
+  }
+
+  @Override
+  public void setTableProperty(OmTableArgs omTableArgs) throws IOException {
+
+  }
+
+  @Override
+  public void deleteTable(String databaseName, String tableName) throws IOException {
+
+  }
+
+  @Override
+  public OmTableInfo getTableInfo(String databaseName, String tableName) throws IOException {
+    return null;
+  }
+
+  @Override
+  public List<OmTableInfo> listTables(String databaseName, String startKey, String prefix, int maxNumOfTables) throws IOException {
+    return null;
+  }
+
+  @Override
+  public void createPartition(OmPartitionInfo omPartitionInfo) throws IOException {
+
+  }
+
+  @Override
+  public void setPartitionProperty(OmPartitionArgs omPartitionArgs) throws IOException {
+
+  }
+
+  @Override
+  public OmPartitionInfo getPartitionInfo(String databaseName, String tableName, String partitionName) throws IOException {
+    return null;
+  }
+
+  @Override
+  public void deletePartition(String databaseName, String tableName, String partitionName) throws IOException {
+
+  }
+
+  @Override
+  public List<OmPartitionInfo> listPartitions(String databaseName, String tableName, String startKey, String prefix, int maxNumOfPartitions) throws IOException {
+    return null;
+  }
+
+  @Override
+  public OpenTabletSession openTablet(OmTabletArgs tabletArgs) throws IOException {
+    return null;
+  }
+
+  @Override
+  public OmTabletInfo lookupTablet(OmTabletArgs tabletArgs) throws IOException {
+    return null;
+  }
+
+  @Override
+  public void deleteTablet(OmTabletArgs tabletArgs) throws IOException {
+
+  }
+
+  @Override
+  public void deleteTablets(OmDeleteTablets omDeleteTablets) throws IOException {
+
+  }
+
+  @Override
+  public List<OmTabletInfo> listTablets(String databaseName, String tableName, String partitionName, String startKey, String prefix, int maxNumOfTablets) throws IOException {
+    return null;
+  }
+
+  @Override
+  public OzoneTabletStatus getTabletStatus(OmTabletArgs tabletArgs) throws IOException {
+    return null;
+  }
+
+  @Override
+  public boolean addAuth(HetuObj obj, OzoneAcl acl) throws IOException {
+    return false;
+  }
+
+  @Override
+  public boolean removeAuth(HetuObj obj, OzoneAcl acl) throws IOException {
+    return false;
+  }
+
+  @Override
+  public boolean setAuth(HetuObj obj, List<OzoneAcl> acls) throws IOException {
+    return false;
+  }
+
+  @Override
+  public List<OzoneAcl> getAuth(HetuObj obj) throws IOException {
     return null;
   }
 }

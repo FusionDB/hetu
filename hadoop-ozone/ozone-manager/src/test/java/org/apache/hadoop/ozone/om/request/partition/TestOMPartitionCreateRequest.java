@@ -271,7 +271,7 @@ public class TestOMPartitionCreateRequest extends TestPartitionRequest {
   }
 
   @NotNull
-  private static OzoneManagerProtocolProtos.TableInfo.PartitionsProto getPartitionsProto() {
+  public static OzoneManagerProtocolProtos.TableInfo.PartitionsProto getPartitionsProto() {
     return OzoneManagerProtocolProtos.TableInfo.PartitionsProto.newBuilder()
             .addAllFields(Arrays.asList("city"))
             .setPartitionType(OzoneManagerProtocolProtos.TableInfo.Type.HASH)

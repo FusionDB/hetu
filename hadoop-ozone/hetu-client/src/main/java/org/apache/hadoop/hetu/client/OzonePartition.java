@@ -27,6 +27,7 @@ import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
+import org.apache.hadoop.hetu.client.io.HetuInputStream;
 import org.apache.hadoop.hetu.client.io.HetuOutputStream;
 import org.apache.hadoop.hetu.client.io.TabletInputStream;
 import org.apache.hadoop.hetu.client.io.TabletOutputStream;
@@ -418,7 +419,7 @@ public class OzonePartition extends WithMetadata {
    * @throws IOException
    */
   public void setVersioning(Boolean newVersioning) throws IOException {
-    proxy.setPartitionVersioning(databaseName, tableName, partitionName, newVersioning);
+    // TODO: replace setPartitionProperties
     versioning = newVersioning;
   }
 
@@ -479,7 +480,7 @@ public class OzonePartition extends WithMetadata {
    * @return OzoneInputStream the stream using which the data can be read.
    * @throws IOException
    */
-  public TabletInputStream readTablet(String tablet) throws IOException {
+  public HetuInputStream readTablet(String tablet) throws IOException {
     return proxy.getTablet(databaseName, tableName, partitionName, tablet);
   }
 

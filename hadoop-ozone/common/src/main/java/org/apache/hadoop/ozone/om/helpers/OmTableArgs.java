@@ -62,7 +62,7 @@ public final class OmTableArgs extends WithMetadata implements Auditable {
    */
   private int numReplicas;
 
-  private long usedCapacityInBytes;
+  private long usedInBytes;
 
   /**
    * Private constructor, constructed via builder.
@@ -75,7 +75,7 @@ public final class OmTableArgs extends WithMetadata implements Auditable {
   private OmTableArgs(String databaseName, String tableName,
                       Boolean isVersionEnabled, StorageType storageType,
                       List<ColumnSchema> columns, int numReplicas,
-                      Map<String, String> metadata, long usedCapacityInBytes) {
+                      Map<String, String> metadata, long usedInBytes) {
     this.databaseName = databaseName;
     this.tableName = tableName;
     this.isVersionEnabled = isVersionEnabled;
@@ -83,7 +83,7 @@ public final class OmTableArgs extends WithMetadata implements Auditable {
     this.metadata = metadata;
     this.columns = columns;
     this.numReplicas = numReplicas;
-    this.usedCapacityInBytes = usedCapacityInBytes;
+    this.usedInBytes = usedInBytes;
   }
 
   /**
@@ -122,8 +122,8 @@ public final class OmTableArgs extends WithMetadata implements Auditable {
    * Returns Table used capacity in bytes.
    * @return usedCapacityInBytes.
    */
-  public long getUsedCapacityInBytes() {
-    return usedCapacityInBytes;
+  public long getUsedInBytes() {
+    return usedInBytes;
   }
 
   /**
@@ -176,7 +176,7 @@ public final class OmTableArgs extends WithMetadata implements Auditable {
     private Map<String, String> metadata;
     private int numReplicas;
     private List<ColumnSchema> columns;
-    private long usedCapacityInBytes;
+    private long usedInBytes;
     private long quotaInBytes;
     private long quotaInNamespace;
 
@@ -184,7 +184,7 @@ public final class OmTableArgs extends WithMetadata implements Auditable {
      * Constructs a builder.
      */
     public Builder() {
-      usedCapacityInBytes = OzoneConsts.USED_CAPACITY_IN_BYTES_RESET;
+      usedInBytes = OzoneConsts.USED_CAPACITY_IN_BYTES_RESET;
     }
 
     public Builder setDatabaseName(String databaseName) {
@@ -222,8 +222,8 @@ public final class OmTableArgs extends WithMetadata implements Auditable {
       return this;
     }
 
-    public Builder setUsedCapacityInBytes(long usedCapacityInBytes) {
-      this.usedCapacityInBytes = usedCapacityInBytes;
+    public Builder setUsedInBytes(long usedInBytes) {
+      this.usedInBytes = usedInBytes;
       return this;
     }
 
@@ -247,7 +247,7 @@ public final class OmTableArgs extends WithMetadata implements Auditable {
       Preconditions.checkArgument(columns.size() > 0);
       Preconditions.checkNotNull(numReplicas);
       return new OmTableArgs(databaseName, tableName, isVersionEnabled,
-          storageType, columns, numReplicas, metadata, usedCapacityInBytes);
+          storageType, columns, numReplicas, metadata, usedInBytes);
     }
 
   }
@@ -270,8 +270,8 @@ public final class OmTableArgs extends WithMetadata implements Auditable {
     if(storageType != null) {
       builder.setStorageType(storageType.toProto());
     }
-    if(usedCapacityInBytes > 0 || usedCapacityInBytes == OzoneConsts.USED_CAPACITY_IN_BYTES_RESET) {
-      builder.setUsedCapacityInBytes(usedCapacityInBytes);
+    if(usedInBytes > 0 || usedInBytes == OzoneConsts.USED_CAPACITY_IN_BYTES_RESET) {
+      builder.setUsedCapacityInBytes(usedInBytes);
     }
     return builder.build();
   }

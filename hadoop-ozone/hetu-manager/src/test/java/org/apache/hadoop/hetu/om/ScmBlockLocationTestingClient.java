@@ -172,6 +172,36 @@ public class ScmBlockLocationTestingClient implements ScmBlockLocationProtocol {
   }
 
   @Override
+  public List<DeleteBlockGroupResult> deleteTabletBlocks(List<BlockGroup> tabletBlocksInfoList) {
+    List<DeleteBlockGroupResult> results = new ArrayList<>();
+    List<DeleteBlockResult> blockResultList = new ArrayList<>();
+    Result result;
+    for (BlockGroup tabletBlocks : tabletBlocksInfoList) {
+      for (BlockID blockTablet : tabletBlocks.getBlockIDList()) {
+        currentCall++;
+        switch (this.failCallsFrequency) {
+          case 0:
+            result = success;
+            break;
+          case 1:
+            result = unknownFailure;
+            break;
+          default:
+            if (currentCall % this.failCallsFrequency == 0) {
+              result = unknownFailure;
+            } else {
+              result = success;
+            }
+        }
+        blockResultList.add(new DeleteBlockResult(blockTablet, result));
+      }
+      results.add(new DeleteBlockGroupResult(tabletBlocks.getGroupID(),
+              blockResultList));
+    }
+    return results;
+  }
+
+  @Override
   public ScmInfo getScmInfo() throws IOException {
     ScmInfo.Builder builder =
         new ScmInfo.Builder()

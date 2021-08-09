@@ -200,7 +200,7 @@ public class OMDatabaseSetQuotaRequest extends OMDatabaseRequest {
     List<OmTableInfo> tableList = metadataManager.listMetaTables(
         databaseName, null, null, Integer.MAX_VALUE);
     for(OmTableInfo tableInfo : tableList) {
-      long nextQuotaInBytes = tableInfo.getUsedCapacityInBytes();
+      long nextQuotaInBytes = tableInfo.getUsedInBytes();
       if(nextQuotaInBytes > OzoneConsts.QUOTA_RESET) {
         totalTableQuota += nextQuotaInBytes;
       }

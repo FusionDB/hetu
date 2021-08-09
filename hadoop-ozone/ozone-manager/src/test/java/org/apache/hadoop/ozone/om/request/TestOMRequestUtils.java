@@ -666,7 +666,7 @@ public final class TestOMRequestUtils {
             .setPartitions(partitionsProto)
             .setColumnKey(ColumnKey.fromProtobuf(getColumnKeyProto()))
             .setCreationTime(Time.now())
-            .setUsedCapacityInBytes(0L).build();
+            .setUsedInBytes(0L).build();
 
     // Add to cache.
     omMetadataManager.getMetaTable().addCacheEntry(
@@ -745,7 +745,7 @@ public final class TestOMRequestUtils {
             .setPartitions(partitionsProto)
             .setCreationTime(Time.now())
             .setDistributedKey(getDistributedKeyProto())
-            .setUsedCapacityInBytes(usedCapacityInBytes).build();
+            .setUsedInBytes(usedCapacityInBytes).build();
 
     // Add to cache.
     omMetadataManager.getMetaTable().addCacheEntry(

@@ -244,7 +244,7 @@ public class OMPartitionSetPropertyRequest extends OMClientRequest {
     List<OmTableInfo> tableList = metadataManager.listMetaTables(
             omDatabaseArgs.getName(), null, null, Integer.MAX_VALUE);
     for(OmTableInfo tableInfo : tableList) {
-      long nextQuotaInBytes = tableInfo.getUsedCapacityInBytes();
+      long nextQuotaInBytes = tableInfo.getUsedInBytes();
       if(nextQuotaInBytes > OzoneConsts.USED_CAPACITY_IN_BYTES_RESET) {
         totalTableQuota += nextQuotaInBytes;
       }

@@ -128,6 +128,7 @@ enum Type {
   CommitTablet = 146;
   DeleteOpenTablets = 147;
   PurgeTablets = 148;
+  LookupTablet = 149;
 }
 
 message OMRequest {
@@ -235,6 +236,7 @@ message OMRequest {
   optional CommitTabletRequest              commitTabletRequest = 146;
   optional DeleteOpenTabletsRequest         deleteOpenTabletsRequest = 147;
   optional PurgeTabletsRequest              purgeTabletsRequest = 148;
+  optional LookupTabletRequest                 lookupTabletRequest = 149;
 }
 
 message OMResponse {
@@ -336,6 +338,7 @@ message OMResponse {
   optional ListTabletsResponse               listTabletsResponse = 145;
   optional CommitTabletResponse              commitTabletResponse = 146;
   optional PurgeTabletsResponse              purgeTabletsResponse = 148;
+  optional LookupTabletResponse                 lookupTabletResponse = 149;
 }
 
 enum Status {
@@ -1393,6 +1396,19 @@ message LookupKeyResponse {
   optional uint64 openVersion = 4;
 }
 
+message LookupTabletRequest {
+  required TabletArgs tabletArgs = 1;
+}
+
+message LookupTabletResponse {
+  optional TabletInfo tabletInfo = 2;
+  // clients' followup request may carry this ID for stateful operations (similar
+  // to a cookie).
+  optional uint64 ID = 3;
+  // TODO : allow specifying a particular version to read.
+  optional uint64 openVersion = 4;
+}
+
 message RenameKeysRequest {
   required RenameKeysArgs renameKeysArgs = 1;
 }
@@ -1584,9 +1600,10 @@ message ListKeysResponse {
 message ListTabletsRequest {
   required string databaseName = 1;
   required string tableName = 2;
-  optional string startTablet = 3;
-  optional string prefix = 4;
-  optional int32 count = 5;
+  required string partitionName = 3;
+  optional string startTablet = 4;
+  optional string prefix = 5;
+  optional int32 count = 6;
 }
 
 message ListTabletsResponse {

@@ -152,7 +152,7 @@ public class OMAllocateTabletRequest extends OMTabletRequest {
     long clientID = allocateTabletRequest.getClientID();
 
     OMMetrics omMetrics = ozoneManager.getMetrics();
-    omMetrics.incNumTabletAllocateCalls();
+    omMetrics.incNumBlockAllocateCalls();
 
     AuditLogger auditLogger = ozoneManager.getAuditLogger();
 
@@ -223,7 +223,7 @@ public class OMAllocateTabletRequest extends OMTabletRequest {
       LOG.debug("Allocated tablet block for Database:{}, Table:{}, Partition: {}, OpenTablet:{}",
           databaseName, tableName, partitionName, openTabletName);
     } catch (IOException ex) {
-      omMetrics.incNumTabletAllocateCallFails();
+      omMetrics.incNumBlockAllocateCallFails();
       exception = ex;
       omClientResponse = new OMAllocateTabletResponse(createErrorOMResponse(
           omResponse, exception));

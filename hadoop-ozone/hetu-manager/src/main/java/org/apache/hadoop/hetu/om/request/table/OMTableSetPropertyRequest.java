@@ -157,7 +157,7 @@ public class OMTableSetPropertyRequest extends OMClientRequest {
           .get(databaseKey);
       if (checkQuotaBytesValid(omMetadataManager, omDatabaseArgs, omTableArgs,
           databaseKey)) {
-        tableInfoBuilder.setUsedInBytes(omTableArgs.getUsedCapacityInBytes());
+        tableInfoBuilder.setUsedInBytes(omTableArgs.getUsedInBytes());
       } else {
         tableInfoBuilder.setUsedInBytes(dbTableInfo.getUsedInBytes());
       }
@@ -217,7 +217,7 @@ public class OMTableSetPropertyRequest extends OMClientRequest {
   public boolean checkQuotaBytesValid(OMMetadataManager metadataManager,
                                       OmDatabaseArgs omDatabaseArgs, OmTableArgs omTableArgs, String databaseKey)
       throws IOException {
-    long usedCapacityInBytes = omTableArgs.getUsedCapacityInBytes();
+    long usedCapacityInBytes = omTableArgs.getUsedInBytes();
 
     if (usedCapacityInBytes == OzoneConsts.USED_CAPACITY_IN_BYTES_RESET &&
         omDatabaseArgs.getQuotaInBytes() != OzoneConsts.QUOTA_RESET) {

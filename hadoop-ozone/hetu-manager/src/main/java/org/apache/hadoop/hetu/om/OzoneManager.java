@@ -4393,10 +4393,10 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     auditMap.put(OzoneConsts.CLIENT_ID, String.valueOf(clientID));
 
     try {
-      metrics.incNumTabletAllocateCalls();
+      metrics.incNumBlockAllocateCalls();
       return tabletManager.allocateTablet(args, clientID, excludeList);
     } catch (Exception ex) {
-      metrics.incNumTabletAllocateCallFails();
+      metrics.incNumBlockAllocateCallFails();
       auditSuccess = false;
       AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction.ALLOCATE_TABLET,
               auditMap, ex));

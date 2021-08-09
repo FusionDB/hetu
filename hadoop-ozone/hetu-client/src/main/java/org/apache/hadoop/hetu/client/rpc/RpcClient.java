@@ -285,16 +285,15 @@ public class RpcClient implements ClientProtocol {
     StorageType storageType = partitionArgs.getStorageType() == null ?
             StorageType.DEFAULT : partitionArgs.getStorageType();
 
-    OmPartitionArgs.Builder builder = OmPartitionArgs.newBuilder();
+    OmPartitionInfo.Builder builder = OmPartitionInfo.newBuilder();
     builder.setDatabaseName(partitionArgs.getDatabaseName());
     builder.setTableName(partitionArgs.getTableName());
     builder.setPartitionName(partitionArgs.getPartitionName());
     builder.setPartitionValue(partitionArgs.getPartitionValue());
     builder.setIsVersionEnabled(isVersionEnabled);
     builder.setStorageType(storageType);
-    builder.setNumReplicas(partitionArgs.getNumReplicas());
     builder.setSizeInBytes(partitionArgs.getSizeInBytes());
-    builder.addMetadata(partitionArgs.getMetadata());
+    builder.addAllMetadata(partitionArgs.getMetadata());
 
     if (partitionArgs.getSizeInBytes() == 0) {
       LOG.info("Creating Partition: {}, with {} as partitionValue.", partitionName, partitionArgs.getPartitionValue());
@@ -317,7 +316,7 @@ public class RpcClient implements ClientProtocol {
     verifyDatabaseName(databaseName);
     verifyTableName(tableName);
     verifyPartitionName(partitionName);
-    OmPartitionArgs  partitionInfo= ozoneManagerClient.getPartitionInfo(databaseName, tableName, partitionName);
+    OmPartitionInfo partitionInfo = ozoneManagerClient.getPartitionInfo(databaseName, tableName, partitionName);
 
     return new OzonePartition(
             conf,
@@ -346,7 +345,7 @@ public class RpcClient implements ClientProtocol {
                                        String partitionPrefix, String prevPartition,
                                        int maxListResult)
           throws IOException {
-    List<OmPartitionInfo> partitions = ozoneManagerClient.listAllPartitions(
+    List<OmPartitionInfo> partitions = ozoneManagerClient.listPartitions(
             databaseName, tableName, partitionPrefix, prevPartition, maxListResult);
 
     return partitions.stream().map(partition -> new OzonePartition(
@@ -522,16 +521,16 @@ public class RpcClient implements ClientProtocol {
         .setIsVersionEnabled(isVersionEnabled)
         .addAllMetadata(tableArgs.getMetadata())
         .setStorageType(storageType)
-        .setDistributedKey()
-        .setColumnKey()
-        .setPartitions()
-        .setNumReplicas()
-        .setStorageEngine()
-        .setColumns()
-        .setUsedCapacityInBytes()
-        .setCreationTime()
-        .setModificationTime()
-        .setUsedCapacityInBytes(0L);
+//        .setDistributedKey()
+//        .setColumnKey()
+//        .setPartitions()
+//        .setNumReplicas()
+//        .setStorageEngine()
+//        .setColumns()
+//        .setUsedCapacityInBytes()
+//        .setCreationTime()
+//        .setModificationTime()
+        .setUsedInBytes(0L);
 //        .setQuotaInBytes(tableArgs.getQuotaInBytes())
 //        .setQuotaInNamespace(tableArgs.getQuotaInNamespace())
 
@@ -686,10 +685,10 @@ public class RpcClient implements ClientProtocol {
         .setQuotaInNamespace(quotaInNamespace);
     // If the table is old, we need to remind the user on the client side
     // that it is not recommended to enable quota.
-    OmTableArgs omTableArgs = ozoneManagerClient.getTableInfo(
+    OmTableInfo omTableInfo = ozoneManagerClient.getTableInfo(
         databaseName, tableName);
-    if (omTableArgs.getQuotaInNamespace() == OLD_QUOTA_DEFAULT ||
-            omTableArgs.getUsedInBytes() == OLD_QUOTA_DEFAULT) {
+    if (omTableInfo.getQuotaInNamespace() == OLD_QUOTA_DEFAULT ||
+            omTableInfo.getUsedInBytes() == OLD_QUOTA_DEFAULT) {
       LOG.warn("Table {} is created before version 1.1.0, usedBytes or " +
           "usedNamespace may be inaccurate and it is not recommended to " +
           "enable quota.", tableName);
@@ -908,17 +907,21 @@ public class RpcClient implements ClientProtocol {
       Preconditions.checkNotNull(databaseName);
       Preconditions.checkNotNull(tableName);
       Preconditions.checkNotNull(partitionName);
-
-    return ozoneManagerClient.listTrash(databaseName, tableName, partitionName, startTabletName,
-        tabletPrefix, maxKeys);
+//
+//    return ozoneManagerClient.listTrash(databaseName, tableName, partitionName, startTabletName,
+//        tabletPrefix, maxKeys);
+    // TODO: list trash
+      return null;
   }
 
   @Override
   public boolean recoverTrash(String databaseName, String tableName,
       String partitionName, String tabletName, String destinationPartition) throws IOException {
 
-    return ozoneManagerClient.recoverTrash(databaseName, tableName, partitionName, tabletName,
-        destinationPartition);
+//    return ozoneManagerClient.recoverTrash(databaseName, tableName, partitionName, tabletName,
+//        destinationPartition);
+    // TODO: recover trash
+    return false;
   }
 
   @Override
@@ -1053,16 +1056,18 @@ public class RpcClient implements ClientProtocol {
   public List<OzoneTabletStatus> listStatus(String databaseName, String tableName,
       String partitionName, String tabletName, boolean recursive, String startTablet, long numEntries)
       throws IOException {
-    OmTabletArgs tabletArgs = new OmTabletArgs.Builder()
-        .setDatabaseName(databaseName)
-        .setTableName(tableName)
-        .setPartitionName(partitionName)
-         .setTabletName(tabletName)
-        .setRefreshPipeline(true)
-        .setSortDatanodesInPipeline(topologyAwareReadEnabled)
-        .build();
-    return ozoneManagerClient
-        .listStatus(tabletArgs, recursive, startTablet, numEntries);
+//    OmTabletArgs tabletArgs = new OmTabletArgs.Builder()
+//        .setDatabaseName(databaseName)
+//        .setTableName(tableName)
+//        .setPartitionName(partitionName)
+//         .setTabletName(tabletName)
+//        .setRefreshPipeline(true)
+//        .setSortDatanodesInPipeline(topologyAwareReadEnabled)
+//        .build();
+//    return ozoneManagerClient
+//        .listStatus(tabletArgs, recursive, startTablet, numEntries);
+    //TODO: list status
+    return null;
   }
 
   /**

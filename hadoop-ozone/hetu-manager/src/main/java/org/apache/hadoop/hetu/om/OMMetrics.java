@@ -88,7 +88,8 @@ public class OMMetrics {
   private @Metric MutableCounterLong numPartitionLists;
   private @Metric MutableCounterLong numTabletAllocate;
   private @Metric MutableCounterLong numTabletCommits;
-  private @Metric MutableCounterLong numTabletAllocations;
+  private @Metric MutableCounterLong numTabletLookup;
+  private @Metric MutableCounterLong numTabletLists;
 
 
   private @Metric MutableCounterLong numGetFileStatus;
@@ -96,6 +97,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numCreateFile;
   private @Metric MutableCounterLong numLookupFile;
   private @Metric MutableCounterLong numListStatus;
+  private @Metric MutableCounterLong numGetTabletStatus;
 
   private @Metric MutableCounterLong numOpenKeyDeleteRequests;
   private @Metric MutableCounterLong numOpenKeysSubmittedForDeletion;
@@ -159,13 +161,16 @@ public class OMMetrics {
   private @Metric MutableCounterLong numTabletCommitFails;
   private @Metric MutableCounterLong numTabletDeleteFails;
   private @Metric MutableCounterLong numOpenTabletDeleteRequestFails;
-  private @Metric MutableCounterLong numTabletAllocationFails;
+  private @Metric MutableCounterLong numTabletAllocateFails;
+  private @Metric MutableCounterLong numTabletLookupFails;
+  private @Metric MutableCounterLong numTabletListFails;
 
   private @Metric MutableCounterLong numGetFileStatusFails;
   private @Metric MutableCounterLong numCreateDirectoryFails;
   private @Metric MutableCounterLong numCreateFileFails;
   private @Metric MutableCounterLong numLookupFileFails;
   private @Metric MutableCounterLong numListStatusFails;
+  private @Metric MutableCounterLong numGetTabletStatusFails;
 
   // Metrics for total number of volumes, buckets and keys
 
@@ -653,16 +658,8 @@ public class OMMetrics {
     numBlockAllocations.incr();
   }
 
-  public void incNumTabletAllocateCalls() {
-    numTabletAllocations.incr();
-  }
-
   public void incNumBlockAllocateCallFails() {
     numBlockAllocationFails.incr();
-  }
-
-  public void incNumTabletAllocateCallFails() {
-    numTabletAllocationFails.incr();
   }
 
   public void incNumBucketListFails() {
@@ -860,6 +857,11 @@ public class OMMetrics {
   }
 
   @VisibleForTesting
+  public long getNumTabletLists() {
+    return numTabletLists.value();
+  }
+
+  @VisibleForTesting
   public long getNumTrashKeyLists() {
     return numTrashKeyLists.value();
   }
@@ -914,6 +916,10 @@ public class OMMetrics {
     return numTableInfoFails.value();
   }
 
+  @VisibleForTesting
+  public long getNumTabletAllocateFails() {
+    return numTabletAllocateFails.value();
+  }
 
   @VisibleForTesting
   public long getNumPartitionInfoFails() {
@@ -971,8 +977,18 @@ public class OMMetrics {
   }
 
   @VisibleForTesting
+  public long getNumTabletLookups() {
+    return numTabletLookup.value();
+  }
+
+  @VisibleForTesting
   public long getNumKeyLookupFails() {
     return numKeyLookupFails.value();
+  }
+
+  @VisibleForTesting
+  public long getNumTabletLookupFails() {
+    return numTabletLookupFails.value();
   }
 
   @VisibleForTesting
@@ -1021,6 +1037,11 @@ public class OMMetrics {
   }
 
   @VisibleForTesting
+  public long getNumTabletListFails() {
+    return numTabletListFails.value();
+  }
+
+  @VisibleForTesting
   public long getNumTrashKeyListFails() {
     return numTrashKeyListFails.value();
   }
@@ -1033,6 +1054,11 @@ public class OMMetrics {
   @VisibleForTesting
   public long getNumGetFileStatus() {
     return numGetFileStatus.value();
+  }
+
+  @VisibleForTesting
+  public long getNumGetTabletStatus() {
+    return numGetTabletStatus.value();
   }
 
   @VisibleForTesting
@@ -1066,18 +1092,8 @@ public class OMMetrics {
   }
 
   @VisibleForTesting
-  public long getNumTabletAllocates() {
-    return numTabletAllocations.value();
-  }
-
-  @VisibleForTesting
   public long getNumBlockAllocateFails() {
     return numBlockAllocationFails.value();
-  }
-
-  @VisibleForTesting
-  public long getNumTabletAllocateFails() {
-    return numTabletAllocationFails.value();
   }
 
   @VisibleForTesting
@@ -1379,5 +1395,36 @@ public class OMMetrics {
 
   public void incNumPartitionListFails() {
     numPartitionListFails.incr();
+  }
+
+  public void incNumTabletAllocateFails() {
+    numTabletAllocateFails.incr();
+  }
+
+  public void incNumTabletLookups() {
+    numTabletOps.incr();
+    numTabletLookup.incr();
+  }
+
+  public void incNumTabletLookupFails() {
+    numTabletLookupFails.incr();
+  }
+
+  public void incNumTabletLists() {
+    numTabletOps.incr();
+    numTabletLists.incr();
+  }
+
+  public void incNumTabletListFails() {
+    numTabletListFails.incr();
+  }
+
+  public void incNumGetTabletStatus() {
+    numTabletOps.incr();
+    numGetTabletStatus.incr();
+  }
+
+  public void incNumGetTabletStatusFails() {
+    numGetTabletStatusFails.incr();
   }
 }

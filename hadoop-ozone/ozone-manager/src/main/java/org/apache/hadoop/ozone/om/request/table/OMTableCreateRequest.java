@@ -209,7 +209,7 @@ public class OMTableCreateRequest extends OMClientRequest {
   public boolean checkQuotaBytesValid(OMMetadataManager metadataManager,
                                       OmDatabaseArgs omDatabaseArgs, OmTableInfo omTableInfo, String databaseKey)
       throws IOException {
-    long usedCapacityInBytes = omTableInfo.getUsedCapacityInBytes();
+    long usedCapacityInBytes = omTableInfo.getUsedInBytes();
     long databaseQuotaInBytes = omDatabaseArgs.getQuotaInBytes();
 
     long totalTableQuota = 0;
@@ -222,7 +222,7 @@ public class OMTableCreateRequest extends OMClientRequest {
     List<OmTableInfo>  tableList = metadataManager.listMetaTables(
         omDatabaseArgs.getName(), null, null, Integer.MAX_VALUE);
     for(OmTableInfo tableInfo : tableList) {
-      long nextUsedCapacityInBytes = tableInfo.getUsedCapacityInBytes();
+      long nextUsedCapacityInBytes = tableInfo.getUsedInBytes();
       if(nextUsedCapacityInBytes > OzoneConsts.USED_CAPACITY_IN_BYTES_RESET) {
         totalTableQuota += nextUsedCapacityInBytes;
       }
