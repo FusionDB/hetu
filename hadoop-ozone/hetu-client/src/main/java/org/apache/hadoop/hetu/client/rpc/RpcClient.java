@@ -61,6 +61,7 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.apache.hadoop.ozone.client.io.LengthInputStream;
 import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
+import org.apache.hadoop.ozone.hm.meta.table.StorageEngine;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmDeleteTablets;
@@ -89,6 +90,7 @@ import org.apache.hadoop.ozone.security.acl.OzoneAclConfig;
 import org.apache.hadoop.ozone.security.auth.HetuObj;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.Time;
 import org.apache.ratis.protocol.ClientId;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -514,6 +516,10 @@ public class RpcClient implements ClientProtocol {
         Boolean.FALSE : tableArgs.getVersioning();
     StorageType storageType = tableArgs.getStorageType() == null ?
         StorageType.DEFAULT : tableArgs.getStorageType();
+    StorageEngine storageEngine = tableArgs.getStorageEngine() == null ?
+        StorageEngine.LSTORE : tableArgs.getStorageEngine();
+    int numReplicas = tableArgs.getNumReplicas() == 0 ?
+        3 : tableArgs.getNumReplicas();
 
     OmTableInfo.Builder builder = OmTableInfo.newBuilder();
     builder.setDatabaseName(databaseName)
@@ -521,18 +527,16 @@ public class RpcClient implements ClientProtocol {
         .setIsVersionEnabled(isVersionEnabled)
         .addAllMetadata(tableArgs.getMetadata())
         .setStorageType(storageType)
-//        .setDistributedKey()
-//        .setColumnKey()
-//        .setPartitions()
-//        .setNumReplicas()
-//        .setStorageEngine()
-//        .setColumns()
-//        .setUsedCapacityInBytes()
-//        .setCreationTime()
-//        .setModificationTime()
-        .setUsedInBytes(0L);
-//        .setQuotaInBytes(tableArgs.getQuotaInBytes())
-//        .setQuotaInNamespace(tableArgs.getQuotaInNamespace())
+        .setDistributedKey(tableArgs.getDistributedKeyProto())
+        .setColumnKey(tableArgs.getColumnKey())
+        .setPartitions(tableArgs.getPartitions())
+        .setNumReplicas(numReplicas)
+        .setStorageEngine(storageEngine.toProto())
+        .setColumns(tableArgs.getColumns())
+        .setCreationTime(Time.now())
+        .setUsedInBytes(0L)
+        .setQuotaInBytes(tableArgs.getQuotaInBytes())
+        .setQuotaInNamespace(tableArgs.getQuotaInNamespace());
 
     LOG.info("Creating Table: {}/{}, with Versioning {} and " +
             "Storage Type set to {} ",
@@ -735,6 +739,7 @@ public class RpcClient implements ClientProtocol {
         tableInfo.getUsedInBytes(),
         tableInfo.getQuotaInNamespace(),
         tableInfo.getCreationTime(),
+        tableInfo.getIsVersionEnabled(),
         tableInfo.getMetadata());
   }
 
@@ -757,6 +762,7 @@ public class RpcClient implements ClientProtocol {
         table.getUsedInBytes(),
         table.getQuotaInNamespace(),
         table.getCreationTime(),
+        table.getIsVersionEnabled(),
         table.getMetadata()))
         .collect(Collectors.toList());
   }

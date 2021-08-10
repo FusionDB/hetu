@@ -200,7 +200,7 @@ public final class OmTabletArgs implements Auditable {
     }
 
     public Builder setTabletName(String tablet) {
-      this.tableName = tablet;
+      this.tabletName = tablet;
       return this;
     }
 

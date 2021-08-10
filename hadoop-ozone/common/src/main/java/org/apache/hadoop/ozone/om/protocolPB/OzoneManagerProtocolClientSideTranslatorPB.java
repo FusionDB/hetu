@@ -1786,6 +1786,7 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
             InfoPartitionRequest.newBuilder();
     req.setDatabaseName(databaseName);
     req.setTableName(tableName);
+    req.setPartitionName(partitionName);
 
     OMRequest omRequest = createOMRequest(Type.InfoPartition)
             .setInfoPartitionRequest(req)
@@ -1953,7 +1954,7 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
             .build();
     req.setTabletArgs(tabletArgs);
 
-    OMRequest omRequest = createOMRequest(Type.LookupKey)
+    OMRequest omRequest = createOMRequest(Type.LookupTablet )
             .setLookupTabletRequest(req)
             .build();
 

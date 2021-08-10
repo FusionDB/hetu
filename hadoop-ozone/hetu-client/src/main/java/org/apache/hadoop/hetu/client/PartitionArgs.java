@@ -45,10 +45,6 @@ public final class PartitionArgs {
    */
   private Map<String, String> metadata;
 
-  /**
-   * Partition encryption tablet name.
-   */
-  private String partitionEncryptionTablet;
   private final String databaseName;
   private final String tableName;
   private final String partitionName;
@@ -63,7 +59,6 @@ public final class PartitionArgs {
    * @param versioning Table version flag.
    * @param storageType Storage type to be used.
    * @param metadata map of table metadata
-   * @param partitionEncryptionTablet partition encryption tablet name
    * @param databaseName
    * @param tableName
    * @param partitionName
@@ -72,14 +67,13 @@ public final class PartitionArgs {
    */
   @SuppressWarnings("parameternumber")
   private PartitionArgs(Boolean versioning, StorageType storageType,
-                        Map<String, String> metadata, String partitionEncryptionTablet,
+                        Map<String, String> metadata,
                         String databaseName, String tableName,
                         String partitionName, String partitionValue,
                         long sizeInBytes) {
     this.versioning = versioning;
     this.storageType = storageType;
     this.metadata = metadata;
-    this.partitionEncryptionTablet = partitionEncryptionTablet;
     this.databaseName = databaseName;
     this.tableName = tableName;
     this.partitionName = partitionName;
@@ -110,14 +104,6 @@ public final class PartitionArgs {
    */
   public Map<String, String> getMetadata() {
     return metadata;
-  }
-
-  /**
-   * Returns the partition encryption tablet name.
-   * @return partition encryption tablet
-   */
-  public String getEncryptionTablet() {
-    return partitionEncryptionTablet;
   }
 
   /**
@@ -164,7 +150,6 @@ public final class PartitionArgs {
     private Boolean versioning;
     private StorageType storageType;
     private Map<String, String> metadata;
-    private String partitionEncryptionTablet;
     private String databaseName;
     private String tableName;
     private String partitionName;
@@ -188,11 +173,6 @@ public final class PartitionArgs {
 
     public PartitionArgs.Builder addMetadata(String key, String value) {
       this.metadata.put(key, value);
-      return this;
-    }
-
-    public PartitionArgs.Builder setTableEncryptionTable(String pet) {
-      this.partitionEncryptionTablet = pet;
       return this;
     }
 
@@ -223,7 +203,7 @@ public final class PartitionArgs {
      */
     public PartitionArgs build() {
       return new PartitionArgs(versioning, storageType, metadata,
-          partitionEncryptionTablet, databaseName, tableName, partitionName,
+          databaseName, tableName, partitionName,
           partitionValue, sizeInBytes);
     }
   }

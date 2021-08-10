@@ -56,7 +56,6 @@ public final class OmTableArgs extends WithMetadata implements Auditable {
    * schema of the table
    */
   private List<ColumnSchema> columns;
-
   /**
    * Table num replicas
    */
@@ -70,7 +69,7 @@ public final class OmTableArgs extends WithMetadata implements Auditable {
    * @param tableName - Table name.
    * @param isVersionEnabled - Table version flag.
    * @param storageType - Storage type to be used.
-   * @param usedCapacityInBytes Table quota in bytes.
+   * @param usedInBytes Table used in bytes.
    */
   private OmTableArgs(String databaseName, String tableName,
                       Boolean isVersionEnabled, StorageType storageType,

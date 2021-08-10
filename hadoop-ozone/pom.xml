@@ -243,6 +243,19 @@
         <artifactId>bcprov-jdk15on</artifactId>
         <version>${bouncycastle.version}</version>
       </dependency>
+
+      <!--hetu storage-->
+      <dependency>
+        <groupId>org.apache.ozone</groupId>
+        <artifactId>hetu-manager</artifactId>
+        <version>${ozone.version}</version>
+        <type>test-jar</type>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.ozone</groupId>
+        <artifactId>hetu-client</artifactId>
+        <version>${ozone.version}</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
   <dependencies>

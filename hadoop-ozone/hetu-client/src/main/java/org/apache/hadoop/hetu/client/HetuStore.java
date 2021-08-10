@@ -53,24 +53,20 @@ public class HetuStore {
    */
   private int listCacheSize;
 
-  private String databaseName;
-
   /**
    * Creates an instance of HetuStore.
    * @param conf Configuration object.
    * @param proxy ClientProtocol proxy.
    */
-  public HetuStore(ConfigurationSource conf, ClientProtocol proxy, String databaseName) {
+  public HetuStore(ConfigurationSource conf, ClientProtocol proxy) {
     this.proxy = TracingUtil.createProxy(proxy, ClientProtocol.class, conf);
     this.listCacheSize = HddsClientUtils.getListCacheSize(conf);
-    this.databaseName = databaseName;
   }
 
   @VisibleForTesting
-  protected HetuStore(String databaseName) {
+  protected HetuStore() {
     // For the unit test
     OzoneConfiguration conf = new OzoneConfiguration();
-    this.databaseName = databaseName;
     proxy = null;
   }
 

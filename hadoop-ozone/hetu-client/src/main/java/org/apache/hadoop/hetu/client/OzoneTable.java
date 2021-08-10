@@ -140,7 +140,7 @@ public class OzoneTable extends WithMetadata {
                     DistributedKeyProto distributedKeyProto, PartitionsProto partitions,
                     StorageEngineProto storageEngine, StorageType storageType, int numReplicas,
                     long usedInBytes, long usedInNamespace, long creationTime,
-                    Map<String, String> metadata) {
+                    boolean isVersionEnabled, Map<String, String> metadata) {
     Preconditions.checkNotNull(proxy, "Client proxy is not set.");
     this.proxy = proxy;
     this.databaseName = databaseName;
@@ -157,6 +157,7 @@ public class OzoneTable extends WithMetadata {
     this.creationTime = Instant.ofEpochMilli(creationTime);
     this.listCacheSize = HddsClientUtils.getListCacheSize(conf);
     this.metadata = metadata;
+    this.isVersionEnabled = isVersionEnabled;
     modificationTime = Instant.now();
     if (modificationTime.isBefore(this.creationTime)) {
       modificationTime = Instant.ofEpochSecond(
@@ -177,7 +178,7 @@ public class OzoneTable extends WithMetadata {
                     Map<String, String> metadata) {
     this(conf, proxy, databaseName, tableName, columns, columnKey,
             distributedKeyProto, partitions, storageEngine, storageType,
-            numReplicas, usedInBytes, usedInNamespace, creationTime, metadata);
+            numReplicas, usedInBytes, usedInNamespace, creationTime, false, metadata);
     this.modificationTime = Instant.ofEpochMilli(modificationTime);
   }
 
@@ -187,7 +188,7 @@ public class OzoneTable extends WithMetadata {
                     List<ColumnSchema> columns, ColumnKey columnKey,
                     DistributedKeyProto distributedKeyProto, PartitionsProto partitions,
                     long usedInBytes, long usedInNamespace, long creationTime,
-                    Map<String, String> metadata) {
+                    boolean isVersionEnabled, Map<String, String> metadata) {
     this.proxy = proxy;
     this.databaseName = databaseName;
     this.tableName = tableName;
@@ -204,6 +205,7 @@ public class OzoneTable extends WithMetadata {
     this.numReplicas = 3;
     this.storageType = StorageType.DEFAULT;
     this.storageEngine = StorageEngineProto.LSTORE;
+    this.isVersionEnabled = isVersionEnabled;
     modificationTime = Instant.now();
     if (modificationTime.isBefore(this.creationTime)) {
       modificationTime = Instant.ofEpochSecond(
@@ -219,7 +221,7 @@ public class OzoneTable extends WithMetadata {
                     long usedInBytes, long usedInNamespace, long creationTime) {
     this(conf, proxy, databaseName, tableName, columns,
             columnKey, distributedKeyProto, partitions,
-            usedInBytes, usedInNamespace, creationTime, new HashMap<>());
+            usedInBytes, usedInNamespace, creationTime, false, new HashMap<>());
   }
 
   @SuppressWarnings("parameternumber")

@@ -20,8 +20,14 @@ package org.apache.hadoop.hetu.client;
 
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.hm.meta.table.ColumnKey;
+import org.apache.hadoop.ozone.hm.meta.table.ColumnSchema;
+import org.apache.hadoop.ozone.hm.meta.table.StorageEngine;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.TableInfo.DistributedKeyProto;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.TableInfo.PartitionsProto;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -29,7 +35,14 @@ import java.util.Map;
  * required for creating a table.
  */
 public final class TableArgs {
-
+  /**
+   * Name of the database in which the table belongs to.
+   */
+  private String databaseName;
+  /**
+   * Name of the table.
+   */
+  private String tableName;
   /**
    * Table Version flag.
    */
@@ -39,18 +52,38 @@ public final class TableArgs {
    * [RAM_DISK, SSD, DISK, ARCHIVE]
    */
   private StorageType storageType;
+  /**
+   * Engine of storage to be used for this table.
+   * [LSTORE, CSTORE]
+   */
+  private StorageEngine storageEngine;
 
+  /**
+   * schema of the table
+   */
+  private List<ColumnSchema> columns;
+
+  /**
+   * Table of column key
+   */
+  private ColumnKey columnKey;
+
+  /**
+   * Table of distributeKey
+   */
+  private DistributedKeyProto distributedKeyProto;
+  /**
+   * Table of partitions
+   */
+  private PartitionsProto partitions;
+  /**
+   * Table num replicas
+   */
+  private int numReplicas;
   /**
    * Custom key/value metadata.
    */
   private Map<String, String> metadata;
-
-  /**
-   * Table encryption tablet name.
-   */
-  private String tableEncryptionTablet;
-  private final String sourceDatabase;
-  private final String sourceTable;
 
   private long quotaInBytes;
   private long quotaInNamespace;
@@ -60,23 +93,27 @@ public final class TableArgs {
    * @param versioning Table version flag.
    * @param storageType Storage type to be used.
    * @param metadata map of table metadata
-   * @param tableEncryptionTablet table encryption partition/tablet name
-   * @param sourceDatabase
-   * @param sourceTable
    * @param quotaInBytes Table quota in bytes.
    * @param quotaInNamespace Table quota in counts.
    */
   @SuppressWarnings("parameternumber")
-  private TableArgs(Boolean versioning, StorageType storageType,
-                    Map<String, String> metadata, String tableEncryptionTablet,
-                    String sourceDatabase, String sourceTable,
-                    long quotaInBytes, long quotaInNamespace) {
+  private TableArgs(Boolean versioning, StorageType storageType, StorageEngine storageEngine,
+                    Map<String, String> metadata, List<ColumnSchema> columns,
+                    String databaseName, String tableName, int numReplicas,
+                    ColumnKey columnKey, DistributedKeyProto distributedKeyProto,
+                    PartitionsProto partitions, long quotaInBytes,
+                    long quotaInNamespace) {
     this.versioning = versioning;
     this.storageType = storageType;
     this.metadata = metadata;
-    this.tableEncryptionTablet = tableEncryptionTablet;
-    this.sourceDatabase = sourceDatabase;
-    this.sourceTable = sourceTable;
+    this.columns = columns;
+    this.databaseName = databaseName;
+    this.tableName = tableName;
+    this.numReplicas = numReplicas;
+    this.storageEngine = storageEngine;
+    this.columnKey = columnKey;
+    this.distributedKeyProto = distributedKeyProto;
+    this.partitions = partitions;
     this.quotaInBytes = quotaInBytes;
     this.quotaInNamespace = quotaInNamespace;
   }
@@ -107,14 +144,6 @@ public final class TableArgs {
   }
 
   /**
-   * Returns the table encryption partition/tablet name.
-   * @return table encryption partition/tablet
-   */
-  public String getEncryptionTablet() {
-    return tableEncryptionTablet;
-  }
-
-  /**
    * Returns new builder class that builds a OmTabletInfo.
    *
    * @return Builder
@@ -123,12 +152,36 @@ public final class TableArgs {
     return new TableArgs.Builder();
   }
 
-  public String getSourceDatabase() {
-    return sourceDatabase;
+  public String getDatabaseName() {
+    return databaseName;
   }
 
-  public String getSourceTable() {
-    return sourceTable;
+  public String getTableName() {
+    return tableName;
+  }
+
+  public List<ColumnSchema> getColumns() {
+    return columns;
+  }
+
+  public int getNumReplicas() {
+    return numReplicas;
+  }
+
+  public ColumnKey getColumnKey() {
+    return columnKey;
+  }
+
+  public DistributedKeyProto getDistributedKeyProto() {
+    return distributedKeyProto;
+  }
+
+  public PartitionsProto getPartitions() {
+    return partitions;
+  }
+
+  public StorageEngine getStorageEngine() {
+    return storageEngine;
   }
 
   /**
@@ -151,12 +204,17 @@ public final class TableArgs {
    * Builder for OmTableInfo.
    */
   public static class Builder {
+    private String databaseName;
+    private String tableName;
     private Boolean versioning;
     private StorageType storageType;
+    private StorageEngine storageEngine;
     private Map<String, String> metadata;
-    private String tableEncryptionTablet;
-    private String sourceDatabase;
-    private String sourceTable;
+    private List<ColumnSchema> columns;
+    private ColumnKey columnKey;
+    private DistributedKeyProto distributedKeyProto;
+    private PartitionsProto partitions;
+    private int numReplicas;
     private long quotaInBytes;
     private long quotaInNamespace;
 
@@ -176,23 +234,48 @@ public final class TableArgs {
       return this;
     }
 
+    public TableArgs.Builder setStorageEngine(StorageEngine storageEngine) {
+      this.storageEngine = storageEngine;
+      return this;
+    }
+
     public TableArgs.Builder addMetadata(String key, String value) {
       this.metadata.put(key, value);
       return this;
     }
 
-    public TableArgs.Builder setTableEncryptionTable(String tet) {
-      this.tableEncryptionTablet = tet;
+    public TableArgs.Builder setDatabaseName(String databaseName) {
+      this.databaseName = databaseName;
       return this;
     }
 
-    public TableArgs.Builder setSourceDatabase(String database) {
-      sourceDatabase = database;
+    public TableArgs.Builder setTableName(String tableName) {
+      this.tableName = tableName;
       return this;
     }
 
-    public TableArgs.Builder setSourceTable(String table) {
-      sourceTable = table;
+    public TableArgs.Builder setColumns(List<ColumnSchema> columns) {
+      this.columns = columns;
+      return this;
+    }
+
+    public TableArgs.Builder setColumnKey(ColumnKey columnKey) {
+      this.columnKey = columnKey;
+      return this;
+    }
+
+    public TableArgs.Builder setDistributedKeyProto(DistributedKeyProto distributedKeyProto) {
+      this.distributedKeyProto = distributedKeyProto;
+      return this;
+    }
+
+    public TableArgs.Builder setPartitions(PartitionsProto partitions) {
+      this.partitions = partitions;
+      return this;
+    }
+
+    public TableArgs.Builder setNumReplicas(int numReplicas) {
+      this.numReplicas = numReplicas;
       return this;
     }
 
@@ -206,15 +289,14 @@ public final class TableArgs {
       return this;
     }
 
-
     /**
      * Constructs the TableArgs.
      * @return instance of TableArgs.
      */
     public TableArgs build() {
-      return new TableArgs(versioning, storageType, metadata,
-          tableEncryptionTablet, sourceDatabase, sourceTable, quotaInBytes,
-          quotaInNamespace);
+      return new TableArgs(versioning, storageType, storageEngine, metadata,
+          columns, databaseName, tableName, numReplicas, columnKey, distributedKeyProto,
+          partitions, quotaInBytes, quotaInNamespace);
     }
   }
 }

@@ -22,6 +22,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.Auditable;
+import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
 import org.apache.hadoop.ozone.hm.meta.table.ColumnKey;
 import org.apache.hadoop.ozone.hm.meta.table.ColumnSchema;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -93,7 +94,10 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
    * Table of usedBytes
    */
   private long usedInBytes;
-
+  /**
+   * Table of quotaBytes
+   */
+  private long quotaInBytes;
   /**
    * Table of quotaInNamespace
    */
@@ -136,6 +140,7 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
                       long updateID,
                       Map<String, String> metadata,
                       long usedBytes,
+                      long quotaInBytes,
                       long quotaInNamespace) {
     this.databaseName = databaseName;
     this.tableName = tableName;
@@ -153,6 +158,7 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
     this.partitions = partitions;
     this.distributedKeyProto = distributedKeyProto;
     this.usedInBytes = usedInBytes;
+    this.quotaInBytes = quotaInBytes;
     this.quotaInNamespace = quotaInNamespace;
   }
 
@@ -249,6 +255,10 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
     return quotaInNamespace;
   }
 
+  public long getQuotaInBytes() {
+    return quotaInBytes;
+  }
+
   /**
    * Returns table column key
    * @return
@@ -295,6 +305,8 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
     auditMap.put(OzoneConsts.NUM_REPLICAS, String.valueOf(this.numReplicas));
     auditMap.put(OzoneConsts.TABLE_PARTITIONS, String.valueOf(this.partitions));
     auditMap.put(OzoneConsts.USED_CAPACITY_IN_BYTES, String.valueOf(this.usedInBytes));
+    auditMap.put(OzoneConsts.QUOTA_IN_BYTES, String.valueOf(this.quotaInBytes));
+    auditMap.put(OzoneConsts.QUOTA_IN_NAMESPACE, String.valueOf(this.quotaInNamespace));
     return auditMap;
   }
 
@@ -343,6 +355,7 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
     private PartitionsProto partitions;
     private DistributedKeyProto distributedKey;
     private long usedInBytes;
+    private long quotaInBytes;
     private long quotaInNamespace;
     private long objectID;
     private long updateID;
@@ -444,6 +457,11 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
       return this;
     }
 
+    public Builder setQuotaInBytes(long quotaInBytes) {
+        this.quotaInBytes = quotaInBytes;
+        return this;
+    }
+
     public Builder setQuotaInNamespace(long quotaInNamespace) {
       this.quotaInNamespace = quotaInNamespace;
       return this;
@@ -465,7 +483,7 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
       return new OmTableInfo(databaseName, tableName, isVersionEnabled,
           storageType, columns, columnKey, storageEngine, numReplicas, partitions, distributedKey,
           creationTime, modificationTime, objectID, updateID,
-          metadata, usedInBytes, quotaInNamespace);
+          metadata, usedInBytes, quotaInBytes, quotaInNamespace);
     }
   }
 
