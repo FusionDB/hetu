@@ -1051,7 +1051,7 @@ public class TabletManagerImpl implements TabletManager {
       throws IOException {
     OmTabletInfo tabletInfo = null;
     metadataManager.getLock().acquireReadLock(PARTITION_LOCK, databaseName,
-        tableName, partitionName, tabletName);
+        tableName, partitionName);
     try {
       // Check if the tablet is a block.
       String tabletBytes = metadataManager.getOzoneTablet(
@@ -1163,7 +1163,7 @@ public class TabletManagerImpl implements TabletManager {
     }
 
     String databaseName = args.getDatabaseName();
-    String tableName = args.getDatabaseName();
+    String tableName = args.getTableName();
     String partitionName = args.getPartitionName();
     String tabletName = args.getTabletName();
     // A map sorted by OmTablet to combine results from TableCache and DB.
@@ -1172,11 +1172,12 @@ public class TabletManagerImpl implements TabletManager {
     Set<String> deletedTabletSet = new TreeSet<>();
 
     if (Strings.isNullOrEmpty(startTablet)) {
-      OzoneTabletStatus tabletStatus = getTabletStatus(args, clientAddress);
+      // tabletName is a directory
+      startTablet = OzoneFSUtils.addTrailingSlashIfNeeded(tabletName);
     }
 
     metadataManager.getLock().acquireReadLock(PARTITION_LOCK, databaseName,
-        tableName, partitionName, tabletName);
+        tableName, partitionName);
     try {
       Table tabletTable = metadataManager.getTabletTable();
       Iterator<Map.Entry<CacheKey<String>, CacheValue<OmTabletInfo>>>
@@ -1186,11 +1187,11 @@ public class TabletManagerImpl implements TabletManager {
           OZONE_URI_DELIMITER + partitionName + OZONE_URI_DELIMITER +
           ((startTablet.equals(OZONE_URI_DELIMITER)) ? "" : startTablet);
       // Note: eliminating the case where startCacheTablet could end with '//'
-      String tabletKey = metadataManager.getOzoneTablet(databaseName, tableName,
-              partitionName, tabletName);
+      String tabletArgs = OzoneFSUtils.addTrailingSlashIfNeeded(
+              metadataManager.getOzoneTablet(databaseName, tableName, partitionName, tabletName));
 
       // First, find tablet in TableCache
-      listStatusFindTabletInTableCache(cacheIter, tabletKey, startCacheTablet,
+      listStatusFindTabletInTableCache(cacheIter, tabletArgs, startCacheTablet,
               cacheTabletKeyMap, deletedTabletSet);
       // Then, find tablet in DB
       String seekTabletInDb =
@@ -1200,7 +1201,7 @@ public class TabletManagerImpl implements TabletManager {
       iterator.seek(seekTabletInDb);
       int countEntries = 0;
       if (iterator.hasNext()) {
-        if (iterator.key().equals(tabletKey)) {
+        if (iterator.key().equals(tabletArgs)) {
           // Skip the tabletKey itself, since we are listing inside the directory
           iterator.next();
         }
@@ -1208,7 +1209,7 @@ public class TabletManagerImpl implements TabletManager {
         while (iterator.hasNext() && numEntries - countEntries > 0) {
           String entryInDb = iterator.key();
           OmTabletInfo omTabletInfo = iterator.value().getValue();
-          if (entryInDb.startsWith(tabletKey)) {
+          if (entryInDb.startsWith(tabletArgs)) {
             String entryTabletName = omTabletInfo.getTabletName();
               // for recursive list all the entries
               if (!deletedTabletSet.contains(entryInDb)) {
@@ -1237,7 +1238,7 @@ public class TabletManagerImpl implements TabletManager {
       deletedTabletSet.clear();
     } finally {
       metadataManager.getLock().releaseReadLock(PARTITION_LOCK, databaseName,
-          tableName, partitionName, tabletName);
+          tableName, partitionName);
     }
 
     List<OmTabletInfo> tabletInfoList = new ArrayList<>(tabletStatusList.size());
@@ -1306,7 +1307,7 @@ public class TabletManagerImpl implements TabletManager {
   }
 
   @VisibleForTesting
-  void sortDatanodes(String clientMachine, OmTabletInfo... tabletInfos) {
+  public void sortDatanodes(String clientMachine, OmTabletInfo... tabletInfos) {
     if (tabletInfos != null && clientMachine != null && !clientMachine.isEmpty()) {
       Map<Set<String>, List<DatanodeDetails>> sortedPipelines = new HashMap<>();
       for (OmTabletInfo tabletInfo : tabletInfos) {

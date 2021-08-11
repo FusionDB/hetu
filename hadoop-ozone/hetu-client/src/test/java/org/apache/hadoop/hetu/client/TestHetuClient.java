@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hetu.client;
 
-import com.google.common.collect.Table;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.conf.InMemoryConfiguration;
@@ -28,9 +27,9 @@ import org.apache.hadoop.hetu.client.io.HetuInputStream;
 import org.apache.hadoop.hetu.client.io.HetuOutputStream;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.hetu.client.rpc.RpcClient;
-import org.apache.hadoop.ozone.hm.meta.table.ColumnKey;
-import org.apache.hadoop.ozone.hm.meta.table.ColumnSchema;
-import org.apache.hadoop.ozone.hm.meta.table.StorageEngine;
+import org.apache.hadoop.hetu.hm.meta.table.ColumnKey;
+import org.apache.hadoop.hetu.hm.meta.table.ColumnSchema;
+import org.apache.hadoop.hetu.hm.meta.table.StorageEngine;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.protocolPB.OmTransport;

@@ -16,7 +16,7 @@
  */
 package org.apache.hadoop.ozone.om;
 
-import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
+import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
 
 import java.io.IOException;
 import java.util.List;

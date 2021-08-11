@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hetu.om.request.database;
 
-import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
+import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
 import org.apache.hadoop.hetu.om.request.TestOMRequestUtils;
 import org.apache.hadoop.hetu.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;

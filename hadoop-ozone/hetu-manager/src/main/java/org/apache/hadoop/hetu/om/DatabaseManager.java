@@ -16,7 +16,7 @@
  */
 package org.apache.hadoop.hetu.om;
 
-import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
+import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
         .OzoneAclInfo;
 

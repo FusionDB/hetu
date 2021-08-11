@@ -271,8 +271,54 @@ public class SCMBlockProtocolServer implements
 
   @Override
   public List<DeleteBlockGroupResult> deleteTabletBlocks(List<BlockGroup> tabletBlocksInfoList) {
-    //TODO
-    return null;
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("SCM is informed by OM to delete {} blocks",
+              tabletBlocksInfoList.size());
+    }
+    List<DeleteBlockGroupResult> results = new ArrayList<>();
+    Map<String, String> auditMap = Maps.newHashMap();
+    ScmBlockLocationProtocolProtos.DeleteScmBlockResult.Result resultCode;
+    Exception e = null;
+    try {
+      scm.getScmBlockManager().deleteBlocks(tabletBlocksInfoList);
+      resultCode = ScmBlockLocationProtocolProtos.
+              DeleteScmBlockResult.Result.success;
+    } catch (IOException ioe) {
+      e = ioe;
+      LOG.warn("Fail to delete {} keys", tabletBlocksInfoList.size(), ioe);
+      switch (ioe instanceof SCMException ? ((SCMException) ioe).getResult() :
+              IO_EXCEPTION) {
+        case SAFE_MODE_EXCEPTION:
+          resultCode =
+                  ScmBlockLocationProtocolProtos.DeleteScmBlockResult.Result.safeMode;
+          break;
+        case FAILED_TO_FIND_BLOCK:
+          resultCode =
+                  ScmBlockLocationProtocolProtos.DeleteScmBlockResult.Result.
+                          errorNotFound;
+          break;
+        default:
+          resultCode =
+                  ScmBlockLocationProtocolProtos.DeleteScmBlockResult.Result.
+                          unknownFailure;
+      }
+    }
+    for (BlockGroup bg : tabletBlocksInfoList) {
+      auditMap.put("KeyBlockToDelete", bg.toString());
+      List<DeleteBlockResult> blockResult = new ArrayList<>();
+      for (BlockID b : bg.getBlockIDList()) {
+        blockResult.add(new DeleteBlockResult(b, resultCode));
+      }
+      results.add(new DeleteBlockGroupResult(bg.getGroupID(), blockResult));
+    }
+    if (e == null) {
+      AUDIT.logWriteSuccess(
+              buildAuditMessageForSuccess(SCMAction.DELETE_KEY_BLOCK, auditMap));
+    } else {
+      AUDIT.logWriteFailure(
+              buildAuditMessageForFailure(SCMAction.DELETE_KEY_BLOCK, auditMap, e));
+    }
+    return results;
   }
 
   @Override

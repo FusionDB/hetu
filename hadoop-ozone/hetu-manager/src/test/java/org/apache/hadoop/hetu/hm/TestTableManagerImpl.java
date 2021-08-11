@@ -14,30 +14,26 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package org.apache.hadoop.hetu.om;
+package org.apache.hadoop.hetu.hm;
 
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.StorageType;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.server.ServerUtils;
+import org.apache.hadoop.hetu.om.OmMetadataManagerImpl;
+import org.apache.hadoop.hetu.om.TableManager;
+import org.apache.hadoop.hetu.om.TableManagerImpl;
 import org.apache.hadoop.hetu.om.request.TestOMRequestUtils;
-import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
-import org.apache.hadoop.ozone.hm.meta.table.ColumnKey;
-import org.apache.hadoop.ozone.hm.meta.table.ColumnSchema;
+import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
+import org.apache.hadoop.hetu.hm.meta.table.ColumnKey;
+import org.apache.hadoop.hetu.hm.meta.table.ColumnSchema;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
-import org.apache.hadoop.ozone.om.helpers.BucketEncryptionKeyInfo;
-import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
-import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
-import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmPartitionInfo;
 import org.apache.hadoop.ozone.om.helpers.OmTableArgs;
 import org.apache.hadoop.ozone.om.helpers.OmTableInfo;
-import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.junit.Ignore;

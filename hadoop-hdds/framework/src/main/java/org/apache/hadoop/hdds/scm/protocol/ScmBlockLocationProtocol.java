@@ -121,5 +121,5 @@ public interface ScmBlockLocationProtocol extends Closeable {
    * @return list of block deletion results.
    * @throws IOException if there is any failure.
    */
-  List<DeleteBlockGroupResult> deleteTabletBlocks(List<BlockGroup> tabletBlocksInfoList);
+  List<DeleteBlockGroupResult> deleteTabletBlocks(List<BlockGroup> tabletBlocksInfoList) throws IOException;
 }

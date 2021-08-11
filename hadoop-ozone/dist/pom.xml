@@ -223,6 +223,11 @@
       <groupId>org.apache.ozone</groupId>
       <artifactId>ozone-insight</artifactId>
     </dependency>
+    <!-- hetu storage -->
+    <dependency>
+      <groupId>org.apache.ozone</groupId>
+      <artifactId>hetu-manager</artifactId>
+    </dependency>
   </dependencies>
   <profiles>
     <profile>

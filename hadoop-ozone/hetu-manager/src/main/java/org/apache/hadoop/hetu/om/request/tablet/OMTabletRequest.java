@@ -26,7 +26,7 @@ import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
+import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.hetu.om.ScmClient;
 import org.apache.hadoop.ozone.om.exceptions.OMException;

@@ -108,7 +108,11 @@
             <version>0.9.12</version>
             <scope>test</scope>
         </dependency>
-
+        <!-- hetu storage -->
+        <dependency>
+            <groupId>org.apache.ozone</groupId>
+            <artifactId>hetu-client</artifactId>
+        </dependency>
     </dependencies>
     <build>
         <plugins>

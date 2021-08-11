@@ -1,4 +1,4 @@
-package org.apache.hadoop.ozone.hm.meta.table;
+package org.apache.hadoop.hetu.hm.meta.table;
 
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 

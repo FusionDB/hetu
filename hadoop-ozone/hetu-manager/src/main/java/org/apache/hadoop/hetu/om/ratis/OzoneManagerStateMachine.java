@@ -555,7 +555,7 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
   }
 
   @VisibleForTesting
-  void addApplyTransactionTermIndex(long term, long index) {
+  public void addApplyTransactionTermIndex(long term, long index) {
     applyTransactionMap.put(index, term);
   }
 

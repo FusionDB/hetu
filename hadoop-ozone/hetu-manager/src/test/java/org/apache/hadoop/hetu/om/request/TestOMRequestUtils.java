@@ -31,9 +31,9 @@ import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
-import org.apache.hadoop.ozone.hm.meta.table.ColumnKey;
-import org.apache.hadoop.ozone.hm.meta.table.ColumnSchema;
+import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
+import org.apache.hadoop.hetu.hm.meta.table.ColumnKey;
+import org.apache.hadoop.hetu.hm.meta.table.ColumnSchema;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
@@ -636,6 +636,15 @@ public final class TestOMRequestUtils {
   public static void addMetaTableToDB(String databaseName, String tableName,
                                    OMMetadataManager omMetadataManager) throws Exception {
 
+    OmTableInfo omTableInfo = getOmTableInfo(databaseName, tableName);
+
+    // Add to cache.
+    omMetadataManager.getMetaTable().addCacheEntry(
+            new CacheKey<>(omMetadataManager.getMetaTableKey(databaseName, tableName)),
+            new CacheValue<>(Optional.of(omTableInfo), 1L));
+  }
+
+  public static OmTableInfo getOmTableInfo(String databaseName, String tableName) {
     ColumnSchema col1 = new ColumnSchema(
             "city",
             "varchar(4)",
@@ -658,19 +667,15 @@ public final class TestOMRequestUtils {
 
     OzoneManagerProtocolProtos.TableInfo.PartitionsProto partitionsProto = getPartitionsProto();
 
-    OmTableInfo omTableInfo = OmTableInfo.newBuilder()
+    return OmTableInfo.newBuilder()
             .setDatabaseName(databaseName)
             .setTableName(tableName)
             .setColumns(Arrays.asList(col1, col2))
             .setPartitions(partitionsProto)
             .setColumnKey(ColumnKey.fromProtobuf(getColumnKeyProto()))
+            .setDistributedKey(getDistributedKeyProto())
             .setCreationTime(Time.now())
             .setUsedInBytes(0L).build();
-
-    // Add to cache.
-    omMetadataManager.getMetaTable().addCacheEntry(
-            new CacheKey<>(omMetadataManager.getMetaTableKey(databaseName, tableName)),
-            new CacheValue<>(Optional.of(omTableInfo), 1L));
   }
 
   @NotNull
@@ -754,7 +759,16 @@ public final class TestOMRequestUtils {
 
   public static void addPartitionToDB(String databaseName, String tableName,
                                       String partitionName, OMMetadataManager omMetadataManager) {
-    OmPartitionInfo omPartitionInfo = OmPartitionInfo.newBuilder()
+    OmPartitionInfo omPartitionInfo = getOmPartitionInfo(databaseName, tableName, partitionName);
+
+    // Add to cache
+    omMetadataManager.getPartitionTable().addCacheEntry(
+            new CacheKey<>(omMetadataManager.getPartitionKey(databaseName, tableName, partitionName)),
+            new CacheValue<>(Optional.of(omPartitionInfo), 1L));
+  }
+
+  private static OmPartitionInfo getOmPartitionInfo(String databaseName, String tableName, String partitionName) {
+    return OmPartitionInfo.newBuilder()
             .setStorageType(StorageType.DISK)
             .setDatabaseName(databaseName)
             .setTableName(tableName)
@@ -769,11 +783,6 @@ public final class TestOMRequestUtils {
             .setModificationTime(System.currentTimeMillis())
             .setPartitionValue("20100120")
             .build();
-
-    // Add to cache
-    omMetadataManager.getPartitionTable().addCacheEntry(
-            new CacheKey<>(omMetadataManager.getPartitionKey(databaseName, tableName, partitionName)),
-            new CacheValue<>(Optional.of(omPartitionInfo), 1L));
   }
 
   public static OMRequest createBucketRequest(
@@ -1337,6 +1346,28 @@ public final class TestOMRequestUtils {
   }
 
   /**
+   * Create OMRequest for create volume.
+   * @param databaseName
+   * @param adminName
+   * @param ownerName
+   * @return OMRequest
+   */
+  public static OMRequest createDatabaseRequest(String databaseName,
+                                              String adminName, String ownerName) {
+    OzoneManagerProtocolProtos.DatabaseInfo databaseInfo =
+            OzoneManagerProtocolProtos.DatabaseInfo.newBuilder().setName(databaseName)
+                    .setAdminName(adminName).setOwnerName(ownerName)
+                    .setQuotaInNamespace(OzoneConsts.QUOTA_RESET).build();
+    OzoneManagerProtocolProtos.CreateDatabaseRequest createDatabaseRequest =
+            OzoneManagerProtocolProtos.CreateDatabaseRequest.newBuilder()
+                    .setDatabaseInfo(databaseInfo).build();
+
+    return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
+            .setCmdType(OzoneManagerProtocolProtos.Type.CreateDatabase)
+            .setCreateDatabaseRequest(createDatabaseRequest).build();
+  }
+
+  /**
    * Create OMRequest for delete bucket.
    * @param volumeName
    * @param bucketName
@@ -1348,6 +1379,20 @@ public final class TestOMRequestUtils {
             .setBucketName(bucketName).setVolumeName(volumeName))
         .setCmdType(OzoneManagerProtocolProtos.Type.DeleteBucket)
         .setClientId(UUID.randomUUID().toString()).build();
+  }
+
+  /**
+   * Create OMRequest for delete table.
+   * @param databaseName
+   * @param tableName
+   */
+  public static OMRequest createDeleteTableRequest(String databaseName,
+                                                    String tableName) {
+    return OMRequest.newBuilder().setDeleteTableRequest(
+            OzoneManagerProtocolProtos.DeleteTableRequest.newBuilder()
+                    .setDatabaseName(databaseName).setTableName(tableName))
+            .setCmdType(OzoneManagerProtocolProtos.Type.DeleteTable)
+            .setClientId(UUID.randomUUID().toString()).build();
   }
 
   /**
@@ -1365,6 +1410,23 @@ public final class TestOMRequestUtils {
     omMetadataManager.getKeyTable().addCacheEntry(
         new CacheKey<>(dbKey),
         new CacheValue<>(Optional.of(omKeyInfo), 1L));
+  }
+
+  /**
+   * Add the Tablet information to OzoneManager DB and cache.
+   * @param omMetadataManager
+   * @param omTabletInfo
+   * @throws IOException
+   */
+  public static void addTabletToOM(final OMMetadataManager omMetadataManager,
+                                final OmTabletInfo omTabletInfo) throws IOException {
+    final String dbTablet = omMetadataManager.getOzoneTablet(
+            omTabletInfo.getDatabaseName(), omTabletInfo.getTableName(),
+            omTabletInfo.getPartitionName(), omTabletInfo.getTabletName());
+    omMetadataManager.getTabletTable().put(dbTablet, omTabletInfo);
+    omMetadataManager.getTabletTable().addCacheEntry(
+            new CacheKey<>(dbTablet),
+            new CacheValue<>(Optional.of(omTabletInfo), 1L));
   }
 
   /**
@@ -1399,6 +1461,61 @@ public final class TestOMRequestUtils {
     omMetadataManager.getMetaTable().addCacheEntry(
             new CacheKey<>(dbTableKey),
             new CacheValue<>(Optional.of(omTableInfo), 1L));
+  }
+
+  /**
+   * Add the table information to OzoneManager DB and cache.
+   * @param omMetadataManager
+   * @param databaseName
+   * @param tableName
+   * @throws IOException
+   */
+  public static void addMetaTableToOM(OMMetadataManager omMetadataManager,
+                                      String databaseName, String tableName) throws IOException {
+    String dbTableKey = omMetadataManager.getMetaTableKey(databaseName, tableName);
+    OmTableInfo omTableInfo = getOmTableInfo(databaseName, tableName);
+    omMetadataManager.getMetaTable().put(dbTableKey, omTableInfo);
+    omMetadataManager.getMetaTable().addCacheEntry(
+            new CacheKey<>(dbTableKey),
+            new CacheValue<>(Optional.of(omTableInfo), 1L));
+  }
+
+  /**
+   * Add the partition information to OzoneManager DB and cache.
+   * @param omMetadataManager
+   * @param omPartitionInfo
+   * @throws IOException
+   */
+  public static void addPartitionToOM(OMMetadataManager omMetadataManager,
+                                      OmPartitionInfo omPartitionInfo) throws IOException {
+    String dbPartitionKey =
+            omMetadataManager.getPartitionKey(omPartitionInfo.getDatabaseName(),
+                    omPartitionInfo.getTableName(), omPartitionInfo.getPartitionName());
+    omMetadataManager.getPartitionTable().put(dbPartitionKey, omPartitionInfo);
+    omMetadataManager.getPartitionTable().addCacheEntry(
+            new CacheKey<>(dbPartitionKey),
+            new CacheValue<>(Optional.of(omPartitionInfo), 1L));
+  }
+
+  /**
+   * Add the partition information to OzoneManager DB and cache.
+   * @param omMetadataManager
+   * @param databaseName
+   * @param tableName
+   * @param partitionName
+   * @throws IOException
+   */
+  public static void addPartitionToOM(OMMetadataManager omMetadataManager,
+                                      String databaseName, String tableName,
+                                      String partitionName) throws IOException {
+    String dbPartitionKey =
+            omMetadataManager.getPartitionKey(databaseName,
+                    tableName, partitionName);
+    OmPartitionInfo omPartitionInfo = getOmPartitionInfo(databaseName, tableName, partitionName);
+    omMetadataManager.getPartitionTable().put(dbPartitionKey, omPartitionInfo);
+    omMetadataManager.getPartitionTable().addCacheEntry(
+            new CacheKey<>(dbPartitionKey),
+            new CacheValue<>(Optional.of(omPartitionInfo), 1L));
   }
 
   /**

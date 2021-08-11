@@ -268,7 +268,7 @@ public class TestHddsClientUtils {
   }
 
   @Test
-  public void testVerifyKeyName() {
+  public void testVerifyTabletName() {
     List<String> invalidNames = new ArrayList<>();
     invalidNames.add("#");
     invalidNames.add("ab^cd");
@@ -281,7 +281,7 @@ public class TestHddsClientUtils {
 
     for (String name : invalidNames) {
       try {
-        HddsClientUtils.verifyKeyName(name);
+        HddsClientUtils.verifyTabletName(name);
         fail("Did not reject invalid string [" + name + "] as a name");
       } catch (IllegalArgumentException e) {
         // throwing up on an invalid name. it's working.

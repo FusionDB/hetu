@@ -22,9 +22,8 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.Auditable;
-import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
-import org.apache.hadoop.ozone.hm.meta.table.ColumnKey;
-import org.apache.hadoop.ozone.hm.meta.table.ColumnSchema;
+import org.apache.hadoop.hetu.hm.meta.table.ColumnKey;
+import org.apache.hadoop.hetu.hm.meta.table.ColumnSchema;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
         .TableInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos

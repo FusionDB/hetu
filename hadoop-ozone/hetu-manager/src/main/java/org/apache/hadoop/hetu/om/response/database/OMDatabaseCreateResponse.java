@@ -20,7 +20,7 @@ package org.apache.hadoop.hetu.om.response.database;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
-import org.apache.hadoop.ozone.hm.OmDatabaseArgs;
+import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.hetu.om.response.CleanupTableInfo;
 import org.apache.hadoop.hetu.om.response.OMClientResponse;

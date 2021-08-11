@@ -20,9 +20,9 @@ package org.apache.hadoop.hetu.client;
 
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.hm.meta.table.ColumnKey;
-import org.apache.hadoop.ozone.hm.meta.table.ColumnSchema;
-import org.apache.hadoop.ozone.hm.meta.table.StorageEngine;
+import org.apache.hadoop.hetu.hm.meta.table.ColumnKey;
+import org.apache.hadoop.hetu.hm.meta.table.ColumnSchema;
+import org.apache.hadoop.hetu.hm.meta.table.StorageEngine;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.TableInfo.DistributedKeyProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.TableInfo.PartitionsProto;
 

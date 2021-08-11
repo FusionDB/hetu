@@ -20,24 +20,20 @@ package org.apache.hadoop.hetu.client;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.hdds.client.OzoneQuota;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hetu.client.protocol.ClientProtocol;
-import org.apache.hadoop.ozone.hm.meta.table.ColumnKey;
-import org.apache.hadoop.ozone.hm.meta.table.ColumnSchema;
+import org.apache.hadoop.hetu.hm.meta.table.ColumnKey;
+import org.apache.hadoop.hetu.hm.meta.table.ColumnSchema;
 import org.apache.hadoop.ozone.om.helpers.WithMetadata;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-        .TableInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
         .TableInfo.StorageEngineProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
         .TableInfo.PartitionsProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
         .TableInfo.DistributedKeyProto;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-        .ColumnSchemaProto;
+
 import java.io.IOException;
 import java.time.Instant;
 import java.util.HashMap;
@@ -45,8 +41,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-
-import static org.apache.hadoop.ozone.OzoneConsts.QUOTA_RESET;
 
 /**
  * A class that encapsulates OzoneTable.

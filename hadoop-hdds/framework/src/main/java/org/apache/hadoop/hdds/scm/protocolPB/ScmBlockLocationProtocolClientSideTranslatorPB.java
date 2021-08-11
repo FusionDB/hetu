@@ -239,9 +239,33 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
   }
 
   @Override
-  public List<DeleteBlockGroupResult> deleteTabletBlocks(List<BlockGroup> tabletBlocksInfoList) {
-    // TODO
-    return null;
+  public List<DeleteBlockGroupResult> deleteTabletBlocks(
+     List<BlockGroup> tabletBlocksInfoList) throws IOException {
+    List<KeyBlocks> keyBlocksProto = tabletBlocksInfoList.stream()
+            .map(BlockGroup::getProto).collect(Collectors.toList());
+    DeleteScmKeyBlocksRequestProto request = DeleteScmKeyBlocksRequestProto
+            .newBuilder()
+            .addAllKeyBlocks(keyBlocksProto)
+            .build();
+
+    SCMBlockLocationRequest wrapper = createSCMBlockRequest(
+            Type.DeleteScmKeyBlocks)
+            .setDeleteScmKeyBlocksRequest(request)
+            .build();
+
+    final SCMBlockLocationResponse wrappedResponse =
+            handleError(submitRequest(wrapper));
+    final DeleteScmKeyBlocksResponseProto resp =
+            wrappedResponse.getDeleteScmKeyBlocksResponse();
+
+    List<DeleteBlockGroupResult> results =
+            new ArrayList<>(resp.getResultsCount());
+    results.addAll(resp.getResultsList().stream().map(
+            result -> new DeleteBlockGroupResult(result.getObjectKey(),
+                    DeleteBlockGroupResult
+                            .convertBlockResultProto(result.getBlockResultsList())))
+            .collect(Collectors.toList()));
+    return results;
   }
 
   /**
