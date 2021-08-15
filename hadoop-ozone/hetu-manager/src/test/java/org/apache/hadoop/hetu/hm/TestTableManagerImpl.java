@@ -21,6 +21,10 @@ import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.server.ServerUtils;
+import org.apache.hadoop.hetu.hm.meta.table.ColumnKeyType;
+import org.apache.hadoop.hetu.hm.meta.table.DistributedKey;
+import org.apache.hadoop.hetu.hm.meta.table.PartitionKey;
+import org.apache.hadoop.hetu.hm.meta.table.Schema;
 import org.apache.hadoop.hetu.om.OmMetadataManagerImpl;
 import org.apache.hadoop.hetu.om.TableManager;
 import org.apache.hadoop.hetu.om.TableManagerImpl;
@@ -35,6 +39,7 @@ import org.apache.hadoop.ozone.om.helpers.OmPartitionInfo;
 import org.apache.hadoop.ozone.om.helpers.OmTableArgs;
 import org.apache.hadoop.ozone.om.helpers.OmTableInfo;
 import org.apache.hadoop.util.Time;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -48,9 +53,7 @@ import org.mockito.runners.MockitoJUnitRunner;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
-
-import static org.apache.hadoop.hetu.om.request.TestOMRequestUtils.getColumnKeyProto;
-import static org.apache.hadoop.hetu.om.request.TestOMRequestUtils.getPartitionsProto;
+import java.util.List;
 
 /**
  * Tests TableManagerImpl, mocks OMMetadataManager for testing.
@@ -112,34 +115,57 @@ public class TestTableManagerImpl {
   }
 
   private OmTableInfo generateOmTableInfo() {
+    return OmTableInfo.newBuilder()
+            .setDatabaseName("sampleDb")
+            .setTableName("tableOne")
+            .setSchema(getSchema())
+            .setCreationTime(Time.now())
+            .setUsedBytes(0L).build();
+  }
+
+  @NotNull
+  private static Schema getSchema() {
+    return new Schema(getColumnSchemas(), getColumnKey(), getDistributedKey(), getPartitionKey());
+  }
+
+  @NotNull
+  public static PartitionKey getPartitionKey() {
+    return new PartitionKey(Type.RANGE, Arrays.asList("ds"));
+  }
+
+  @NotNull
+  public static DistributedKey getDistributedKey() {
+    return new DistributedKey(Type.HASH, Arrays.asList("id"));
+  }
+
+  @NotNull
+  public static List<ColumnSchema> getColumnSchemas() {
     ColumnSchema col1 = new ColumnSchema(
             "city",
-            "varchar(4)",
-            "varcher",
-            0,
+            "varchar",
+            1,
             "",
+            -1,
             "",
-            "城市",
+            "用户",
             true);
 
     ColumnSchema col2 = new ColumnSchema(
             "id",
             "Long",
-            "Long",
-            1,
+            0,
             "",
+            -1,
             "",
             "ID",
             true);
 
-    return OmTableInfo.newBuilder()
-            .setDatabaseName("sampleDb")
-            .setTableName("tableOne")
-            .setColumns(Arrays.asList(col1, col2))
-            .setPartitions(getPartitionsProto())
-            .setColumnKey(ColumnKey.fromProtobuf(getColumnKeyProto()))
-            .setCreationTime(Time.now())
-            .setUsedInBytes(0L).build();
+    return Arrays.asList(col1, col2);
+  }
+
+  @NotNull
+  public static ColumnKey getColumnKey() {
+    return new ColumnKey(ColumnKeyType.PRIMARY_KEY, Arrays.asList("id"));
   }
 
   @Test

@@ -25,6 +25,11 @@ import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.scm.XceiverClientFactory;
 import org.apache.hadoop.hetu.client.io.HetuInputStream;
 import org.apache.hadoop.hetu.client.io.HetuOutputStream;
+import org.apache.hadoop.hetu.hm.Type;
+import org.apache.hadoop.hetu.hm.meta.table.ColumnKeyType;
+import org.apache.hadoop.hetu.hm.meta.table.DistributedKey;
+import org.apache.hadoop.hetu.hm.meta.table.PartitionKey;
+import org.apache.hadoop.hetu.hm.meta.table.Schema;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.hetu.client.rpc.RpcClient;
 import org.apache.hadoop.hetu.hm.meta.table.ColumnKey;
@@ -124,7 +129,7 @@ public class TestHetuClient {
         .build();
     store.createDatabase(databaseName, databaseArgs);
     OzoneDatabase database = store.getDatabase(databaseName);
-    Assert.assertEquals(OzoneConsts.QUOTA_RESET, database.getQuotaInNamespace());
+    Assert.assertEquals(OzoneConsts.QUOTA_RESET, database.getQuotaInTable());
     Assert.assertEquals(OzoneConsts.QUOTA_RESET, database.getQuotaInBytes());
     Assert.assertEquals("val1", database.getMetadata().get("key1"));
     Assert.assertEquals(databaseName, database.getDatabaseName());
@@ -150,43 +155,35 @@ public class TestHetuClient {
     return TableArgs.newBuilder()
             .setDatabaseName(databaseName)
             .setTableName(tableName)
-            .setColumnKey(ColumnKey.fromProtobuf(getColumnKeyProto()))
-            .setColumns(getColumnSchemas())
-            .setDistributedKeyProto(getDistributedKeyProto())
-            .setPartitions(getPartitionsProto())
-            .setQuotaInBytes(-1)
-            .setQuotaInNamespace(-1)
+            .setSchema(new Schema(getColumnSchemas(), getColumnKey(), getDistributedKey(), getPartitionKey()))
+            .setQuotaInBytes(-2)
+            .setQuotaInBucket(-2)
+            .setUsedBucket(0)
+            .setUsedBytes(0L)
+            .setBuckets(8)
             .setStorageEngine(StorageEngine.LSTORE)
             .setStorageType(StorageType.DISK)
             .build();
   }
 
   @NotNull
-  public static OzoneManagerProtocolProtos.TableInfo.PartitionsProto getPartitionsProto() {
-    return OzoneManagerProtocolProtos.TableInfo.PartitionsProto.newBuilder()
-            .addAllFields(Arrays.asList("ds"))
-            .setPartitionType(OzoneManagerProtocolProtos.TableInfo.Type.RANGE)
-            .build();
+  public static PartitionKey getPartitionKey() {
+    return new PartitionKey(Type.RANGE, Arrays.asList("ds"));
   }
 
   @NotNull
-  public static OzoneManagerProtocolProtos.TableInfo.DistributedKeyProto getDistributedKeyProto() {
-    return OzoneManagerProtocolProtos.TableInfo.DistributedKeyProto
-            .newBuilder()
-            .setDistributedKeyType(OzoneManagerProtocolProtos.TableInfo.Type.HASH)
-            .setBuckets(8)
-            .addAllFields(Arrays.asList("id"))
-            .build();
+  public static DistributedKey getDistributedKey() {
+    return new DistributedKey(Type.HASH, Arrays.asList("id"));
   }
 
   @NotNull
   public static List<ColumnSchema> getColumnSchemas() {
     ColumnSchema col1 = new ColumnSchema(
             "city",
-            "varchar(4)",
-            "varcher",
-            0,
+            "varchar",
+            1,
             "",
+            -1,
             "",
             "用户",
             true);
@@ -194,9 +191,9 @@ public class TestHetuClient {
     ColumnSchema col2 = new ColumnSchema(
             "id",
             "Long",
-            "Long",
-            1,
+            0,
             "",
+            -1,
             "",
             "ID",
             true);
@@ -205,12 +202,8 @@ public class TestHetuClient {
   }
 
   @NotNull
-  public static OzoneManagerProtocolProtos.TableInfo.ColumnKeyProto getColumnKeyProto() {
-    return OzoneManagerProtocolProtos.TableInfo.ColumnKeyProto
-            .newBuilder()
-            .setColumnKeyType(OzoneManagerProtocolProtos.TableInfo.ColumnKeyTypeProto.PRIMARY_KEY)
-            .addAllFields(Arrays.asList("id"))
-            .build();
+  public static ColumnKey getColumnKey() {
+    return new ColumnKey(ColumnKeyType.PRIMARY_KEY, Arrays.asList("id"));
   }
 
   @Test

@@ -149,7 +149,7 @@ public class TestOMDatabaseSetOwnerRequest extends TestOMDatabaseRequest {
     // create request with quota set.
     OMRequest originalRequest =
         TestOMRequestUtils.createSetDatabasePropertyRequest(databaseName,
-            100L, 100L);
+            100L, 100);
 
     OMDatabaseRequest omDatabaseSetOwnerRequest =
         new OMDatabaseSetOwnerRequest(originalRequest);

@@ -26,13 +26,12 @@ import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hetu.client.protocol.ClientProtocol;
 import org.apache.hadoop.hetu.hm.meta.table.ColumnKey;
 import org.apache.hadoop.hetu.hm.meta.table.ColumnSchema;
+import org.apache.hadoop.hetu.hm.meta.table.Schema;
+import org.apache.hadoop.hetu.hm.meta.table.StorageEngine;
+import org.apache.hadoop.ozone.audit.SCMAction;
 import org.apache.hadoop.ozone.om.helpers.WithMetadata;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
         .TableInfo.StorageEngineProto;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-        .TableInfo.PartitionsProto;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-        .TableInfo.DistributedKeyProto;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -64,11 +63,11 @@ public class OzoneTable extends WithMetadata {
   /**
    * Schema of the table.
    */
-  private List<ColumnSchema> columns;
+  private Schema schema;
   /**
    * Table storage engine: LStore or CStore
    */
-  private StorageEngineProto storageEngine;
+  private StorageEngine storageEngine;
 
   /**
    * Table Version flag.
@@ -92,28 +91,28 @@ public class OzoneTable extends WithMetadata {
    */
   private int numReplicas;
   /**
-   * Table of partitions
+   * Table num buckets: 8 ~ 64
    */
-  private PartitionsProto partitions;
+  private int buckets;
   /**
    * Table of usedBytes
    */
-  private long usedInBytes;
+  private long usedBytes;
 
   /**
-   * Table of usedInNamespace
+   * Table of quotaInBytes
    */
-  public long usedInNamespace;
+  private long quotaInBytes;
 
   /**
-   * Table of column key
+   * Table of usedBucket
    */
-  private ColumnKey columnKey;
+  private int usedBucket;
 
   /**
-   * Table of distributeKey
+   * Table of quotaInBucket
    */
-  private DistributedKeyProto distributedKeyProto;
+  private int quotaInBucket;
 
   private int listCacheSize;
 
@@ -123,31 +122,31 @@ public class OzoneTable extends WithMetadata {
    * @param proxy ClientProtocol proxy.
    * @param databaseName Name of the database.
    * @param tableName Name of the table.
-   * @param usedInBytes Table used in bytes.
+   * @param schema Schema of the table.
+   * @param usedBytes Table used in bytes.
    * @param creationTime creation time of the table
    * @param metadata custom key value metadata.
    */
   @SuppressWarnings("parameternumber")
   public OzoneTable(ConfigurationSource conf, ClientProtocol proxy,
                     String databaseName, String tableName,
-                    List<ColumnSchema> columns, ColumnKey columnKey,
-                    DistributedKeyProto distributedKeyProto, PartitionsProto partitions,
-                    StorageEngineProto storageEngine, StorageType storageType, int numReplicas,
-                    long usedInBytes, long usedInNamespace, long creationTime,
+                    Schema schema, StorageEngine storageEngine, StorageType storageType,
+                    int numReplicas, int buckets, long usedBytes, long quotaInBytes,
+                    int usedBucket, int quotaInBucket, long creationTime,
                     boolean isVersionEnabled, Map<String, String> metadata) {
     Preconditions.checkNotNull(proxy, "Client proxy is not set.");
     this.proxy = proxy;
     this.databaseName = databaseName;
     this.tableName = tableName;
-    this.columns = columns;
-    this.columnKey = columnKey;
-    this.distributedKeyProto = distributedKeyProto;
-    this.partitions = partitions;
+    this.schema = schema;
     this.storageEngine = storageEngine;
     this.storageType = storageType;
     this.numReplicas = numReplicas;
-    this.usedInBytes = usedInBytes;
-    this.usedInNamespace = usedInNamespace;
+    this.buckets = buckets;
+    this.usedBytes = usedBytes;
+    this.quotaInBytes = quotaInBytes;
+    this.usedBucket = usedBucket;
+    this.quotaInBucket = quotaInBucket;
     this.creationTime = Instant.ofEpochMilli(creationTime);
     this.listCacheSize = HddsClientUtils.getListCacheSize(conf);
     this.metadata = metadata;
@@ -165,40 +164,34 @@ public class OzoneTable extends WithMetadata {
   @SuppressWarnings("parameternumber")
   public OzoneTable(ConfigurationSource conf, ClientProtocol proxy,
                     String databaseName, String tableName,
-                    List<ColumnSchema> columns, ColumnKey columnKey,
-                    DistributedKeyProto distributedKeyProto, PartitionsProto partitions,
-                    StorageEngineProto storageEngine, StorageType storageType, int numReplicas,
-                    long usedInBytes, long usedInNamespace, long creationTime, long modificationTime,
-                    Map<String, String> metadata) {
-    this(conf, proxy, databaseName, tableName, columns, columnKey,
-            distributedKeyProto, partitions, storageEngine, storageType,
-            numReplicas, usedInBytes, usedInNamespace, creationTime, false, metadata);
+                    Schema schema, StorageEngine storageEngine, StorageType storageType,
+                    int numReplicas, int buckets, long usedBytes, long quotaInBytes,
+                    int usedBucket, int quotaInBucket, long creationTime,
+                    long modificationTime, Map<String, String> metadata) {
+    this(conf, proxy, databaseName, tableName, schema, storageEngine,
+            storageType, numReplicas, buckets, usedBytes, quotaInBytes,
+            usedBucket, quotaInBucket, creationTime, false, metadata);
     this.modificationTime = Instant.ofEpochMilli(modificationTime);
   }
 
   @SuppressWarnings("parameternumber")
   public OzoneTable(ConfigurationSource conf, ClientProtocol proxy,
                     String databaseName, String tableName,
-                    List<ColumnSchema> columns, ColumnKey columnKey,
-                    DistributedKeyProto distributedKeyProto, PartitionsProto partitions,
-                    long usedInBytes, long usedInNamespace, long creationTime,
+                    Schema schema, long usedBytes, int usedBucket, long creationTime,
                     boolean isVersionEnabled, Map<String, String> metadata) {
     this.proxy = proxy;
     this.databaseName = databaseName;
     this.tableName = tableName;
-    this.columns = columns;
-    this.columnKey = columnKey;
-    this.distributedKeyProto = distributedKeyProto;
-    this.partitions = partitions;
-    this.usedInBytes = usedInBytes;
-    this.usedInNamespace = usedInNamespace;
+    this.schema = schema;
+    this.usedBytes = usedBytes;
+    this.usedBucket = usedBucket;
     this.creationTime = Instant.ofEpochMilli(creationTime);
     this.metadata = metadata;
     this.listCacheSize = HddsClientUtils.getListCacheSize(conf);
 
     this.numReplicas = 3;
     this.storageType = StorageType.DEFAULT;
-    this.storageEngine = StorageEngineProto.LSTORE;
+    this.storageEngine = StorageEngine.LSTORE;
     this.isVersionEnabled = isVersionEnabled;
     modificationTime = Instant.now();
     if (modificationTime.isBefore(this.creationTime)) {
@@ -209,98 +202,46 @@ public class OzoneTable extends WithMetadata {
 
   @SuppressWarnings("parameternumber")
   public OzoneTable(ConfigurationSource conf, ClientProtocol proxy,
-                    String databaseName, String tableName,
-                    List<ColumnSchema> columns, ColumnKey columnKey,
-                    DistributedKeyProto distributedKeyProto, PartitionsProto partitions,
-                    long usedInBytes, long usedInNamespace, long creationTime) {
-    this(conf, proxy, databaseName, tableName, columns,
-            columnKey, distributedKeyProto, partitions,
-            usedInBytes, usedInNamespace, creationTime, false, new HashMap<>());
+                    String databaseName, String tableName, Schema schema,
+                    long usedBytes, int usedBucket, long creationTime) {
+    this(conf, proxy, databaseName, tableName, schema,
+            usedBytes, usedBucket, creationTime, false, new HashMap<>());
   }
+
 
   @SuppressWarnings("parameternumber")
   public OzoneTable(ConfigurationSource conf, ClientProtocol proxy,
                     String databaseName, String tableName,
-                    List<ColumnSchema> columns, ColumnKey columnKey,
-                    long usedInBytes, long usedInNamespace, long creationTime) {
-    this.proxy = proxy;
-    this.databaseName = databaseName;
-    this.tableName = tableName;
-    this.columns = columns;
-    this.columnKey = columnKey;
-    this.usedInBytes = usedInBytes;
-    this.usedInNamespace = usedInNamespace;
-    this.creationTime = Instant.ofEpochMilli(creationTime);
-    this.metadata = new HashMap<>();
-    this.listCacheSize = HddsClientUtils.getListCacheSize(conf);
-
-    this.numReplicas = 3;
-    this.storageType = StorageType.DEFAULT;
-    this.storageEngine = StorageEngineProto.LSTORE;
-    modificationTime = Instant.now();
-    if (modificationTime.isBefore(this.creationTime)) {
-      modificationTime = Instant.ofEpochSecond(
-              this.creationTime.getEpochSecond(), this.creationTime.getNano());
-    }
-  }
-
-
-  @SuppressWarnings("parameternumber")
-  public OzoneTable(String databaseName, String tableName,
-                    List<ColumnSchema> columns, ColumnKey columnKey,
-                    DistributedKeyProto distributedKeyProto, PartitionsProto partitions,
-                    long usedInBytes, long usedInNamespace, long creationTime,
-                    Map<String, String> metadata) {
-    this.proxy = null;
-    this.databaseName = databaseName;
-    this.tableName = tableName;
-    this.columns = columns;
-    this.columnKey = columnKey;
-    this.distributedKeyProto = distributedKeyProto;
-    this.partitions = partitions;
-    this.usedInBytes = usedInBytes;
-    this.usedInNamespace = usedInNamespace;
-    this.creationTime = Instant.ofEpochMilli(creationTime);
-    this.metadata = metadata;
-
-    this.numReplicas = 3;
-    this.storageType = StorageType.DEFAULT;
-    this.storageEngine = StorageEngineProto.LSTORE;
-    modificationTime = Instant.now();
-    if (modificationTime.isBefore(this.creationTime)) {
-      modificationTime = Instant.ofEpochSecond(
-              this.creationTime.getEpochSecond(), this.creationTime.getNano());
-    }
+                    Schema schema, long usedBytes, int usedBucket,
+                    long creationTime, Map<String, String> metadata) {
+    this(conf, proxy, databaseName, tableName, schema, usedBytes, usedBucket, creationTime, false, metadata);
   }
 
   @VisibleForTesting
-  protected OzoneTable(String databaseName, String tableName,
-                       List<ColumnSchema> columns, ColumnKey columnKey,
-                       long usedInBytes, long usedInNamespace, long creationTime) {
-    this.proxy = null;
-    this.databaseName = databaseName;
-    this.tableName = tableName;
-    this.columns = columns;
-    this.columnKey = columnKey;
-    this.usedInBytes = usedInBytes;
-    this.usedInNamespace = usedInNamespace;
-    this.creationTime = Instant.ofEpochMilli(creationTime);
-    this.metadata = new HashMap<>();
-    modificationTime = Instant.now();
-    if (modificationTime.isBefore(this.creationTime)) {
-      modificationTime = Instant.ofEpochSecond(
-              this.creationTime.getEpochSecond(), this.creationTime.getNano());
-    }
+  protected OzoneTable(String databaseName, String tableName, Schema schema,
+                       long usedBytes, int usedBucket, long creationTime) {
+    this(null, null, databaseName, tableName, schema, usedBytes, usedBucket,
+            creationTime, false, new HashMap<>());
   }
 
   @SuppressWarnings("parameternumber")
   @VisibleForTesting
   protected OzoneTable(String databaseName, String tableName,
-                       List<ColumnSchema> columns, ColumnKey columnKey,
-                       long quotaInBytes, long usedInNamespace, long creationTime,
+                       Schema schema, long usedBytes, long quotaInBytes, long creationTime,
                        long modificationTime) {
-    this(databaseName, tableName, columns, columnKey, quotaInBytes, usedInNamespace, creationTime);
+    this.proxy = null;
+    this.databaseName = databaseName;
+    this.tableName = tableName;
+    this.schema = schema;
+    this.usedBytes = usedBytes;
+    this.quotaInBytes = quotaInBytes;
+    this.creationTime = Instant.ofEpochMilli(creationTime);
+    this.metadata = new HashMap<>();
     this.modificationTime = Instant.ofEpochMilli(modificationTime);
+    if (this.modificationTime.isBefore(this.creationTime)) {
+      this.modificationTime = Instant.ofEpochSecond(
+              this.creationTime.getEpochSecond(), this.creationTime.getNano());
+    }
   }
 
   /**
@@ -322,22 +263,40 @@ public class OzoneTable extends WithMetadata {
   }
 
   /**
-   * Returns Used allocated for the Database in bytes.
+   * Returns Used allocated for the Table in bytes.
    *
    * @return usedInBytes
    */
-  public long getUsedInBytes() {
-    return usedInBytes;
+  public long getUsedBytes() {
+    return usedBytes;
   }
 
   /**
-   * Returns quota of table counts allocated for the Table.
+   * Returns quota of buckets counts allocated for the Table.
    *
-   * @return usedInNamespace
+   * @return usedInBucket
    */
-  public long getUsedInNamespace() {
-    return usedInNamespace;
+  public long getUsedBucket() {
+    return usedBucket;
   }
+
+  /**
+   * Returns quota of bytes for the Table.
+   * Return
+   * @return
+   */
+  public long getQuotaInBytes() {
+    return quotaInBytes;
+  }
+
+  /**
+   * Returns quota of buckets count for the Table.
+   * @return
+   */
+  public int getQuotaInBucket() {
+    return quotaInBucket;
+  }
+
   /**
    * Returns creation time of the database.
    *
@@ -356,11 +315,11 @@ public class OzoneTable extends WithMetadata {
     return modificationTime;
   }
 
-  public List<ColumnSchema> getColumns() {
-    return columns;
+  public Schema getSchema() {
+    return schema;
   }
 
-  public StorageEngineProto getStorageEngine() {
+  public StorageEngine getStorageEngine() {
     return storageEngine;
   }
 
@@ -372,26 +331,18 @@ public class OzoneTable extends WithMetadata {
     return numReplicas;
   }
 
-  public PartitionsProto getPartitions() {
-    return partitions;
-  }
-
-  public ColumnKey getColumnKey() {
-    return columnKey;
-  }
-
-  public DistributedKeyProto getDistributedKeyProto() {
-    return distributedKeyProto;
+  public int getBuckets() {
+    return buckets;
   }
 
   /**
    * Sets/Changes the quota* of this Table.
-   * @param usedInNamespace quota in namespace of the table
+   * @param quotaInBucket quota in bucket counts of the table
    * @param quotaInBytes  quota in bytes of the table
    * @throws IOException
    */
-  public void setTableQuota(long usedInNamespace, long quotaInBytes) throws IOException {
-    proxy.setTableQuota(databaseName, tableName, usedInNamespace, quotaInBytes);
+  public void setTableQuota(int quotaInBucket, long quotaInBytes) throws IOException {
+    proxy.setTableQuota(databaseName, tableName, quotaInBucket, quotaInBytes);
   }
 
   /**

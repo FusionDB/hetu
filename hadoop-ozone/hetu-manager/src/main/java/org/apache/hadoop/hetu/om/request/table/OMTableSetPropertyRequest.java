@@ -23,11 +23,11 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
+import org.apache.hadoop.hetu.hm.meta.table.Schema;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.audit.OMAction;
 import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
-import org.apache.hadoop.hetu.hm.meta.table.ColumnSchema;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.hetu.om.OMMetrics;
 import org.apache.hadoop.hetu.om.OzoneManager;
@@ -51,7 +51,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.TABLE_LOCK;
 
@@ -120,14 +119,12 @@ public class OMTableSetPropertyRequest extends OMClientRequest {
       OmTableInfo.Builder tableInfoBuilder = OmTableInfo.newBuilder();
       tableInfoBuilder.setDatabaseName(dbTableInfo.getDatabaseName())
           .setTableName(dbTableInfo.getTableName())
+          .setSchema(Schema.fromProtobuf(tableArgs.getSchema()))
+          .setBuckets(tableArgs.getBuckets())
           .setObjectID(dbTableInfo.getObjectID())
           .setUpdateID(transactionLogIndex);
       tableInfoBuilder.addAllMetadata(KeyValueUtil
           .getFromProtobuf(tableArgs.getMetadataList()));
-      tableInfoBuilder.setColumns(tableArgs.getColumnsList()
-              .stream()
-              .map(columnSchemaProto -> ColumnSchema.fromProtobuf(columnSchemaProto))
-              .collect(Collectors.toList()));
       tableInfoBuilder.setNumReplicas(tableArgs.getNumReplicas());
 
       //Check StorageType to update
@@ -151,15 +148,14 @@ public class OMTableSetPropertyRequest extends OMClientRequest {
             .setIsVersionEnabled(dbTableInfo.getIsVersionEnabled());
       }
 
-      //Check usedCapacityInBytes to update
+      //Check usedBytes to update
       String databaseKey = omMetadataManager.getDatabaseKey(databaseName);
       OmDatabaseArgs omDatabaseArgs = omMetadataManager.getDatabaseTable()
           .get(databaseKey);
-      if (checkQuotaBytesValid(omMetadataManager, omDatabaseArgs, omTableArgs,
-          databaseKey)) {
-        tableInfoBuilder.setUsedInBytes(omTableArgs.getUsedInBytes());
+      if (checkQuotaBytesValid(omMetadataManager, omDatabaseArgs, omTableArgs)) {
+        tableInfoBuilder.setUsedBytes(omTableArgs.getUsedBytes());
       } else {
-        tableInfoBuilder.setUsedInBytes(dbTableInfo.getUsedInBytes());
+        tableInfoBuilder.setUsedBytes(dbTableInfo.getUsedBytes());
       }
 
       tableInfoBuilder.setCreationTime(dbTableInfo.getCreationTime());
@@ -215,39 +211,39 @@ public class OMTableSetPropertyRequest extends OMClientRequest {
   }
 
   public boolean checkQuotaBytesValid(OMMetadataManager metadataManager,
-                                      OmDatabaseArgs omDatabaseArgs, OmTableArgs omTableArgs, String databaseKey)
+                                      OmDatabaseArgs omDatabaseArgs, OmTableArgs omTableArgs)
       throws IOException {
-    long usedCapacityInBytes = omTableArgs.getUsedInBytes();
+    long usedBytes = omTableArgs.getUsedBytes();
 
-    if (usedCapacityInBytes == OzoneConsts.USED_CAPACITY_IN_BYTES_RESET &&
-        omDatabaseArgs.getQuotaInBytes() != OzoneConsts.QUOTA_RESET) {
+    if (usedBytes == OzoneConsts.USED_IN_BYTES_RESET &&
+        omDatabaseArgs.getQuotaInBytes() != OzoneConsts.HETU_QUOTA_RESET) {
       throw new OMException("Can not clear table spaceQuota because" +
           " database spaceQuota is not cleared.",
           OMException.ResultCodes.QUOTA_ERROR);
     }
 
-    if (usedCapacityInBytes < OzoneConsts.USED_CAPACITY_IN_BYTES_RESET || usedCapacityInBytes == 0) {
+    if (usedBytes < OzoneConsts.USED_IN_BYTES_RESET || usedBytes == 0) {
       return false;
     }
 
     long totalTableQuota = 0;
     long databaseQuotaInBytes = omDatabaseArgs.getQuotaInBytes();
 
-    if (usedCapacityInBytes > OzoneConsts.USED_CAPACITY_IN_BYTES_RESET) {
-      totalTableQuota = usedCapacityInBytes;
+    if (usedBytes > OzoneConsts.USED_IN_BYTES_RESET) {
+      totalTableQuota = usedBytes;
     }
     List<OmTableInfo> tableList = metadataManager.listMetaTables(
         omDatabaseArgs.getName(), null, null, Integer.MAX_VALUE);
     for(OmTableInfo tableInfo : tableList) {
-      long nextQuotaInBytes = tableInfo.getUsedInBytes();
-      if(nextQuotaInBytes > OzoneConsts.USED_CAPACITY_IN_BYTES_RESET &&
+      long nextQuotaInBytes = tableInfo.getUsedBytes();
+      if(nextQuotaInBytes > OzoneConsts.USED_IN_BYTES_RESET &&
           !omTableArgs.getTableName().equals(tableInfo.getTableName())) {
         totalTableQuota += nextQuotaInBytes;
       }
     }
 
     if(databaseQuotaInBytes < totalTableQuota &&
-        databaseQuotaInBytes != OzoneConsts.QUOTA_RESET) {
+        databaseQuotaInBytes != OzoneConsts.HETU_QUOTA_RESET) {
       throw new IllegalArgumentException("Total tables quota in this database " +
           "should not be greater than database quota : the total space quota is" +
           " set to:" + totalTableQuota + ". But the database space quota is:" +
@@ -255,5 +251,4 @@ public class OMTableSetPropertyRequest extends OMClientRequest {
     }
     return true;
   }
-
 }

@@ -247,9 +247,9 @@ public abstract class OMTabletRequest extends OMClientRequest {
    */
   protected void checkTableQuotaInDatabase(OmDatabaseArgs omDatabaseArgs, OmTableInfo omTableInfo,
                                            long allocatedNamespace) throws IOException {
-    if (omTableInfo.getUsedInBytes() > OzoneConsts.QUOTA_RESET) {
-      long usedNamespace = omTableInfo.getUsedInBytes();
-      long quotaInNamespace = omDatabaseArgs.getQuotaInNamespace();
+    if (omTableInfo.getUsedBytes() > OzoneConsts.HETU_QUOTA_RESET) {
+      long usedNamespace = omTableInfo.getUsedBytes();
+      int quotaInNamespace = omDatabaseArgs.getQuotaInTable();
       long toUseNamespaceInTotal = usedNamespace + allocatedNamespace;
       if (quotaInNamespace < toUseNamespaceInTotal) {
         throw new OMException("The database quota of Table:"

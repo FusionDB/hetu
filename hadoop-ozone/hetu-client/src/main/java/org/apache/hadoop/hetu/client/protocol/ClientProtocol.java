@@ -165,12 +165,12 @@ public interface ClientProtocol {
    * Set Table Quota.
    * @param databaseName Name of the Database.
    * @param tableName Name of the Table.
+   * @param quotaInBucket The maximum number of buckets in this table.
    * @param quotaInBytes The maximum size this tables can be used.
-   * @param quotaInNamespace The maximum number of tablets in this table.
    * @throws IOException
    */
   void setTableQuota(String databaseName, String tableName,
-                     long quotaInNamespace, long quotaInBytes) throws IOException;
+                     int quotaInBucket, long quotaInBytes) throws IOException;
 
   /**
    * Deletes a table if it is empty.

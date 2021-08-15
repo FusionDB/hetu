@@ -48,6 +48,7 @@
     <!-- hetu storage -->
     <module>hetu-client</module>
     <module>hetu-manager</module>
+    <module>hetu-photon</module>
   </modules>
 
   <repositories>
@@ -249,11 +250,15 @@
         <groupId>org.apache.ozone</groupId>
         <artifactId>hetu-manager</artifactId>
         <version>${ozone.version}</version>
-        <type>test-jar</type>
       </dependency>
       <dependency>
         <groupId>org.apache.ozone</groupId>
         <artifactId>hetu-client</artifactId>
+        <version>${ozone.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.ozone</groupId>
+        <artifactId>hetu-photon</artifactId>
         <version>${ozone.version}</version>
       </dependency>
     </dependencies>

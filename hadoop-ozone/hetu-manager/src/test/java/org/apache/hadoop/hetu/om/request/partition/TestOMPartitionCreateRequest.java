@@ -19,9 +19,14 @@
 
 package org.apache.hadoop.hetu.om.request.partition;
 
+import org.apache.hadoop.hetu.hm.Type;
 import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
 import org.apache.hadoop.hetu.hm.meta.table.ColumnKey;
+import org.apache.hadoop.hetu.hm.meta.table.ColumnKeyType;
 import org.apache.hadoop.hetu.hm.meta.table.ColumnSchema;
+import org.apache.hadoop.hetu.hm.meta.table.DistributedKey;
+import org.apache.hadoop.hetu.hm.meta.table.PartitionKey;
+import org.apache.hadoop.hetu.hm.meta.table.Schema;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmPartitionInfo;
@@ -39,6 +44,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -238,61 +244,56 @@ public class TestOMPartitionCreateRequest extends TestPartitionRequest {
   }
 
   private static OmTableInfo getOmTableInfo(String databaseName, String tableName) {
+    return OmTableInfo.newBuilder()
+            .setDatabaseName(databaseName)
+            .setTableName(tableName)
+            .setSchema(getSchema())
+            .build();
+  }
+
+
+  @NotNull
+  private static Schema getSchema() {
+    return new Schema(getColumnSchemas(), getColumnKey(), getDistributedKey(), getPartitionKey());
+  }
+
+  @NotNull
+  public static PartitionKey getPartitionKey() {
+    return new PartitionKey(Type.RANGE, Arrays.asList("ds"));
+  }
+
+  @NotNull
+  public static DistributedKey getDistributedKey() {
+    return new DistributedKey(Type.HASH, Arrays.asList("id"));
+  }
+
+  @NotNull
+  public static List<ColumnSchema> getColumnSchemas() {
     ColumnSchema col1 = new ColumnSchema(
             "city",
-            "varchar(4)",
-            "varcher",
-            0,
+            "varchar",
+            1,
             "",
+            -1,
             "",
-            "城市",
+            "用户",
             true);
 
     ColumnSchema col2 = new ColumnSchema(
             "id",
             "Long",
-            "Long",
-            1,
+            0,
             "",
+            -1,
             "",
             "ID",
             true);
 
-    OzoneManagerProtocolProtos.TableInfo.PartitionsProto partitionsProto = getPartitionsProto();
-
-    return OmTableInfo.newBuilder()
-            .setDatabaseName(databaseName)
-            .setTableName(tableName)
-            .setColumns(Arrays.asList(col1, col2))
-            .setPartitions(partitionsProto)
-            .setDistributedKey(getDistributedKeyProto())
-            .setColumnKey(getColumnKeyProto())
-            .build();
+    return Arrays.asList(col1, col2);
   }
 
   @NotNull
-  private static OzoneManagerProtocolProtos.TableInfo.PartitionsProto getPartitionsProto() {
-    return OzoneManagerProtocolProtos.TableInfo.PartitionsProto.newBuilder()
-            .addAllFields(Arrays.asList("city"))
-            .setPartitionType(OzoneManagerProtocolProtos.TableInfo.Type.HASH)
-            .build();
-  }
-
-  private static OzoneManagerProtocolProtos.TableInfo.DistributedKeyProto getDistributedKeyProto() {
-    return OzoneManagerProtocolProtos.TableInfo.DistributedKeyProto
-            .newBuilder()
-            .setDistributedKeyType(OzoneManagerProtocolProtos.TableInfo.Type.HASH)
-            .setBuckets(8)
-            .addAllFields(Arrays.asList("id"))
-            .build();
-  }
-
-  private static ColumnKey getColumnKeyProto() {
-    OzoneManagerProtocolProtos.TableInfo.ColumnKeyProto columnKeyProto = OzoneManagerProtocolProtos.TableInfo.ColumnKeyProto
-            .newBuilder()
-            .setColumnKeyType(OzoneManagerProtocolProtos.TableInfo.ColumnKeyTypeProto.PRIMARY_KEY)
-            .addAllFields(Arrays.asList("id"))
-            .build();
-    return ColumnKey.fromProtobuf(columnKeyProto);
+  public static ColumnKey getColumnKey() {
+    return new ColumnKey(ColumnKeyType.PRIMARY_KEY, Arrays.asList("id"));
   }
 }

@@ -149,8 +149,7 @@ public class OMTableCreateRequest extends OMClientRequest {
       }
 
       //Check quotaInBytes to update
-      checkQuotaBytesValid(metadataManager, omDatabaseArgs, omTableInfo,
-          databaseKey);
+      checkQuotaBytesValid(metadataManager, omDatabaseArgs, omTableInfo);
 
       // TODO: check schema, partitions, numReplicas
 
@@ -207,9 +206,9 @@ public class OMTableCreateRequest extends OMClientRequest {
   }
 
   public boolean checkQuotaBytesValid(OMMetadataManager metadataManager,
-                                      OmDatabaseArgs omDatabaseArgs, OmTableInfo omTableInfo, String databaseKey)
+                                      OmDatabaseArgs omDatabaseArgs, OmTableInfo omTableInfo)
       throws IOException {
-    long usedCapacityInBytes = omTableInfo.getUsedInBytes();
+    long usedCapacityInBytes = omTableInfo.getUsedBytes();
     long databaseQuotaInBytes = omDatabaseArgs.getQuotaInBytes();
 
     long totalTableQuota = 0;
@@ -222,13 +221,13 @@ public class OMTableCreateRequest extends OMClientRequest {
     List<OmTableInfo>  tableList = metadataManager.listMetaTables(
         omDatabaseArgs.getName(), null, null, Integer.MAX_VALUE);
     for(OmTableInfo tableInfo : tableList) {
-      long nextUsedCapacityInBytes = tableInfo.getUsedInBytes();
-      if(nextUsedCapacityInBytes > OzoneConsts.USED_CAPACITY_IN_BYTES_RESET) {
+      long nextUsedCapacityInBytes = tableInfo.getUsedBytes();
+      if(nextUsedCapacityInBytes > OzoneConsts.USED_IN_BYTES_RESET) {
         totalTableQuota += nextUsedCapacityInBytes;
       }
     }
     if(databaseQuotaInBytes < totalTableQuota
-        && databaseQuotaInBytes != OzoneConsts.QUOTA_RESET) {
+        && databaseQuotaInBytes != OzoneConsts.HETU_QUOTA_RESET) {
       throw new IllegalArgumentException("Total tables quota in this databse " +
           "should not be greater than database quota : the total space quota is" +
           " set to:" + totalTableQuota + ". But the database space quota is:" +

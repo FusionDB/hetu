@@ -19,12 +19,14 @@ package org.apache.hadoop.ozone.om.helpers;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.StorageType;
+import org.apache.hadoop.hetu.hm.meta.table.Schema;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.Auditable;
 import org.apache.hadoop.hetu.hm.meta.table.ColumnSchema;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.TableArgs;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ColumnSchemaProto;
 
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +46,10 @@ public final class OmTableArgs extends WithMetadata implements Auditable {
    */
   private final String tableName;
   /**
+   * schema of the table
+   */
+  private final Schema schema;
+  /**
    * Table Version flag.
    */
   private Boolean isVersionEnabled;
@@ -53,36 +59,57 @@ public final class OmTableArgs extends WithMetadata implements Auditable {
    */
   private StorageType storageType;
   /**
-   * schema of the table
+   * Table num buckets
    */
-  private List<ColumnSchema> columns;
+  private int buckets;
   /**
    * Table num replicas
    */
   private int numReplicas;
-
-  private long usedInBytes;
+  /**
+   * Table used bytes
+   */
+  private long usedBytes;
+  /**
+   * Table quota in bytes
+   */
+  private long quotaInBytes;
+  /**
+   * Table used num of buckets
+   */
+  private int usedBucket;
+  /**
+   * Table quota in bucket.
+   */
+  private int quotaInBucket;
 
   /**
    * Private constructor, constructed via builder.
    * @param databaseName - Database name.
    * @param tableName - Table name.
+   * @param schema - Table schema.
    * @param isVersionEnabled - Table version flag.
    * @param storageType - Storage type to be used.
-   * @param usedInBytes Table used in bytes.
+   * @param usedBytes - Table used in bytes.
+   * @param usedBucket - Table used bucket count
    */
-  private OmTableArgs(String databaseName, String tableName,
+  private OmTableArgs(String databaseName, String tableName, Schema schema,
                       Boolean isVersionEnabled, StorageType storageType,
-                      List<ColumnSchema> columns, int numReplicas,
-                      Map<String, String> metadata, long usedInBytes) {
+                       int numReplicas, int buckets,
+                      Map<String, String> metadata, long usedBytes,
+                      long quotaInBytes, int usedBucket, int quotaInBucket) {
     this.databaseName = databaseName;
     this.tableName = tableName;
+    this.schema = schema;
     this.isVersionEnabled = isVersionEnabled;
     this.storageType = storageType;
     this.metadata = metadata;
-    this.columns = columns;
     this.numReplicas = numReplicas;
-    this.usedInBytes = usedInBytes;
+    this.buckets = buckets;
+    this.usedBytes = usedBytes;
+    this.quotaInBytes = quotaInBytes;
+    this.usedBucket = usedBucket;
+    this.quotaInBucket = quotaInBucket;
   }
 
   /**
@@ -119,18 +146,42 @@ public final class OmTableArgs extends WithMetadata implements Auditable {
 
   /**
    * Returns Table used capacity in bytes.
-   * @return usedCapacityInBytes.
+   * @return usedInBytes.
    */
-  public long getUsedInBytes() {
-    return usedInBytes;
+  public long getUsedBytes() {
+    return usedBytes;
+  }
+
+  /**
+   * Returns Table used count in bucket.
+   * @return
+   */
+  public int getUsedBucket() {
+    return usedBucket;
+  }
+
+  /**
+   * Returns Table quota in bytes.
+   * @return
+   */
+  public long getQuotaInBytes() {
+    return quotaInBytes;
+  }
+
+  /**
+   * Returns Table quota in bucket count.
+   * @return
+   */
+  public int getQuotaInBucket() {
+    return quotaInBucket;
   }
 
   /**
    * Returns Table Schema
    * @return
    */
-  public List<ColumnSchema> getColumns() {
-    return columns;
+  public Schema getSchema() {
+    return schema;
   }
 
   /**
@@ -139,6 +190,14 @@ public final class OmTableArgs extends WithMetadata implements Auditable {
    */
   public int getNumReplicas() {
     return numReplicas;
+  }
+
+  /**
+   * Returns Table num buckets
+   * @return
+   */
+  public int getBuckets() {
+    return buckets;
   }
 
   /**
@@ -154,11 +213,12 @@ public final class OmTableArgs extends WithMetadata implements Auditable {
     Map<String, String> auditMap = new LinkedHashMap<>();
     auditMap.put(OzoneConsts.DATABASE, this.databaseName);
     auditMap.put(OzoneConsts.TABLE, this.tableName);
+    auditMap.put(OzoneConsts.TABLE_SCHEMA, this.schema.toString());
     auditMap.put(OzoneConsts.GDPR_FLAG,
         this.metadata.get(OzoneConsts.GDPR_FLAG));
     auditMap.put(OzoneConsts.IS_VERSION_ENABLED,
                 String.valueOf(this.isVersionEnabled));
-    if(this.storageType != null){
+    if(this.storageType != null) {
       auditMap.put(OzoneConsts.STORAGE_TYPE, this.storageType.name());
     }
     return auditMap;
@@ -170,20 +230,23 @@ public final class OmTableArgs extends WithMetadata implements Auditable {
   public static class Builder {
     private String databaseName;
     private String tableName;
+    private Schema schema;
     private Boolean isVersionEnabled;
     private StorageType storageType;
     private Map<String, String> metadata;
     private int numReplicas;
-    private List<ColumnSchema> columns;
-    private long usedInBytes;
+    private int buckets;
+    private long usedBytes;
     private long quotaInBytes;
-    private long quotaInNamespace;
+    private int usedBucket;
+    private int quotaInBucket;
 
     /**
      * Constructs a builder.
      */
     public Builder() {
-      usedInBytes = OzoneConsts.USED_CAPACITY_IN_BYTES_RESET;
+      usedBytes = OzoneConsts.USED_IN_BYTES_RESET;
+      usedBucket = OzoneConsts.USED_IN_BUCKET_RESET;
     }
 
     public Builder setDatabaseName(String databaseName) {
@@ -216,13 +279,13 @@ public final class OmTableArgs extends WithMetadata implements Auditable {
       return this;
     }
 
-    public Builder setColumns(List<ColumnSchema> columns) {
-      this.columns = columns;
+    public Builder setSchema(Schema schema) {
+      this.schema = schema;
       return this;
     }
 
-    public Builder setUsedInBytes(long usedInBytes) {
-      this.usedInBytes = usedInBytes;
+    public Builder setUsedBytes(long usedBytes) {
+      this.usedBytes = usedBytes;
       return this;
     }
 
@@ -231,8 +294,18 @@ public final class OmTableArgs extends WithMetadata implements Auditable {
       return this;
     }
 
-    public Builder setQuotaInNamespace(long quotaInNamespace) {
-      this.quotaInNamespace = quotaInNamespace;
+    public Builder setBuckets(int buckets) {
+      this.buckets = buckets;
+      return this;
+    }
+
+    public Builder setUsedBucket(int usedBucket) {
+      this.usedBucket = usedBucket;
+      return this;
+    }
+
+    public Builder setQuotaInBucket(int quotaInBucket) {
+      this.quotaInBucket = quotaInBucket;
       return this;
     }
 
@@ -243,10 +316,12 @@ public final class OmTableArgs extends WithMetadata implements Auditable {
     public OmTableArgs build() {
       Preconditions.checkNotNull(databaseName);
       Preconditions.checkNotNull(tableName);
-      Preconditions.checkArgument(columns.size() > 0);
+      Preconditions.checkNotNull(schema);
       Preconditions.checkNotNull(numReplicas);
-      return new OmTableArgs(databaseName, tableName, isVersionEnabled,
-          storageType, columns, numReplicas, metadata, usedInBytes);
+      Preconditions.checkNotNull(buckets);
+      return new OmTableArgs(databaseName, tableName, schema, isVersionEnabled,
+          storageType, numReplicas, buckets, metadata, usedBytes, quotaInBytes,
+          usedBucket, quotaInBucket);
     }
 
   }
@@ -256,12 +331,10 @@ public final class OmTableArgs extends WithMetadata implements Auditable {
    */
   public TableArgs getProtobuf() {
     TableArgs.Builder builder = TableArgs.newBuilder();
-    List<ColumnSchemaProto> columnSchemaProtos = columns.stream()
-            .map(columnSchema -> ColumnSchema.toProtobuf(columnSchema))
-            .collect(toList());
     builder.setDatabaseName(databaseName)
         .setTableName(tableName)
-        .addAllColumns(columnSchemaProtos)
+        .setSchema(schema.toProtobuf())
+        .setBuckets(buckets)
         .setNumReplicas(numReplicas);
     if(isVersionEnabled != null) {
       builder.setIsVersionEnabled(isVersionEnabled);
@@ -269,8 +342,17 @@ public final class OmTableArgs extends WithMetadata implements Auditable {
     if(storageType != null) {
       builder.setStorageType(storageType.toProto());
     }
-    if(usedInBytes > 0 || usedInBytes == OzoneConsts.USED_CAPACITY_IN_BYTES_RESET) {
-      builder.setUsedCapacityInBytes(usedInBytes);
+    if(usedBytes > 0 || usedBytes == OzoneConsts.USED_IN_BYTES_RESET) {
+      builder.setUsedBytes(usedBytes);
+    }
+    if (usedBucket > 0 || usedBucket == OzoneConsts.USED_IN_BUCKET_RESET) {
+      builder.setUsedBucket(usedBucket);
+    }
+    if(quotaInBytes > 0 || quotaInBytes == OzoneConsts.HETU_QUOTA_RESET) {
+      builder.setQuotaInBytes(quotaInBytes);
+    }
+    if(quotaInBucket > 0 || quotaInBucket == OzoneConsts.HETU_BUCKET_QUOTA_RESET) {
+      builder.setQuotaInBucket(quotaInBucket);
     }
     return builder.build();
   }
@@ -281,19 +363,17 @@ public final class OmTableArgs extends WithMetadata implements Auditable {
    * @return instance of OmTableArgs
    */
   public static OmTableArgs getFromProtobuf(TableArgs tableArgs) {
-   List<ColumnSchema> columns =  tableArgs.getColumnsList()
-           .stream()
-           .map(proto -> ColumnSchema.fromProtobuf(proto))
-           .collect(toList());
     return new OmTableArgs(tableArgs.getDatabaseName(),
         tableArgs.getTableName(),
-            tableArgs.hasIsVersionEnabled() ?
-            tableArgs.getIsVersionEnabled() : null,
+        Schema.fromProtobuf(tableArgs.getSchema()),
+        tableArgs.hasIsVersionEnabled() ?
+        tableArgs.getIsVersionEnabled() : null,
         tableArgs.hasStorageType() ? StorageType.valueOf(
-            tableArgs.getStorageType()) : null,
-        columns,
+        tableArgs.getStorageType()) : null,
         tableArgs.getNumReplicas(),
+        tableArgs.getBuckets(),
         KeyValueUtil.getFromProtobuf(tableArgs.getMetadataList()),
-        tableArgs.getUsedCapacityInBytes());
+        tableArgs.getUsedBytes(), tableArgs.getQuotaInBytes(),
+        tableArgs.getUsedBucket(), tableArgs.getQuotaInBucket());
   }
 }

@@ -23,24 +23,36 @@ import org.apache.hadoop.hdds.utils.db.DBColumnFamilyDefinition;
 import org.apache.hadoop.hdds.utils.db.DBDefinition;
 import org.apache.hadoop.hdds.utils.db.LongCodec;
 import org.apache.hadoop.hdds.utils.db.StringCodec;
+import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.hetu.om.OmMetadataManagerImpl;
+import org.apache.hadoop.ozone.om.codec.HmDatabaseArgsCodec;
 import org.apache.hadoop.ozone.om.codec.OmBucketInfoCodec;
 import org.apache.hadoop.ozone.om.codec.OmKeyInfoCodec;
 import org.apache.hadoop.ozone.om.codec.OmMultipartKeyInfoCodec;
+import org.apache.hadoop.ozone.om.codec.OmPartitionInfoCodec;
 import org.apache.hadoop.ozone.om.codec.OmPrefixInfoCodec;
+import org.apache.hadoop.ozone.om.codec.OmTableInfoCodec;
+import org.apache.hadoop.ozone.om.codec.OmTabletInfoCodec;
 import org.apache.hadoop.ozone.om.codec.OmVolumeArgsCodec;
 import org.apache.hadoop.ozone.om.codec.RepeatedOmKeyInfoCodec;
+import org.apache.hadoop.ozone.om.codec.RepeatedOmTabletInfoCodec;
 import org.apache.hadoop.ozone.om.codec.S3SecretValueCodec;
 import org.apache.hadoop.ozone.om.codec.TokenIdentifierCodec;
+import org.apache.hadoop.ozone.om.codec.UserDatabaseInfoCodec;
 import org.apache.hadoop.ozone.om.codec.UserVolumeInfoCodec;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmPartitionInfo;
+import org.apache.hadoop.ozone.om.helpers.OmTableArgs;
+import org.apache.hadoop.ozone.om.helpers.OmTableInfo;
+import org.apache.hadoop.ozone.om.helpers.OmTabletInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmPrefixInfo;
+import org.apache.hadoop.ozone.om.helpers.RepeatedOmTabletInfo;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 
 import org.apache.hadoop.hdds.utils.TransactionInfo;
@@ -152,6 +164,70 @@ public class OMDBDefinition implements DBDefinition {
                     TransactionInfo.class,
                     new TransactionInfoCodec());
 
+  public static final DBColumnFamilyDefinition<String, OmDatabaseArgs>
+          DATABASE_TABLE =
+          new DBColumnFamilyDefinition<>(
+                  OmMetadataManagerImpl.DATABASE_TABLE,
+                  String.class,
+                  new StringCodec(),
+                  OmDatabaseArgs.class,
+                  new HmDatabaseArgsCodec());
+
+  public static final DBColumnFamilyDefinition<String, OmTableInfo>
+          META_TABLE =
+          new DBColumnFamilyDefinition<>(
+                  OmMetadataManagerImpl.META_TABLE,
+                  String.class,
+                  new StringCodec(),
+                  OmTableInfo.class,
+                  new OmTableInfoCodec());
+
+  public static final DBColumnFamilyDefinition<String, OmPartitionInfo>
+          PARTITION_TABLE =
+          new DBColumnFamilyDefinition<>(
+                  OmMetadataManagerImpl.PARTITION_TABLE,
+                  String.class,
+                  new StringCodec(),
+                  OmPartitionInfo.class,
+                  new OmPartitionInfoCodec());
+
+  public static final DBColumnFamilyDefinition<String, OmTabletInfo>
+          OPEN_TABLET_TABLE =
+          new DBColumnFamilyDefinition<>(
+                  OmMetadataManagerImpl.OPEN_TABLET_TABLE,
+                  String.class,
+                  new StringCodec(),
+                  OmTabletInfo.class,
+                  new OmTabletInfoCodec(true));
+
+  public static final DBColumnFamilyDefinition<String, OmTabletInfo>
+          TABLET_TABLE =
+          new DBColumnFamilyDefinition<>(
+                  OmMetadataManagerImpl.TABLET_TABLE,
+                  String.class,
+                  new StringCodec(),
+                  OmTabletInfo.class,
+                  new OmTabletInfoCodec(true));
+
+  public static final DBColumnFamilyDefinition<String, RepeatedOmTabletInfo>
+          DELETED_TABLET =
+          new DBColumnFamilyDefinition<>(
+                  OmMetadataManagerImpl.DELETED_TABLET,
+                  String.class,
+                  new StringCodec(),
+                  RepeatedOmTabletInfo.class,
+                  new RepeatedOmTabletInfoCodec(true));
+
+  public static final DBColumnFamilyDefinition<String,
+          OzoneManagerStorageProtos.PersistedUserDatabaseInfo>
+          USER_TABLE_DB =
+          new DBColumnFamilyDefinition<>(
+                  OmMetadataManagerImpl.USER_TABLE_DB,
+                  String.class,
+                  new StringCodec(),
+                  OzoneManagerStorageProtos.PersistedUserDatabaseInfo.class,
+                  new UserDatabaseInfoCodec());
+
   @Override
   public String getName() {
     return OzoneConsts.OM_DB_NAME;
@@ -167,6 +243,8 @@ public class OMDBDefinition implements DBDefinition {
     return new DBColumnFamilyDefinition[] {DELETED_TABLE, USER_TABLE,
         VOLUME_TABLE, OPEN_KEY_TABLE, KEY_TABLE,
         BUCKET_TABLE, MULTIPART_INFO_TABLE, PREFIX_TABLE, DTOKEN_TABLE,
+        DATABASE_TABLE, META_TABLE, PARTITION_TABLE, OPEN_TABLET_TABLE,
+        TABLET_TABLE, DELETED_TABLET, USER_TABLE_DB,
         S3_SECRET_TABLE, TRANSACTION_INFO_TABLE};
   }
 }

@@ -101,5 +101,4 @@ public class TestOMTableCreateResponse {
     Assert.assertEquals(omTableInfo.toString(), keyValue.getValue().toString());
   }
 
-
 }

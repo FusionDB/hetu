@@ -18,16 +18,14 @@
 
 package org.apache.hadoop.hetu.client;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.StorageType;
-import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.hetu.hm.meta.table.ColumnKey;
-import org.apache.hadoop.hetu.hm.meta.table.ColumnSchema;
+import org.apache.hadoop.hetu.hm.meta.table.Schema;
 import org.apache.hadoop.hetu.hm.meta.table.StorageEngine;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.TableInfo.DistributedKeyProto;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.TableInfo.PartitionsProto;
+import org.apache.hadoop.ozone.OzoneConsts;
 
 import java.util.HashMap;
-import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -38,92 +36,108 @@ public final class TableArgs {
   /**
    * Name of the database in which the table belongs to.
    */
-  private String databaseName;
+  private final String databaseName;
   /**
    * Name of the table.
    */
-  private String tableName;
+  private final String tableName;
+  /**
+   * schema of the table
+   */
+  private final Schema schema;
   /**
    * Table Version flag.
    */
-  private Boolean versioning;
+  private Boolean isVersionEnabled;
   /**
    * Type of storage to be used for this table.
    * [RAM_DISK, SSD, DISK, ARCHIVE]
    */
   private StorageType storageType;
   /**
-   * Engine of storage to be used for this table.
+   * Type of storage engine to be used for this table.
    * [LSTORE, CSTORE]
    */
   private StorageEngine storageEngine;
-
   /**
-   * schema of the table
+   * Table num buckets
    */
-  private List<ColumnSchema> columns;
-
-  /**
-   * Table of column key
-   */
-  private ColumnKey columnKey;
-
-  /**
-   * Table of distributeKey
-   */
-  private DistributedKeyProto distributedKeyProto;
-  /**
-   * Table of partitions
-   */
-  private PartitionsProto partitions;
+  private int buckets;
   /**
    * Table num replicas
    */
   private int numReplicas;
   /**
-   * Custom key/value metadata.
+   * Table used bytes
    */
-  private Map<String, String> metadata;
-
+  private long usedBytes;
+  /**
+   * Table quota in bytes
+   */
   private long quotaInBytes;
-  private long quotaInNamespace;
+  /**
+   * Table used num of buckets
+   */
+  private int usedBucket;
+  /**
+   * Table quota in bucket.
+   */
+  private int quotaInBucket;
+
+  private Map<String, String> metadata = new HashMap<>();
 
   /**
    * Private constructor, constructed via builder.
-   * @param versioning Table version flag.
-   * @param storageType Storage type to be used.
-   * @param metadata map of table metadata
-   * @param quotaInBytes Table quota in bytes.
-   * @param quotaInNamespace Table quota in counts.
+   * @param databaseName - Database name.
+   * @param tableName - Table name.
+   * @param schema - Table schema.
+   * @param isVersionEnabled - Table version flag.
+   * @param storageType - Storage type to be used.
+   * @param usedBytes - Table used in bytes.
+   * @param usedBucket - Table used bucket count
    */
-  @SuppressWarnings("parameternumber")
-  private TableArgs(Boolean versioning, StorageType storageType, StorageEngine storageEngine,
-                    Map<String, String> metadata, List<ColumnSchema> columns,
-                    String databaseName, String tableName, int numReplicas,
-                    ColumnKey columnKey, DistributedKeyProto distributedKeyProto,
-                    PartitionsProto partitions, long quotaInBytes,
-                    long quotaInNamespace) {
-    this.versioning = versioning;
-    this.storageType = storageType;
-    this.metadata = metadata;
-    this.columns = columns;
+  private TableArgs(String databaseName, String tableName, Schema schema,
+                      Boolean isVersionEnabled, StorageType storageType,
+                      StorageEngine storageEngine, int numReplicas, int buckets,
+                      Map<String, String> metadata, long usedBytes,
+                      long quotaInBytes, int usedBucket, int quotaInBucket) {
     this.databaseName = databaseName;
     this.tableName = tableName;
-    this.numReplicas = numReplicas;
+    this.schema = schema;
+    this.isVersionEnabled = isVersionEnabled;
+    this.storageType = storageType;
     this.storageEngine = storageEngine;
-    this.columnKey = columnKey;
-    this.distributedKeyProto = distributedKeyProto;
-    this.partitions = partitions;
+    this.metadata = metadata;
+    this.numReplicas = numReplicas;
+    this.buckets = buckets;
+    this.usedBytes = usedBytes;
     this.quotaInBytes = quotaInBytes;
-    this.quotaInNamespace = quotaInNamespace;
+    this.usedBucket = usedBucket;
+    this.quotaInBucket = quotaInBucket;
+  }
+
+  /**
+   * Returns the Database Name.
+   * @return String.
+   */
+  public String getDatabaseName() {
+    return databaseName;
+  }
+
+  /**
+   * Returns the Table Name.
+   * @return String
+   */
+  public String getTableName() {
+    return tableName;
   }
 
   /**
    * Returns true if table version is enabled, else false.
    * @return isVersionEnabled
    */
-  public Boolean getVersioning() {
-    return versioning;
+  public Boolean getIsVersionEnabled() {
+    return isVersionEnabled;
   }
 
   /**
@@ -134,98 +148,121 @@ public final class TableArgs {
     return storageType;
   }
 
-  /**
-   * Custom metadata for the tables.
-   *
-   * @return key value map
-   */
-  public Map<String, String> getMetadata() {
-    return metadata;
-  }
-
-  /**
-   * Returns new builder class that builds a OmTabletInfo.
-   *
-   * @return Builder
-   */
-  public static TableArgs.Builder newBuilder() {
-    return new TableArgs.Builder();
-  }
-
-  public String getDatabaseName() {
-    return databaseName;
-  }
-
-  public String getTableName() {
-    return tableName;
-  }
-
-  public List<ColumnSchema> getColumns() {
-    return columns;
-  }
-
-  public int getNumReplicas() {
-    return numReplicas;
-  }
-
-  public ColumnKey getColumnKey() {
-    return columnKey;
-  }
-
-  public DistributedKeyProto getDistributedKeyProto() {
-    return distributedKeyProto;
-  }
-
-  public PartitionsProto getPartitions() {
-    return partitions;
-  }
-
   public StorageEngine getStorageEngine() {
     return storageEngine;
   }
 
   /**
-   * Returns Table Quota in bytes.
-   * @return quotaInBytes.
+   * Returns Table used capacity in bytes.
+   * @return usedInBytes.
+   */
+  public long getUsedBytes() {
+    return usedBytes;
+  }
+
+  /**
+   * Returns Table used count in bucket.
+   * @return
+   */
+  public int getUsedBucket() {
+    return usedBucket;
+  }
+
+  public Map<String, String> getMetadata() {
+    return metadata;
+  }
+
+  /**
+   * Returns Table quota in bytes.
+   * @return
    */
   public long getQuotaInBytes() {
     return quotaInBytes;
   }
 
   /**
-   * Returns Table Quota in tablet counts.
-   * @return quotaInNamespace.
+   * Returns Table quota in bucket count.
+   * @return
    */
-  public long getQuotaInNamespace() {
-    return quotaInNamespace;
+  public int getQuotaInBucket() {
+    return quotaInBucket;
   }
 
   /**
-   * Builder for OmTableInfo.
+   * Returns Table Schema
+   * @return
+   */
+  public Schema getSchema() {
+    return schema;
+  }
+
+  /**
+   * Returns Table Num Replicas
+   * @return
+   */
+  public int getNumReplicas() {
+    return numReplicas;
+  }
+
+  /**
+   * Returns Table num buckets
+   * @return
+   */
+  public int getBuckets() {
+    return buckets;
+  }
+
+  /**
+   * Returns new builder class that builds a TableArgs.
+   * @return Builder
+   */
+  public static TableArgs.Builder newBuilder() {
+    return new TableArgs.Builder();
+  }
+
+  /**
+   * Builder for TableArgs.
    */
   public static class Builder {
     private String databaseName;
     private String tableName;
-    private Boolean versioning;
+    private Schema schema;
+    private Boolean isVersionEnabled;
     private StorageType storageType;
     private StorageEngine storageEngine;
     private Map<String, String> metadata;
-    private List<ColumnSchema> columns;
-    private ColumnKey columnKey;
-    private DistributedKeyProto distributedKeyProto;
-    private PartitionsProto partitions;
     private int numReplicas;
+    private int buckets;
+    private long usedBytes;
     private long quotaInBytes;
-    private long quotaInNamespace;
+    private int usedBucket;
+    private int quotaInBucket;
 
+    /**
+     * Constructs a builder.
+     */
     public Builder() {
-      metadata = new HashMap<>();
-      quotaInBytes = OzoneConsts.QUOTA_RESET;
-      quotaInNamespace = OzoneConsts.QUOTA_RESET;
+      usedBytes = OzoneConsts.USED_IN_BYTES_RESET;
+      usedBucket = OzoneConsts.USED_IN_BUCKET_RESET;
     }
 
-    public TableArgs.Builder setVersioning(Boolean versionFlag) {
-      this.versioning = versionFlag;
+    public TableArgs.Builder setDatabaseName(String databaseName) {
+      this.databaseName = databaseName;
+      return this;
+    }
+
+    public TableArgs.Builder setTableName(String tableName) {
+      this.tableName = tableName;
+      return this;
+    }
+
+    public TableArgs.Builder setIsVersionEnabled(Boolean versionFlag) {
+      this.isVersionEnabled = versionFlag;
+      return this;
+    }
+
+    public TableArgs.Builder addMetadata(Map<String, String> metadataMap) {
+      this.metadata = metadataMap;
       return this;
     }
 
@@ -239,53 +276,38 @@ public final class TableArgs {
       return this;
     }
 
-    public TableArgs.Builder addMetadata(String key, String value) {
-      this.metadata.put(key, value);
-      return this;
-    }
-
-    public TableArgs.Builder setDatabaseName(String databaseName) {
-      this.databaseName = databaseName;
-      return this;
-    }
-
-    public TableArgs.Builder setTableName(String tableName) {
-      this.tableName = tableName;
-      return this;
-    }
-
-    public TableArgs.Builder setColumns(List<ColumnSchema> columns) {
-      this.columns = columns;
-      return this;
-    }
-
-    public TableArgs.Builder setColumnKey(ColumnKey columnKey) {
-      this.columnKey = columnKey;
-      return this;
-    }
-
-    public TableArgs.Builder setDistributedKeyProto(DistributedKeyProto distributedKeyProto) {
-      this.distributedKeyProto = distributedKeyProto;
-      return this;
-    }
-
-    public TableArgs.Builder setPartitions(PartitionsProto partitions) {
-      this.partitions = partitions;
-      return this;
-    }
-
     public TableArgs.Builder setNumReplicas(int numReplicas) {
       this.numReplicas = numReplicas;
       return this;
     }
 
-    public TableArgs.Builder setQuotaInBytes(long quota) {
-      quotaInBytes = quota;
+    public TableArgs.Builder setSchema(Schema schema) {
+      this.schema = schema;
       return this;
     }
 
-    public TableArgs.Builder setQuotaInNamespace(long quota) {
-      quotaInNamespace = quota;
+    public TableArgs.Builder setUsedBytes(long usedBytes) {
+      this.usedBytes = usedBytes;
+      return this;
+    }
+
+    public TableArgs.Builder setQuotaInBytes(long quotaInBytes) {
+      this.quotaInBytes = quotaInBytes;
+      return this;
+    }
+
+    public TableArgs.Builder setBuckets(int buckets) {
+      this.buckets = buckets;
+      return this;
+    }
+
+    public TableArgs.Builder setUsedBucket(int usedBucket) {
+      this.usedBucket = usedBucket;
+      return this;
+    }
+
+    public TableArgs.Builder setQuotaInBucket(int quotaInBucket) {
+      this.quotaInBucket = quotaInBucket;
       return this;
     }
 
@@ -294,9 +316,15 @@ public final class TableArgs {
      * @return instance of TableArgs.
      */
     public TableArgs build() {
-      return new TableArgs(versioning, storageType, storageEngine, metadata,
-          columns, databaseName, tableName, numReplicas, columnKey, distributedKeyProto,
-          partitions, quotaInBytes, quotaInNamespace);
+      Preconditions.checkNotNull(databaseName);
+      Preconditions.checkNotNull(tableName);
+      Preconditions.checkNotNull(schema);
+      Preconditions.checkNotNull(numReplicas);
+      Preconditions.checkNotNull(buckets);
+      return new TableArgs(databaseName, tableName, schema, isVersionEnabled,
+              storageType, storageEngine, numReplicas, buckets, metadata, usedBytes, quotaInBytes,
+              usedBucket, quotaInBucket);
     }
+
   }
 }

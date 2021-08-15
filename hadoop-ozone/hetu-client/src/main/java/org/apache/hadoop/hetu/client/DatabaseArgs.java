@@ -32,26 +32,26 @@ public final class DatabaseArgs {
   private final String admin;
   private final String owner;
   private final long quotaInBytes;
-  private final long quotaInNamespace;
+  private final int quotaInTable;
   private Map<String, String> metadata;
 
   /**
    * Private constructor, constructed via builder.
    * @param admin Administrator's name.
    * @param owner Volume owner's name
-   * @param quotaInBytes Volume quota in bytes.
-   * @param quotaInNamespace Volume quota in counts.
+   * @param quotaInBytes Database quota in bytes.
+   * @param quotaInTable Database quota in counts.
    * @param metadata Metadata of volume.
    */
   private DatabaseArgs(String admin,
                        String owner,
                        long quotaInBytes,
-                       long quotaInNamespace,
+                       int quotaInTable,
                        Map<String, String> metadata) {
     this.admin = admin;
     this.owner = owner;
     this.quotaInBytes = quotaInBytes;
-    this.quotaInNamespace = quotaInNamespace;
+    this.quotaInTable = quotaInTable;
     this.metadata = metadata;
   }
 
@@ -80,11 +80,11 @@ public final class DatabaseArgs {
   }
 
   /**
-   * Returns Volume Quota in bucket counts.
+   * Returns Database Quota in table counts.
    * @return quotaInNamespace.
    */
-  public long getQuotaInNamespace() {
-    return quotaInNamespace;
+  public int getQuotaInTable() {
+    return quotaInTable;
   }
 
   /**
@@ -112,15 +112,15 @@ public final class DatabaseArgs {
     private String adminName;
     private String ownerName;
     private long quotaInBytes;
-    private long quotaInNamespace;
+    private int quotaInTable;
     private Map<String, String> metadata = new HashMap<>();
 
     /**
      * Constructs a builder.
      */
     public Builder() {
-      quotaInBytes = OzoneConsts.QUOTA_RESET;
-      quotaInNamespace = OzoneConsts.QUOTA_RESET;
+      quotaInBytes = OzoneConsts.HETU_QUOTA_RESET;
+      quotaInTable = OzoneConsts.HETU_TABLE_QUOTA_RESET;
     }
 
     public DatabaseArgs.Builder setAdmin(String admin) {
@@ -138,8 +138,8 @@ public final class DatabaseArgs {
       return this;
     }
 
-    public DatabaseArgs.Builder setQuotaInNamespace(long quota) {
-      this.quotaInNamespace = quota;
+    public DatabaseArgs.Builder setQuotaInTable(int quota) {
+      this.quotaInTable = quota;
       return this;
     }
 
@@ -154,7 +154,7 @@ public final class DatabaseArgs {
      */
     public DatabaseArgs build() {
       return new DatabaseArgs(adminName, ownerName, quotaInBytes,
-          quotaInNamespace, metadata);
+          quotaInTable, metadata);
     }
   }
 

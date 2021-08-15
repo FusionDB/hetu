@@ -28,6 +28,11 @@ import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
+import org.apache.hadoop.hetu.hm.Type;
+import org.apache.hadoop.hetu.hm.meta.table.ColumnKeyType;
+import org.apache.hadoop.hetu.hm.meta.table.DistributedKey;
+import org.apache.hadoop.hetu.hm.meta.table.PartitionKey;
+import org.apache.hadoop.hetu.hm.meta.table.Schema;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -645,12 +650,38 @@ public final class TestOMRequestUtils {
   }
 
   public static OmTableInfo getOmTableInfo(String databaseName, String tableName) {
+    return OmTableInfo.newBuilder()
+            .setDatabaseName(databaseName)
+            .setTableName(tableName)
+            .setSchema(getSchema())
+            .setBuckets(8)
+            .setCreationTime(Time.now())
+            .setUsedBytes(0L).build();
+  }
+
+  @NotNull
+  public static Schema getSchema() {
+    return new Schema(getColumnSchemas(), getColumnKey(), getDistributedKey(), getPartitionKey());
+  }
+
+  @NotNull
+  public static PartitionKey getPartitionKey() {
+    return new PartitionKey(Type.RANGE, Arrays.asList("ds"));
+  }
+
+  @NotNull
+  public static DistributedKey getDistributedKey() {
+    return new DistributedKey(Type.HASH, Arrays.asList("id"));
+  }
+
+  @NotNull
+  public static List<ColumnSchema> getColumnSchemas() {
     ColumnSchema col1 = new ColumnSchema(
             "city",
-            "varchar(4)",
-            "varcher",
-            0,
+            "varchar",
+            1,
             "",
+            -1,
             "",
             "用户",
             true);
@@ -658,32 +689,19 @@ public final class TestOMRequestUtils {
     ColumnSchema col2 = new ColumnSchema(
             "id",
             "Long",
-            "Long",
-            1,
+            0,
             "",
+            -1,
             "",
             "ID",
             true);
 
-    OzoneManagerProtocolProtos.TableInfo.PartitionsProto partitionsProto = getPartitionsProto();
-
-    return OmTableInfo.newBuilder()
-            .setDatabaseName(databaseName)
-            .setTableName(tableName)
-            .setColumns(Arrays.asList(col1, col2))
-            .setPartitions(partitionsProto)
-            .setColumnKey(ColumnKey.fromProtobuf(getColumnKeyProto()))
-            .setDistributedKey(getDistributedKeyProto())
-            .setCreationTime(Time.now())
-            .setUsedInBytes(0L).build();
+    return Arrays.asList(col1, col2);
   }
 
   @NotNull
-  public static OzoneManagerProtocolProtos.TableInfo.PartitionsProto getPartitionsProto() {
-    return OzoneManagerProtocolProtos.TableInfo.PartitionsProto.newBuilder()
-            .addAllFields(Arrays.asList("city"))
-            .setPartitionType(OzoneManagerProtocolProtos.TableInfo.Type.RANGE)
-            .build();
+  public static ColumnKey getColumnKey() {
+    return new ColumnKey(ColumnKeyType.PRIMARY_KEY, Arrays.asList("id"));
   }
 
   /**
@@ -718,38 +736,12 @@ public final class TestOMRequestUtils {
    */
   public static void addMetaTableToDB(String databaseName, String tableName,
                                    OMMetadataManager omMetadataManager, long usedCapacityInBytes) throws Exception {
-
-    ColumnSchema col1 = new ColumnSchema(
-            "city",
-            "varchar(4)",
-            "varcher",
-            0,
-            "",
-            "",
-            "用户",
-            true);
-
-    ColumnSchema col2 = new ColumnSchema(
-            "id",
-            "Long",
-            "Long",
-            1,
-            "",
-            "",
-            "ID",
-            true);
-
-    OzoneManagerProtocolProtos.TableInfo.PartitionsProto partitionsProto = getPartitionsProto();
-
     OmTableInfo omTableInfo = OmTableInfo.newBuilder()
             .setDatabaseName(databaseName)
             .setTableName(tableName)
-            .setColumns(Arrays.asList(col1, col2))
-            .setColumnKey(ColumnKey.fromProtobuf(getColumnKeyProto()))
-            .setPartitions(partitionsProto)
+            .setSchema(getSchema())
             .setCreationTime(Time.now())
-            .setDistributedKey(getDistributedKeyProto())
-            .setUsedInBytes(usedCapacityInBytes).build();
+            .setUsedBytes(usedCapacityInBytes).build();
 
     // Add to cache.
     omMetadataManager.getMetaTable().addCacheEntry(
@@ -808,14 +800,6 @@ public final class TestOMRequestUtils {
           String tableName, String databaseName, boolean isVersionEnabled,
           OzoneManagerProtocolProtos.StorageTypeProto storageTypeProto) {
 
-    List<OzoneManagerProtocolProtos.ColumnSchemaProto> columnSchemaProtos = getColumnSchemaProtos();
-
-    OzoneManagerProtocolProtos.TableInfo.PartitionsProto partitionsProto = getPartitionsProto();
-
-    OzoneManagerProtocolProtos.TableInfo.ColumnKeyProto columnKeyProto = getColumnKeyProto();
-
-    OzoneManagerProtocolProtos.TableInfo.DistributedKeyProto distributedKeyProto = getDistributedKeyProto();
-
     OzoneManagerProtocolProtos.TableInfo tableInfo =
             OzoneManagerProtocolProtos.TableInfo.newBuilder()
                     .setTableName(tableName)
@@ -824,10 +808,8 @@ public final class TestOMRequestUtils {
                     .setStorageType(storageTypeProto)
                     .setStorageEngine(OzoneManagerProtocolProtos.TableInfo.StorageEngineProto.LSTORE)
                     .setNumReplicas(3)
-                    .setPartitions(partitionsProto)
-                    .addAllColumns(columnSchemaProtos)
-                    .setColumnKey(columnKeyProto)
-                    .setDistributedKey(distributedKeyProto)
+                    .setBuckets(8)
+                    .setSchema(getSchema().toProtobuf())
                     .addAllMetadata(getMetadataList()).build();
     OzoneManagerProtocolProtos.CreateTableRequest.Builder req =
             OzoneManagerProtocolProtos.CreateTableRequest.newBuilder();
@@ -836,25 +818,6 @@ public final class TestOMRequestUtils {
             .setCreateTableRequest(req)
             .setCmdType(OzoneManagerProtocolProtos.Type.CreateTable)
             .setClientId(UUID.randomUUID().toString()).build();
-  }
-
-  @NotNull
-  public static OzoneManagerProtocolProtos.TableInfo.DistributedKeyProto getDistributedKeyProto() {
-    return OzoneManagerProtocolProtos.TableInfo.DistributedKeyProto
-            .newBuilder()
-            .setDistributedKeyType(OzoneManagerProtocolProtos.TableInfo.Type.HASH)
-            .setBuckets(8)
-            .addAllFields(Arrays.asList("id"))
-            .build();
-  }
-
-  @NotNull
-  public static OzoneManagerProtocolProtos.TableInfo.ColumnKeyProto getColumnKeyProto() {
-    return OzoneManagerProtocolProtos.TableInfo.ColumnKeyProto
-            .newBuilder()
-            .setColumnKeyType(OzoneManagerProtocolProtos.TableInfo.ColumnKeyTypeProto.PRIMARY_KEY)
-            .addAllFields(Arrays.asList("id"))
-            .build();
   }
 
   public static OMRequest createPartitionRequest(
@@ -883,40 +846,6 @@ public final class TestOMRequestUtils {
             .setCmdType(OzoneManagerProtocolProtos.Type.CreatePartition)
             .setClientId(UUID.randomUUID().toString()).build();
   }
-
-  @NotNull
-  public static List<OzoneManagerProtocolProtos.ColumnSchemaProto> getColumnSchemaProtos() {
-    List<ColumnSchema> columnSchemaList = getColumnSchemas();
-    return columnSchemaList.stream()
-            .map(proto -> ColumnSchema.toProtobuf(proto))
-            .collect(toList());
-  }
-
-  @NotNull
-  public static List<ColumnSchema> getColumnSchemas() {
-    ColumnSchema col1 = new ColumnSchema(
-            "city",
-            "varchar(4)",
-            "varcher",
-            0,
-            "",
-            "",
-            "用户",
-            true);
-
-    ColumnSchema col2 = new ColumnSchema(
-            "id",
-            "Long",
-            "Long",
-            1,
-            "",
-            "",
-            "ID",
-            true);
-
-    return Arrays.asList(col1, col2);
-  }
-
 
   public static List< HddsProtos.KeyValue> getMetadataList() {
     List<HddsProtos.KeyValue> metadataList = new ArrayList<>();
@@ -1034,15 +963,10 @@ public final class TestOMRequestUtils {
    */
   public static OMRequest createSetDatabasePropertyRequest(String databaseName,
                                                          String newOwner) {
-    OzoneManagerProtocolProtos.DatabaseInfo databaseInfo = OzoneManagerProtocolProtos.DatabaseInfo.newBuilder()
-            .setName(databaseName)
-            .setOwnerName(newOwner)
-            .setAdminName(newOwner)
-            .setModificationTime(Time.now())
-            .build();
-
     SetDatabasePropertyRequest setDatabasePropertyRequest = SetDatabasePropertyRequest.newBuilder()
-            .setDatabaseInfo(databaseInfo)
+            .setDatabaseName(databaseName)
+            .setOwnerName(newOwner)
+            .setModificationTime(Time.now())
             .build();
 
     return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
@@ -1054,23 +978,17 @@ public final class TestOMRequestUtils {
    * Create OMRequest for set volume property request with quota set.
    * @param databaseName
    * @param quotaInBytes
-   * @param quotaInNamespace
+   * @param quotaInTable
    * @return OMRequest
    */
   public static OMRequest createSetDatabasePropertyRequest(String databaseName,
-                                                         long quotaInBytes, long quotaInNamespace) {
-    OzoneManagerProtocolProtos.DatabaseInfo databaseInfo = OzoneManagerProtocolProtos.DatabaseInfo.newBuilder().setName(databaseName)
-            .setQuotaInBytes(quotaInBytes)
-            .setQuotaInNamespace(quotaInNamespace)
-            .setModificationTime(Time.now())
-            .setAdminName(databaseName)
-            .setOwnerName(databaseName)
-            .setName(databaseName)
-            .build();
-
+                                                         long quotaInBytes, int quotaInTable) {
     SetDatabasePropertyRequest setDatabasePropertyRequest = SetDatabasePropertyRequest.newBuilder()
-                    .setDatabaseInfo(databaseInfo)
-                    .build();
+            .setDatabaseName(databaseName)
+            .setQuotaInBytes(quotaInBytes)
+            .setQuotaInTable(quotaInTable)
+            .setModificationTime(Time.now())
+            .build();
 
     return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
             .setCmdType(OzoneManagerProtocolProtos.Type.SetDatabaseProperty)
@@ -1357,7 +1275,7 @@ public final class TestOMRequestUtils {
     OzoneManagerProtocolProtos.DatabaseInfo databaseInfo =
             OzoneManagerProtocolProtos.DatabaseInfo.newBuilder().setName(databaseName)
                     .setAdminName(adminName).setOwnerName(ownerName)
-                    .setQuotaInNamespace(OzoneConsts.QUOTA_RESET).build();
+                    .setQuotaInTable(OzoneConsts.HETU_TABLE_QUOTA_RESET).build();
     OzoneManagerProtocolProtos.CreateDatabaseRequest createDatabaseRequest =
             OzoneManagerProtocolProtos.CreateDatabaseRequest.newBuilder()
                     .setDatabaseInfo(databaseInfo).build();
@@ -1568,13 +1486,13 @@ public final class TestOMRequestUtils {
             OmDatabaseArgs.newBuilder().setCreationTime(Time.now())
                     .setName(databaseName).setAdminName(ownerName)
                     .setOwnerName(ownerName).setQuotaInBytes(Long.MAX_VALUE)
-                    .setQuotaInNamespace(10000L).build();
+                    .setQuotaInTable(10000).build();
     omMetadataManager.getDatabaseTable().put(
-            omMetadataManager.getVolumeKey(databaseName), omDatabaseArgs);
+            omMetadataManager.getDatabaseKey(databaseName), omDatabaseArgs);
 
     // Add to cache.
     omMetadataManager.getDatabaseTable().addCacheEntry(
-            new CacheKey<>(omMetadataManager.getVolumeKey(databaseName)),
+            new CacheKey<>(omMetadataManager.getDatabaseKey(databaseName)),
             new CacheValue<>(Optional.of(omDatabaseArgs), 1L));
   }
 
@@ -1591,7 +1509,7 @@ public final class TestOMRequestUtils {
             OmDatabaseArgs.newBuilder().setCreationTime(Time.now())
                     .setName(databaseName).setAdminName(databaseName)
                     .setOwnerName(databaseName).setQuotaInBytes(quotaInBytes)
-                    .setQuotaInNamespace(10000L).build();
+                    .setQuotaInTable(10000).build();
     omMetadataManager.getDatabaseTable().put(
             omMetadataManager.getDatabaseKey(databaseName), omDatabaseArgs);
 

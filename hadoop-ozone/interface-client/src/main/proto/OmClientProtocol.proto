@@ -505,40 +505,34 @@ message VolumeInfo {
 
 message DatabaseInfo {
   required string adminName = 1;
-  required string ownerName = 2;
+  optional string ownerName = 2;
   required string name = 3;
   optional uint64 creationTime = 4;
   optional uint64 modificationTime = 5;
   repeated hadoop.hdds.KeyValue metadata = 6;
   optional uint64 quotaInBytes = 7;
-  optional int64 quotaInNamespace = 8 [default = -2];
-  optional uint64 usedNamespace = 9;
-  optional uint64 objectID = 10;
-  optional uint64 updateID = 11;
-  optional string Comment = 12;
+  optional int32  quotaInTable = 8 [default = -2];
+  optional uint64  usedNamespace = 9;
+
+  optional uint64 objectID = 11;
+  optional uint64 updateID = 12;
 }
 
-message TableInfo {
-  enum StorageEngineProto {
-    LSTORE = 1;
-    CSTORE = 2;
-  }
-
-  enum Type {
+message SchemaProto {
+  enum TypeProto {
     HASH = 1;
     RANGE = 2;
     LIST = 3;
   }
 
-  message PartitionsProto {
-    required Type partitionType = 1;
+  message PartitionKeyProto {
+    required TypeProto partitionKeyType = 1;
     repeated string fields = 2;
   }
 
   message DistributedKeyProto {
-    required Type distributedKeyType = 1 [default = HASH];
-    required int32 buckets = 2 [default = 8];
-    repeated string fields = 3;
+    required TypeProto distributedKeyType = 1 [default = HASH];
+    repeated string fields = 2;
   }
 
   enum ColumnKeyTypeProto {
@@ -549,26 +543,39 @@ message TableInfo {
   }
 
   message ColumnKeyProto {
-    optional ColumnKeyTypeProto columnKeyType = 1;
+    required ColumnKeyTypeProto columnKeyType = 1;
     repeated string fields = 2;
+  }
+
+  repeated ColumnSchemaProto columns = 1;
+  required PartitionKeyProto partitionKey = 2;
+  required DistributedKeyProto distributedKey = 3;
+  required ColumnKeyProto columnKey = 4;
+}
+
+message TableInfo {
+  enum StorageEngineProto {
+    LSTORE = 1;
+    CSTORE = 2;
   }
 
   required string databaseName = 1;
   required string tableName = 2;
-  repeated ColumnSchemaProto columns = 3;
+  required SchemaProto schema = 3;
   required StorageEngineProto storageEngine = 4 [default = LSTORE];
   required bool isVersionEnabled = 5 [default = false];
   required StorageTypeProto storageType = 6 [default = DISK];
   required int32 numReplicas = 7;
-  optional uint64 creationTime = 8;
-  repeated hadoop.hdds.KeyValue metadata = 9;
-  required PartitionsProto partitions = 10;
-  required DistributedKeyProto distributedKey = 11;
-  required ColumnKeyProto columnKey = 12;
-  optional uint64 objectID = 13;
-  optional uint64 updateID = 14;
-  optional uint64 modificationTime = 15;
-  optional uint64 usedCapacityInBytes = 16;
+  required int32 buckets = 8 [default = 8];
+  repeated hadoop.hdds.KeyValue metadata = 10;
+  optional uint64 creationTime = 11;
+  optional uint64 modificationTime = 12;
+  optional uint64 quotaInBytes = 13;
+  optional int64 usedBytes = 14 [default = -2];
+  optional int32 quotaInBucket = 15;
+  optional int32 usedBucket = 16 [default = -2];
+  optional uint64 objectID = 17;
+  optional uint64 updateID = 18;
 }
 
 message PartitionInfo {
@@ -589,14 +596,14 @@ message PartitionInfo {
 }
 
 message ColumnSchemaProto {
-  required string columnType = 1;
-  required string columnName = 2;
-  required string dataType = 3;
-  required int32 ordinalPosition = 4;
-  optional string columnDefault = 6;
+  required string columnName = 1;
+  required string columnType = 2;
+  required int32  ordinalPosition = 3;
+  optional int64  desiredSize = 4;
+  optional string defaultValue = 5;
   optional string extra = 7 [default = "DEFAULT_GENERATED"];
   optional string columnComment = 8;
-  optional bool isNullable = 9;
+  optional bool   isNullable = 9;
 }
 
 message TabletInfo {
@@ -612,7 +619,6 @@ message TabletInfo {
   optional uint64 creationTime = 10;
   optional uint64 modificationTime = 11;
   repeated hadoop.hdds.KeyValue metadata = 12;
-  optional FileEncryptionInfoProto fileEncryptionInfo = 13;
   optional uint64 objectID = 14;
   optional uint64 updateID = 15;
 }
@@ -705,7 +711,11 @@ message GetDatabaseResponse {
 update a database
  */
 message SetDatabasePropertyRequest {
-  required DatabaseInfo databaseInfo = 1;
+  required string databaseName = 1;
+  optional string ownerName = 2;
+  optional uint64 quotaInBytes = 3;
+  optional uint64 modificationTime = 4;
+  optional int32 quotaInTable = 5;
 }
 
 message SetDatabasePropertyResponse {
@@ -894,12 +904,16 @@ message BucketArgs {
 message TableArgs {
   required string databaseName = 1;
   required string tableName = 2;
-  repeated ColumnSchemaProto columns = 3;
+  required SchemaProto schema = 3;
   required bool isVersionEnabled = 4 [default = false];
   required StorageTypeProto storageType = 5 [default = DISK];
   required int32 numReplicas = 6;
-  repeated hadoop.hdds.KeyValue metadata = 7;
-  optional uint64 usedCapacityInBytes = 8;
+  required int32 buckets = 7;
+  repeated hadoop.hdds.KeyValue metadata = 8;
+  optional uint64 usedBytes = 9;
+  optional uint64 quotaInBytes = 10;
+  optional int32 usedBucket = 11;
+  optional int32  quotaInBucket = 12;
 }
 
 message PartitionArgs {

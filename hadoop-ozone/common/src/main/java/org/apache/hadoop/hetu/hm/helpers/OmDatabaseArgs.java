@@ -34,7 +34,7 @@ import java.util.Objects;
 
 
 /**
- * A class that encapsulates the OmVolumeArgs Args.
+ * A class that encapsulates the OmDatabaseArgs Args.
  */
 public final class OmDatabaseArgs extends WithObjectID implements Auditable {
   private final String adminName;
@@ -43,17 +43,17 @@ public final class OmDatabaseArgs extends WithObjectID implements Auditable {
   private long creationTime;
   private long modificationTime;
   private long quotaInBytes;
-  private long quotaInNamespace;
+  private int quotaInTable;
   private long usedNamespace;
 
   /**
    * Private constructor, constructed via builder.
    * @param adminName  - Administrator's name.
-   * @param ownerName  - Volume owner's name
+   * @param ownerName  - Database owner's name
    * @param database - database name
-   * @param quotaInBytes - Volume Quota in bytes.
-   * @param quotaInNamespace - Volume Quota in counts.
-   * @param usedNamespace - Volume Namespace Quota Usage in counts.
+   * @param quotaInBytes - Database Quota in bytes.
+   * @param quotaInTable - Table Quota in counts.
+   * @param usedNamespace - Database Table Quota Usage in counts.
    * @param metadata - metadata map for custom key/value data.
    * @param creationTime - Volume creation time.
    * @param objectID - ID of this object.
@@ -63,14 +63,14 @@ public final class OmDatabaseArgs extends WithObjectID implements Auditable {
   @SuppressWarnings({"checkstyle:ParameterNumber", "This is invoked from a " +
       "builder."})
   private OmDatabaseArgs(String adminName, String ownerName, String database,
-                         long quotaInBytes, long quotaInNamespace, long usedNamespace,
+                         long quotaInBytes, int quotaInTable, long usedNamespace,
                          Map<String, String> metadata, long creationTime,
                          long modificationTime, long objectID, long updateID) {
     this.adminName = adminName;
     this.ownerName = ownerName;
     this.name = database;
     this.quotaInBytes = quotaInBytes;
-    this.quotaInNamespace = quotaInNamespace;
+    this.quotaInTable = quotaInTable;
     this.usedNamespace = usedNamespace;
     this.metadata = metadata;
     this.creationTime = creationTime;
@@ -88,8 +88,8 @@ public final class OmDatabaseArgs extends WithObjectID implements Auditable {
     this.quotaInBytes = quotaInBytes;
   }
 
-  public void setQuotaInNamespace(long quotaInNamespace) {
-    this.quotaInNamespace= quotaInNamespace;
+  public void setQuotaInTable(int quotaInTable) {
+    this.quotaInTable= quotaInTable;
   }
 
   public void setCreationTime(long time) {
@@ -152,19 +152,19 @@ public final class OmDatabaseArgs extends WithObjectID implements Auditable {
    * Returns Quota in counts.
    * @return long, Quota in counts.
    */
-  public long getQuotaInNamespace() {
-    return quotaInNamespace;
+  public int getQuotaInTable() {
+    return quotaInTable;
   }
 
   /**
-   * increase used bucket namespace by n.
+   * increase used table namespace by n.
    */
   public void incrUsedNamespace(long n) {
     usedNamespace += n;
   }
 
   /**
-   * Returns used bucket namespace.
+   * Returns used table namespace.
    * @return usedNamespace
    */
   public long getUsedNamespace() {
@@ -191,7 +191,7 @@ public final class OmDatabaseArgs extends WithObjectID implements Auditable {
         String.valueOf(this.modificationTime));
     auditMap.put(OzoneConsts.QUOTA_IN_BYTES, String.valueOf(this.quotaInBytes));
     auditMap.put(OzoneConsts.QUOTA_IN_NAMESPACE,
-        String.valueOf(this.quotaInNamespace));
+        String.valueOf(this.quotaInTable));
     auditMap.put(OzoneConsts.USED_NAMESPACE,
         String.valueOf(this.usedNamespace));
     auditMap.put(OzoneConsts.OBJECT_ID, String.valueOf(this.getObjectID()));
@@ -226,8 +226,8 @@ public final class OmDatabaseArgs extends WithObjectID implements Auditable {
     private long creationTime;
     private long modificationTime;
     private long quotaInBytes;
-    private long quotaInNamespace;
-    private long usedNamespace;
+    private int  quotaInTable;
+    private long  usedNamespace;
     private Map<String, String> metadata;
     private List<OzoneAcl> acls;
     private long objectID;
@@ -259,8 +259,8 @@ public final class OmDatabaseArgs extends WithObjectID implements Auditable {
      */
     public Builder() {
       metadata = new HashMap<>();
-      quotaInBytes = OzoneConsts.QUOTA_RESET;
-      quotaInNamespace = OzoneConsts.QUOTA_RESET;
+      quotaInBytes = OzoneConsts.HETU_QUOTA_RESET;
+      quotaInTable = OzoneConsts.HETU_TABLE_QUOTA_RESET;
     }
 
     public Builder setAdminName(String admin) {
@@ -293,13 +293,13 @@ public final class OmDatabaseArgs extends WithObjectID implements Auditable {
       return this;
     }
 
-    public Builder setQuotaInNamespace(long quotaNamespace) {
-      this.quotaInNamespace = quotaNamespace;
+    public Builder setQuotaInTable(int quotaTable) {
+      this.quotaInTable = quotaTable;
       return this;
     }
 
-    public Builder setUsedNamespace(long namespaceUsage) {
-      this.usedNamespace = namespaceUsage;
+    public Builder setUsedNamespace(long tableUsage) {
+      this.usedNamespace = tableUsage;
       return this;
     }
 
@@ -324,10 +324,9 @@ public final class OmDatabaseArgs extends WithObjectID implements Auditable {
       Preconditions.checkNotNull(ownerName);
       Preconditions.checkNotNull(name);
       return new OmDatabaseArgs(adminName, ownerName, name, quotaInBytes,
-          quotaInNamespace, usedNamespace, metadata, creationTime,
+          quotaInTable, usedNamespace, metadata, creationTime,
           modificationTime, objectID, updateID);
     }
-
   }
 
   public DatabaseInfo getProtobuf() {
@@ -336,7 +335,7 @@ public final class OmDatabaseArgs extends WithObjectID implements Auditable {
         .setOwnerName(ownerName)
         .setName(name)
         .setQuotaInBytes(quotaInBytes)
-        .setQuotaInNamespace(quotaInNamespace)
+        .setQuotaInTable(quotaInTable)
         .setUsedNamespace(usedNamespace)
         .addAllMetadata(KeyValueUtil.toProtobuf(metadata))
         .setCreationTime(
@@ -354,7 +353,7 @@ public final class OmDatabaseArgs extends WithObjectID implements Auditable {
         databaseInfo.getOwnerName(),
         databaseInfo.getName(),
         databaseInfo.getQuotaInBytes(),
-        databaseInfo.getQuotaInNamespace(),
+        databaseInfo.getQuotaInTable(),
         databaseInfo.getUsedNamespace(),
         KeyValueUtil.getFromProtobuf(databaseInfo.getMetadataList()),
         databaseInfo.getCreationTime(),
@@ -365,12 +364,13 @@ public final class OmDatabaseArgs extends WithObjectID implements Auditable {
 
   @Override
   public String getObjectInfo() {
-    return "HMDatabaseArgs{" +
+    return "OmDatabaseArgs{" +
         "name='" + name + '\'' +
         ", admin='" + adminName + '\'' +
         ", owner='" + ownerName + '\'' +
         ", creationTime='" + creationTime + '\'' +
         ", quotaInBytes='" + quotaInBytes + '\'' +
+        ", quotaInTable='" + quotaInTable + '\'' +
         ", usedNamespace='" + usedNamespace + '\'' +
         '}';
   }
@@ -385,7 +385,7 @@ public final class OmDatabaseArgs extends WithObjectID implements Auditable {
     }
 
     return new OmDatabaseArgs(adminName, ownerName, name, quotaInBytes,
-        quotaInNamespace, usedNamespace, cloneMetadata,
+        quotaInTable, usedNamespace, cloneMetadata,
         creationTime, modificationTime, objectID, updateID);
   }
 }

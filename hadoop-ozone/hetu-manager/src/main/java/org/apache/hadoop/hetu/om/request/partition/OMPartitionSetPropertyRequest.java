@@ -224,34 +224,34 @@ public class OMPartitionSetPropertyRequest extends OMClientRequest {
           throws IOException {
     long sizeInBytes = omPartitionArgs.getSizeInBytes();
 
-    if (sizeInBytes == OzoneConsts.USED_CAPACITY_IN_BYTES_RESET &&
-            omDatabaseArgs.getQuotaInBytes() != OzoneConsts.QUOTA_RESET) {
+    if (sizeInBytes == OzoneConsts.USED_IN_BYTES_RESET &&
+            omDatabaseArgs.getQuotaInBytes() != OzoneConsts.HETU_QUOTA_RESET) {
       throw new OMException("Can not clear table spaceQuota because" +
               " database spaceQuota is not cleared.",
               OMException.ResultCodes.QUOTA_ERROR);
     }
 
-    if (sizeInBytes < OzoneConsts.USED_CAPACITY_IN_BYTES_RESET || sizeInBytes == 0) {
+    if (sizeInBytes < OzoneConsts.USED_IN_BYTES_RESET || sizeInBytes == 0) {
       return false;
     }
 
     long totalTableQuota = 0;
     long databaseQuotaInBytes = omDatabaseArgs.getQuotaInBytes();
 
-    if (sizeInBytes > OzoneConsts.USED_CAPACITY_IN_BYTES_RESET) {
+    if (sizeInBytes > OzoneConsts.USED_IN_BYTES_RESET) {
       totalTableQuota = sizeInBytes;
     }
     List<OmTableInfo> tableList = metadataManager.listMetaTables(
             omDatabaseArgs.getName(), null, null, Integer.MAX_VALUE);
     for(OmTableInfo tableInfo : tableList) {
-      long nextQuotaInBytes = tableInfo.getUsedInBytes();
-      if(nextQuotaInBytes > OzoneConsts.USED_CAPACITY_IN_BYTES_RESET) {
+      long nextQuotaInBytes = tableInfo.getUsedBytes();
+      if(nextQuotaInBytes > OzoneConsts.USED_IN_BYTES_RESET) {
         totalTableQuota += nextQuotaInBytes;
       }
     }
 
     if(databaseQuotaInBytes < totalTableQuota &&
-            databaseQuotaInBytes != OzoneConsts.QUOTA_RESET) {
+            databaseQuotaInBytes != OzoneConsts.HETU_QUOTA_RESET) {
       throw new IllegalArgumentException("Total tables quota in this database " +
               "should not be greater than database quota : the total space quota is" +
               " set to:" + totalTableQuota + ". But the database space quota is:" +

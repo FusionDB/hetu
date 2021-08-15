@@ -21,12 +21,15 @@ package org.apache.hadoop.hetu.om.response;
 
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hetu.hm.meta.table.ColumnKey;
+import org.apache.hadoop.hetu.hm.meta.table.StorageEngine;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmPartitionInfo;
 import org.apache.hadoop.ozone.om.helpers.OmTableInfo;
 import org.apache.hadoop.hetu.om.request.TestOMRequestUtils;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.util.Time;
+
+import static org.apache.hadoop.hetu.om.request.TestOMRequestUtils.getSchema;
 
 /**
  * Helper class to test OMClientResponse classes.
@@ -46,12 +49,9 @@ public final class TestOMResponseUtils {
 
   public static OmTableInfo createTable(String database, String table) {
     return OmTableInfo.newBuilder().setDatabaseName(database).setTableName(table)
-            .setColumns(TestOMRequestUtils.getColumnSchemas())
-            .setStorageEngine(OzoneManagerProtocolProtos.TableInfo.StorageEngineProto.LSTORE)
+            .setSchema(getSchema())
+            .setStorageEngine(StorageEngine.LSTORE)
             .setNumReplicas(3)
-            .setPartitions(TestOMRequestUtils.getPartitionsProto())
-            .setDistributedKey(TestOMRequestUtils.getDistributedKeyProto())
-            .setColumnKey(ColumnKey.fromProtobuf(TestOMRequestUtils.getColumnKeyProto()))
             .setCreationTime(Time.now()).setIsVersionEnabled(true).addMetadata(
                     "key1", "value1").build();
 

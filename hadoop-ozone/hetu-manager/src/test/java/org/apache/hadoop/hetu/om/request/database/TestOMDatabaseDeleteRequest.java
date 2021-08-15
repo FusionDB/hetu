@@ -31,6 +31,8 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.UUID;
 
+import static org.apache.hadoop.hetu.om.request.TestOMRequestUtils.getSchema;
+
 
 /**
  * Tests delete database request.
@@ -126,36 +128,11 @@ public class TestOMDatabaseDeleteRequest extends TestOMDatabaseRequest {
     // Add some table to table cache.
     String tableName = UUID.randomUUID().toString();
 
-    ColumnSchema col1 = new ColumnSchema(
-            "city",
-            "varchar(4)",
-            "varcher",
-            0,
-            "",
-            "",
-            "城市",
-            true);
-
-    ColumnSchema col2 = new ColumnSchema(
-            "id",
-            "Long",
-            "Long",
-            1,
-            "",
-            "",
-            "ID",
-            true);
-
-    OzoneManagerProtocolProtos.TableInfo.PartitionsProto partitionsProto = OzoneManagerProtocolProtos.TableInfo.PartitionsProto.newBuilder()
-            .addAllFields(Arrays.asList("city"))
-            .setPartitionType(OzoneManagerProtocolProtos.TableInfo.Type.HASH)
-            .build();
-
     OmTableInfo omTableInfo = OmTableInfo.newBuilder()
         .setDatabaseName(databaseName)
         .setTableName(tableName)
-        .setColumns(Arrays.asList(col1, col2))
-        .setPartitions(partitionsProto)
+        .setSchema(getSchema())
+        .setBuckets(8)
         .build();
     TestOMRequestUtils.addMetaTableToOM(omMetadataManager, omTableInfo);
 

@@ -210,9 +210,18 @@ public final class OzoneConsts {
   public static final long OLD_QUOTA_DEFAULT = -2;
 
   /**
-   * Table used RESET default is -1: usedCapacityInBytes
+   * Quota RESET default is -1, which means quota is not set.
    */
-  public static final long USED_CAPACITY_IN_BYTES_RESET = -1;
+  public static final long HETU_QUOTA_RESET = -1;
+  public static final int HETU_OLD_QUOTA_DEFAULT = -2;
+  public static final int HETU_BUCKET_QUOTA_RESET = -1;
+  public static final int HETU_TABLE_QUOTA_RESET = -1;
+
+  /**
+   * Table used RESET default is -1: usedInBytes
+   */
+  public static final long USED_IN_BYTES_RESET = -1;
+  public static final int USED_IN_BUCKET_RESET = -1;
 
 
   /**
@@ -297,6 +306,10 @@ public final class OzoneConsts {
   public static final String USED_NAMESPACE = "usedNamespace";
   public static final String QUOTA_IN_BYTES = "quotaInBytes";
   public static final String QUOTA_IN_NAMESPACE = "quotaInNamespace";
+  public static final String QUOTA_IN_TABLE = "quotaInTable";
+  public static final String USED_IN_TABLE = "usedInTable";
+  public static final String QUOTA_IN_BUCKET = "quotaInBucket";
+  public static final String USED_IN_BUCKET = "usedInBucket";
   public static final String OBJECT_ID = "objectID";
   public static final String UPDATE_ID = "updateID";
   public static final String CLIENT_ID = "clientID";
@@ -353,9 +366,9 @@ public final class OzoneConsts {
   public static final String DISTRIBUTED_KEY = "distributedKey";
   public static final String STORAGE_ENGINE = "storageEngine";
   public static final String NUM_REPLICAS = "numReplicas";
-  public static final String TABLE_PARTITIONS = "partitions";
-  public static final String USED_CAPACITY_IN_BYTES = "used_capacity_in_bytes";
-  public static final String SIZE_IN_BYTES = "size_in_bytes";
+  public static final String TABLE_PARTITION_KEY = "partitionKey";
+  public static final String USED_IN_BYTES = "usedInBytes";
+  public static final String SIZE_IN_BYTES = "sizeInBytes";
   public static final String ROWS = "rows";
   public static final String BUCKETS = "buckets";
   public static final String DELETED_TABLETS_LIST = "deletedTabletsList";

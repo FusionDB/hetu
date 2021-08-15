@@ -67,7 +67,7 @@ public class OzoneDatabase extends WithMetadata {
   /**
    * Quota of table count allocated for the Database.
    */
-  private long quotaInNamespace;
+  private long quotaInTable;
   /**
    * Table namespace quota usage.
    */
@@ -97,7 +97,7 @@ public class OzoneDatabase extends WithMetadata {
   @SuppressWarnings("parameternumber")
   public OzoneDatabase(ConfigurationSource conf, ClientProtocol proxy,
                        String databaseName, String admin, String owner, long quotaInBytes,
-                       long quotaInNamespace, long creationTime,
+                       int quotaInTable, long creationTime,
                        Map<String, String> metadata) {
     Preconditions.checkNotNull(proxy, "Client proxy is not set.");
     this.proxy = proxy;
@@ -105,7 +105,7 @@ public class OzoneDatabase extends WithMetadata {
     this.admin = admin;
     this.owner = owner;
     this.quotaInBytes = quotaInBytes;
-    this.quotaInNamespace = quotaInNamespace;
+    this.quotaInTable = quotaInTable;
     this.creationTime = Instant.ofEpochMilli(creationTime);
     this.listCacheSize = HddsClientUtils.getListCacheSize(conf);
     this.metadata = metadata;
@@ -122,10 +122,10 @@ public class OzoneDatabase extends WithMetadata {
   @SuppressWarnings("parameternumber")
   public OzoneDatabase(ConfigurationSource conf, ClientProtocol proxy,
                        String databaseName, String admin, String owner, long quotaInBytes,
-                       long quotaInNamespace, long usedNamespace, long creationTime,
+                       int quotaInTable, long usedNamespace, long creationTime,
                        long modificationTime,
                        Map<String, String> metadata) {
-    this(conf, proxy, databaseName, admin, owner, quotaInBytes, quotaInNamespace,
+    this(conf, proxy, databaseName, admin, owner, quotaInBytes, quotaInTable,
         creationTime, metadata);
     this.modificationTime = Instant.ofEpochMilli(modificationTime);
     this.usedNamespace = usedNamespace;
@@ -134,8 +134,8 @@ public class OzoneDatabase extends WithMetadata {
   @SuppressWarnings("parameternumber")
   public OzoneDatabase(ConfigurationSource conf, ClientProtocol proxy,
                        String databaseName, String admin, String owner, long quotaInBytes,
-                       long quotaInNamespace, long creationTime) {
-    this(conf, proxy, databaseName, admin, owner, quotaInBytes, quotaInNamespace,
+                       int quotaInTable, long creationTime) {
+    this(conf, proxy, databaseName, admin, owner, quotaInBytes, quotaInTable,
         creationTime, new HashMap<>());
     modificationTime = Instant.now();
     if (modificationTime.isBefore(this.creationTime)) {
@@ -147,9 +147,9 @@ public class OzoneDatabase extends WithMetadata {
   @SuppressWarnings("parameternumber")
   public OzoneDatabase(ConfigurationSource conf, ClientProtocol proxy,
                        String databaseName, String admin, String owner, long quotaInBytes,
-                       long quotaInNamespace, long usedNamespace, long creationTime,
+                       int quotaInTable, long usedNamespace, long creationTime,
                        long modificationTime) {
-    this(conf, proxy, databaseName, admin, owner, quotaInBytes, quotaInNamespace,
+    this(conf, proxy, databaseName, admin, owner, quotaInBytes, quotaInTable,
         creationTime);
     this.modificationTime = Instant.ofEpochMilli(modificationTime);
     this.usedNamespace = usedNamespace;
@@ -157,13 +157,13 @@ public class OzoneDatabase extends WithMetadata {
 
   @VisibleForTesting
   protected OzoneDatabase(String databaseName, String admin, String owner,
-                          long quotaInBytes, long quotaInNamespace, long creationTime) {
+                          long quotaInBytes, int quotaInTable, long creationTime) {
     this.proxy = null;
     this.databaseName = databaseName;
     this.admin = admin;
     this.owner = owner;
     this.quotaInBytes = quotaInBytes;
-    this.quotaInNamespace = quotaInNamespace;
+    this.quotaInTable = quotaInTable;
     this.creationTime = Instant.ofEpochMilli(creationTime);
     this.metadata = new HashMap<>();
     modificationTime = Instant.now();
@@ -176,9 +176,9 @@ public class OzoneDatabase extends WithMetadata {
   @SuppressWarnings("parameternumber")
   @VisibleForTesting
   protected OzoneDatabase(String databaseName, String admin, String owner,
-                          long quotaInBytes, long quotaInNamespace, long creationTime,
+                          long quotaInBytes, int quotaInTable, long creationTime,
                           long modificationTime) {
-    this(databaseName, admin, owner, quotaInBytes, quotaInNamespace, creationTime);
+    this(databaseName, admin, owner, quotaInBytes, quotaInTable, creationTime);
     this.modificationTime = Instant.ofEpochMilli(modificationTime);
   }
 
@@ -221,10 +221,10 @@ public class OzoneDatabase extends WithMetadata {
   /**
    * Returns quota of table counts allocated for the Database.
    *
-   * @return quotaInNamespace
+   * @return quotaInTable
    */
-  public long getQuotaInNamespace() {
-    return quotaInNamespace;
+  public long getQuotaInTable() {
+    return quotaInTable;
   }
   /**
    * Returns creation time of the database.
@@ -270,9 +270,9 @@ public class OzoneDatabase extends WithMetadata {
    */
   public void clearSpaceQuota() throws IOException {
     OzoneDatabase ozoneDatabase = proxy.getDatabaseDetails(databaseName);
-    proxy.setDatabaseQuota(databaseName, ozoneDatabase.getQuotaInNamespace(), QUOTA_RESET);
+    proxy.setDatabaseQuota(databaseName, ozoneDatabase.getQuotaInTable(), QUOTA_RESET);
     this.quotaInBytes = QUOTA_RESET;
-    this.quotaInNamespace = ozoneDatabase.getQuotaInNamespace();
+    this.quotaInTable = ozoneDatabase.getQuotaInTable();
   }
 
   /**
@@ -284,7 +284,7 @@ public class OzoneDatabase extends WithMetadata {
     OzoneDatabase ozoneDatabase = proxy.getDatabaseDetails(databaseName);
     proxy.setDatabaseQuota(databaseName, QUOTA_RESET, ozoneDatabase.getQuotaInBytes());
     this.quotaInBytes = ozoneDatabase.getQuotaInBytes();
-    this.quotaInNamespace = QUOTA_RESET;
+    this.quotaInTable = QUOTA_RESET;
   }
 
   /**
@@ -297,7 +297,7 @@ public class OzoneDatabase extends WithMetadata {
     proxy.setDatabaseQuota(databaseName, quota.getQuotaInNamespace(),
         quota.getQuotaInBytes());
     this.quotaInBytes = quota.getQuotaInBytes();
-    this.quotaInNamespace = quota.getQuotaInNamespace();
+    this.quotaInTable = quota.getQuotaInNamespace();
   }
 
   /**

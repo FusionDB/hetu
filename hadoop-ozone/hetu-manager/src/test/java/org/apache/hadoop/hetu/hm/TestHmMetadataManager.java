@@ -19,24 +19,23 @@ package org.apache.hadoop.hetu.hm;
 
 import com.google.common.base.Optional;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.utils.TransactionInfo;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
 import org.apache.hadoop.hetu.hm.meta.table.ColumnKey;
+import org.apache.hadoop.hetu.hm.meta.table.ColumnKeyType;
 import org.apache.hadoop.hetu.hm.meta.table.ColumnSchema;
+import org.apache.hadoop.hetu.hm.meta.table.DistributedKey;
+import org.apache.hadoop.hetu.hm.meta.table.PartitionKey;
+import org.apache.hadoop.hetu.hm.meta.table.Schema;
 import org.apache.hadoop.hetu.hm.meta.table.StorageEngine;
 import org.apache.hadoop.hetu.om.OmMetadataManagerImpl;
 import org.apache.hadoop.hetu.om.request.TestOMRequestUtils;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
-import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
-import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmTableInfo;
 import org.apache.hadoop.ozone.om.helpers.OmTabletInfo;
-import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Before;
@@ -311,16 +310,16 @@ public class TestHmMetadataManager {
 
 
   private void addTablesToCache(String databaseName, String tableName) {
+
+    Schema schema = new Schema(getColumnSchemas(), getColumnKey(), getDistributedKey(), getPartitionKey());
+
     OmTableInfo omTableInfo = OmTableInfo.newBuilder()
         .setDatabaseName(databaseName)
         .setTableName(tableName)
-        .setColumns(getColumnSchemas())
-        .setStorageEngine(StorageEngine.LSTORE.toProto())
-        .setPartitions(getPartitionsProto())
-        .setDistributedKey(getDistributedKeyProto())
-        .setColumnKey(ColumnKey.fromProtobuf(getColumnKeyProto()))
-        .setStorageType(StorageType.DISK)
+        .setSchema(schema)
+        .setStorageEngine(StorageEngine.LSTORE)
         .setIsVersionEnabled(false)
+        .setBuckets(8)
         .build();
 
     omMetadataManager.getMetaTable().addCacheEntry(
@@ -329,31 +328,23 @@ public class TestHmMetadataManager {
   }
 
   @NotNull
-  public static OzoneManagerProtocolProtos.TableInfo.PartitionsProto getPartitionsProto() {
-    return OzoneManagerProtocolProtos.TableInfo.PartitionsProto.newBuilder()
-            .addAllFields(Arrays.asList("ds"))
-            .setPartitionType(OzoneManagerProtocolProtos.TableInfo.Type.RANGE)
-            .build();
+  public static PartitionKey getPartitionKey() {
+    return new PartitionKey(Type.LIST, Arrays.asList("ds"));
   }
 
   @NotNull
-  public static OzoneManagerProtocolProtos.TableInfo.DistributedKeyProto getDistributedKeyProto() {
-    return OzoneManagerProtocolProtos.TableInfo.DistributedKeyProto
-            .newBuilder()
-            .setDistributedKeyType(OzoneManagerProtocolProtos.TableInfo.Type.HASH)
-            .setBuckets(8)
-            .addAllFields(Arrays.asList("id"))
-            .build();
+  public static DistributedKey getDistributedKey() {
+    return new DistributedKey(Type.HASH, Arrays.asList("id"));
   }
 
   @NotNull
   public static List<ColumnSchema> getColumnSchemas() {
     ColumnSchema col1 = new ColumnSchema(
             "city",
-            "varchar(4)",
             "varcher",
             0,
             "",
+            4,
             "",
             "用户",
             true);
@@ -361,23 +352,19 @@ public class TestHmMetadataManager {
     ColumnSchema col2 = new ColumnSchema(
             "id",
             "Long",
-            "Long",
             1,
             "",
+            -1,
             "",
-            "ID",
+            "唯一ID",
             true);
 
     return Arrays.asList(col1, col2);
   }
 
   @NotNull
-  public static OzoneManagerProtocolProtos.TableInfo.ColumnKeyProto getColumnKeyProto() {
-    return OzoneManagerProtocolProtos.TableInfo.ColumnKeyProto
-            .newBuilder()
-            .setColumnKeyType(OzoneManagerProtocolProtos.TableInfo.ColumnKeyTypeProto.PRIMARY_KEY)
-            .addAllFields(Arrays.asList("id"))
-            .build();
+  public static ColumnKey getColumnKey() {
+    return new ColumnKey(ColumnKeyType.PRIMARY_KEY, Arrays.asList("id"));
   }
 
   @Test

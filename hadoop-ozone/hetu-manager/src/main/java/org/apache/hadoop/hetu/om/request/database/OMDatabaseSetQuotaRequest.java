@@ -63,14 +63,15 @@ public class OMDatabaseSetQuotaRequest extends OMDatabaseRequest {
 
   @Override
   public OMRequest preExecute(OzoneManager ozoneManager) throws IOException {
-
-    long modificationTime = Time.now();
-    OmDatabaseArgs databaseArgs = OmDatabaseArgs.getFromProtobuf(getOmRequest().getSetDatabasePropertyRequest().getDatabaseInfo());
-    databaseArgs.setModificationTime(modificationTime);
+    SetDatabasePropertyRequest setDatabasePropertyRequest = getOmRequest().getSetDatabasePropertyRequest();
 
     SetDatabasePropertyRequest.Builder setPropertyRequestBuilde = getOmRequest()
         .getSetDatabasePropertyRequest().toBuilder()
-        .setDatabaseInfo(databaseArgs.getProtobuf());
+        .setDatabaseName(setDatabasePropertyRequest.getDatabaseName())
+        .setOwnerName(setDatabasePropertyRequest.getOwnerName())
+        .setQuotaInBytes(setDatabasePropertyRequest.getQuotaInBytes())
+        .setQuotaInTable(setDatabasePropertyRequest.getQuotaInTable())
+        .setModificationTime(Time.now());
 
     return getOmRequest().toBuilder()
         .setSetDatabasePropertyRequest(setPropertyRequestBuilde)
@@ -93,13 +94,13 @@ public class OMDatabaseSetQuotaRequest extends OMDatabaseRequest {
 
     // In production this will never happen, this request will be called only
     // when we have quota in bytes is set in setDatabasePropertyRequest.
-    if (!setDatabasePropertyRequest.getDatabaseInfo().hasQuotaInBytes()) {
+    if (!setDatabasePropertyRequest.hasQuotaInBytes()) {
       omResponse.setStatus(OzoneManagerProtocolProtos.Status.INVALID_REQUEST)
           .setSuccess(false);
       return new OMDatabaseSetQuotaResponse(omResponse.build());
     }
 
-    String database = setDatabasePropertyRequest.getDatabaseInfo().getName();
+    String database = setDatabasePropertyRequest.getDatabaseName();
     OMMetrics omMetrics = ozoneManager.getMetrics();
     omMetrics.incNumDatabaseUpdates();
 
@@ -107,7 +108,7 @@ public class OMDatabaseSetQuotaRequest extends OMDatabaseRequest {
     OzoneManagerProtocolProtos.UserInfo userInfo = getOmRequest().getUserInfo();
     Map<String, String> auditMap = buildDatabaseAuditMap(database);
     auditMap.put(OzoneConsts.QUOTA_IN_BYTES,
-        String.valueOf(setDatabasePropertyRequest.getDatabaseInfo().getQuotaInBytes()));
+        String.valueOf(setDatabasePropertyRequest.getQuotaInBytes()));
 
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
     IOException exception = null;
@@ -126,30 +127,23 @@ public class OMDatabaseSetQuotaRequest extends OMDatabaseRequest {
 
       OmDatabaseArgs omDatabaseArgs = getDatabaseInfo(omMetadataManager, database);
       if (checkQuotaBytesValid(omMetadataManager,
-          setDatabasePropertyRequest.getDatabaseInfo().getQuotaInBytes(), database)) {
+          setDatabasePropertyRequest.getQuotaInBytes(), database)) {
         omDatabaseArgs.setQuotaInBytes(
             setDatabasePropertyRequest
-                    .getDatabaseInfo()
+
                     .getQuotaInBytes());
       } else {
         omDatabaseArgs.setQuotaInBytes(omDatabaseArgs.getQuotaInBytes());
       }
-      if (checkQuotaNamespaceValid(
-          setDatabasePropertyRequest.getDatabaseInfo().getQuotaInNamespace())) {
-        omDatabaseArgs.setQuotaInNamespace(
-            setDatabasePropertyRequest
-                .getDatabaseInfo()
-                .getQuotaInNamespace());
+      if (checkQuotaTableValid(setDatabasePropertyRequest.getQuotaInTable())) {
+        omDatabaseArgs.setQuotaInTable(setDatabasePropertyRequest.getQuotaInTable());
       } else {
-        omDatabaseArgs.setQuotaInNamespace(omDatabaseArgs.getQuotaInNamespace());
+        omDatabaseArgs.setQuotaInTable(omDatabaseArgs.getQuotaInTable());
       }
 
       omDatabaseArgs.setUpdateID(transactionLogIndex,
           ozoneManager.isRatisEnabled());
-      omDatabaseArgs.setModificationTime(
-          setDatabasePropertyRequest
-                  .getDatabaseInfo()
-                  .getModificationTime());
+      omDatabaseArgs.setModificationTime(setDatabasePropertyRequest.getModificationTime());
 
       // update cache.
       omMetadataManager.getDatabaseTable().addCacheEntry(
@@ -179,11 +173,11 @@ public class OMDatabaseSetQuotaRequest extends OMDatabaseRequest {
     // return response after releasing lock.
     if (exception == null) {
       LOG.debug("Changing database quota is successfully completed for database: " +
-          "{} quota:{}", database, setDatabasePropertyRequest.getDatabaseInfo().getQuotaInBytes());
+          "{} quota:{}", database, setDatabasePropertyRequest.getQuotaInBytes());
     } else {
       omMetrics.incNumDatabaseUpdateFails();
       LOG.error("Changing database quota failed for database:{} quota:{}", database,
-          setDatabasePropertyRequest.getDatabaseInfo().getQuotaInBytes(), exception);
+          setDatabasePropertyRequest.getQuotaInBytes(), exception);
     }
     return omClientResponse;
   }
@@ -200,7 +194,7 @@ public class OMDatabaseSetQuotaRequest extends OMDatabaseRequest {
     List<OmTableInfo> tableList = metadataManager.listMetaTables(
         databaseName, null, null, Integer.MAX_VALUE);
     for(OmTableInfo tableInfo : tableList) {
-      long nextQuotaInBytes = tableInfo.getUsedInBytes();
+      long nextQuotaInBytes = tableInfo.getUsedBytes();
       if(nextQuotaInBytes > OzoneConsts.QUOTA_RESET) {
         totalTableQuota += nextQuotaInBytes;
       }
@@ -215,9 +209,8 @@ public class OMDatabaseSetQuotaRequest extends OMDatabaseRequest {
     return true;
   }
 
-  public boolean checkQuotaNamespaceValid(long quotaInNamespace) {
-
-    if (quotaInNamespace < OzoneConsts.QUOTA_RESET || quotaInNamespace == 0) {
+  public boolean checkQuotaTableValid(int quotaInTable) {
+    if (quotaInTable < OzoneConsts.HETU_TABLE_QUOTA_RESET || quotaInTable == 0) {
       return false;
     }
     return true;

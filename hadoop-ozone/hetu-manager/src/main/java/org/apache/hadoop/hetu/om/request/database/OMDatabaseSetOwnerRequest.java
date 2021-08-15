@@ -68,7 +68,11 @@ public class OMDatabaseSetOwnerRequest extends OMDatabaseRequest {
 
     SetDatabasePropertyRequest.Builder setPropertyRequestBuilder = getOmRequest()
         .getSetDatabasePropertyRequest().toBuilder()
-        .setDatabaseInfo(databaseArgs.getProtobuf());
+        .setDatabaseName(databaseArgs.getName())
+        .setQuotaInBytes(databaseArgs.getQuotaInBytes())
+        .setQuotaInTable(databaseArgs.getQuotaInTable())
+        .setOwnerName(databaseArgs.getOwnerName())
+        .setModificationTime(databaseArgs.getModificationTime());
 
     return getOmRequest().toBuilder()
         .setSetDatabasePropertyRequest(setPropertyRequestBuilder)
@@ -88,7 +92,7 @@ public class OMDatabaseSetOwnerRequest extends OMDatabaseRequest {
         getOmRequest());
     // In production this will never happen, this request will be called only
     // when we have ownerName in setDatabasePropertyRequest.
-    if (!setDatabasePropertyRequest.getDatabaseInfo().hasOwnerName()) {
+    if (!setDatabasePropertyRequest.hasOwnerName()) {
       omResponse.setStatus(OzoneManagerProtocolProtos.Status.INVALID_REQUEST)
           .setSuccess(false);
       return new OMDatabaseSetOwnerResponse(omResponse.build());
@@ -96,8 +100,8 @@ public class OMDatabaseSetOwnerRequest extends OMDatabaseRequest {
 
     OMMetrics omMetrics = ozoneManager.getMetrics();
     omMetrics.incNumDatabaseUpdates();
-    String database = setDatabasePropertyRequest.getDatabaseInfo().getName();
-    String newOwner = setDatabasePropertyRequest.getDatabaseInfo().getOwnerName();
+    String database = setDatabasePropertyRequest.getDatabaseName();
+    String newOwner = setDatabasePropertyRequest.getOwnerName();
 
     AuditLogger auditLogger = ozoneManager.getAuditLogger();
     OzoneManagerProtocolProtos.UserInfo userInfo = getOmRequest().getUserInfo();
@@ -161,7 +165,7 @@ public class OMDatabaseSetOwnerRequest extends OMDatabaseRequest {
 
       // Update modificationTime.
       omDatabaseArgs.setModificationTime(
-          setDatabasePropertyRequest.getDatabaseInfo().getModificationTime());
+          setDatabasePropertyRequest.getModificationTime());
 
       // Update cache.
       omMetadataManager.getUserTableDb().addCacheEntry(

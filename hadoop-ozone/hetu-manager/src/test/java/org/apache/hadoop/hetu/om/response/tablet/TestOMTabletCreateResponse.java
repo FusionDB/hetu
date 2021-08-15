@@ -51,7 +51,7 @@ public class TestOMTabletCreateResponse extends TestOMTabletResponse {
             .setAdminName(OzoneConsts.ADMIN)
             .setOwnerName(OzoneConsts.OWNER)
             .setQuotaInBytes(Long.MAX_VALUE)
-            .setQuotaInNamespace(10000L).build();
+            .setQuotaInTable(10000).build();
 
     OMResponse omResponse = OMResponse.newBuilder().setCreateTabletResponse(
                 CreateTabletResponse.getDefaultInstance())
@@ -87,7 +87,7 @@ public class TestOMTabletCreateResponse extends TestOMTabletResponse {
             .setAdminName(OzoneConsts.ADMIN)
             .setOwnerName(OzoneConsts.OWNER)
             .setQuotaInBytes(Long.MAX_VALUE)
-            .setQuotaInNamespace(10000L).build();
+            .setQuotaInTable(10000).build();
 
     OMResponse omResponse = OMResponse.newBuilder().setCreateTabletResponse(
         CreateTabletResponse.getDefaultInstance())

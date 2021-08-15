@@ -40,10 +40,10 @@ public class TestOMDatabaseSetQuotaRequest extends TestOMDatabaseRequest {
   public void testPreExecute() throws Exception {
     String databaseName = UUID.randomUUID().toString();
     long quotaInBytes = 100L;
-    long quotaInNamespace = 1000L;
+    int quotaInTable = 1000;
     OMRequest originalRequest =
         TestOMRequestUtils.createSetDatabasePropertyRequest(databaseName,
-            quotaInBytes, quotaInNamespace);
+            quotaInBytes, quotaInTable);
 
     OMDatabaseSetQuotaRequest omDatabaseSetQuotaRequest =
         new OMDatabaseSetQuotaRequest(originalRequest);
@@ -58,14 +58,14 @@ public class TestOMDatabaseSetQuotaRequest extends TestOMDatabaseRequest {
     String databaseName = UUID.randomUUID().toString();
     String ownerName = "user1";
     long quotaInBytes = 100L;
-    long quotaInNamespace = 1000L;
+    int quotaInTable = 1000;
 
     TestOMRequestUtils.addDbUserToDB(databaseName, ownerName, omMetadataManager);
     TestOMRequestUtils.addDatabaseToDB(databaseName, ownerName, omMetadataManager);
 
     OMRequest originalRequest =
         TestOMRequestUtils.createSetDatabasePropertyRequest(databaseName,
-            quotaInBytes, quotaInNamespace);
+            quotaInBytes, quotaInTable);
 
     OMDatabaseSetQuotaRequest omDatabaseSetQuotaRequest =
         new OMDatabaseSetQuotaRequest(originalRequest);
@@ -80,7 +80,7 @@ public class TestOMDatabaseSetQuotaRequest extends TestOMDatabaseRequest {
     // As request is valid database table should not have entry.
     Assert.assertNotNull(omDatabaseArgs);
     long quotaBytesBeforeSet = omDatabaseArgs.getQuotaInBytes();
-    long quotaNamespaceBeforeSet = omDatabaseArgs.getQuotaInNamespace();
+    long quotaNamespaceBeforeSet = omDatabaseArgs.getQuotaInTable();
 
     OMClientResponse omClientResponse =
         omDatabaseSetQuotaRequest.validateAndUpdateCache(ozoneManager, 1,
@@ -95,9 +95,9 @@ public class TestOMDatabaseSetQuotaRequest extends TestOMDatabaseRequest {
 
     OmDatabaseArgs ova = omMetadataManager.getDatabaseTable().get(databaseKey);
     long quotaBytesAfterSet = ova.getQuotaInBytes();
-    long quotaNamespaceAfterSet = ova.getQuotaInNamespace();
+    long quotaNamespaceAfterSet = ova.getQuotaInTable();
     Assert.assertEquals(quotaInBytes, quotaBytesAfterSet);
-    Assert.assertEquals(quotaInNamespace, quotaNamespaceAfterSet);
+    Assert.assertEquals(quotaInTable, quotaNamespaceAfterSet);
     Assert.assertNotEquals(quotaBytesBeforeSet, quotaBytesAfterSet);
     Assert.assertNotEquals(quotaNamespaceBeforeSet, quotaNamespaceAfterSet);
 
@@ -114,11 +114,11 @@ public class TestOMDatabaseSetQuotaRequest extends TestOMDatabaseRequest {
       throws Exception {
     String databaseName = UUID.randomUUID().toString();
     long quotaInBytes = 100L;
-    long quotaInNamespace= 100L;
+    int quotaInTable= 100;
 
     OMRequest originalRequest =
         TestOMRequestUtils.createSetDatabasePropertyRequest(databaseName,
-            quotaInBytes, quotaInNamespace);
+            quotaInBytes, quotaInTable);
 
     OMDatabaseSetQuotaRequest omDatabaseSetQuotaRequest =
         new OMDatabaseSetQuotaRequest(originalRequest);
@@ -172,7 +172,7 @@ public class TestOMDatabaseSetQuotaRequest extends TestOMDatabaseRequest {
         databaseName, tableName, omMetadataManager, 8 * GB);
     OMRequest originalRequest =
         TestOMRequestUtils.createSetDatabasePropertyRequest(databaseName,
-            5 * GB, 100L);
+            5 * GB, 100);
 
     OMDatabaseSetQuotaRequest omDatabaseSetQuotaRequest =
         new OMDatabaseSetQuotaRequest(originalRequest);

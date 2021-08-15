@@ -1,6 +1,6 @@
 package org.apache.hadoop.hetu.hm.meta.table;
 
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.TableInfo.ColumnKeyTypeProto;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SchemaProto.ColumnKeyTypeProto;
 
 /**
  * Created by xiliu on 2021/6/23

@@ -33,6 +33,7 @@ import org.junit.Test;
 import java.util.List;
 import java.util.UUID;
 
+import static org.apache.hadoop.hetu.om.request.TestOMRequestUtils.getSchema;
 import static org.apache.hadoop.ozone.OzoneConsts.GB;
 
 /**
@@ -111,17 +112,17 @@ public class TestOMTableSetPropertyRequest extends TestTableRequest {
   }
 
   private OMRequest createSetTablePropertyRequest(String databaseName,
-      String tableName, boolean isVersionEnabled, long usedCapacityInBytes) {
-    List<OzoneManagerProtocolProtos.ColumnSchemaProto> columnSchemaProtos = TestOMRequestUtils.getColumnSchemaProtos();
+      String tableName, boolean isVersionEnabled, long usedBytes) {
 
     return OMRequest.newBuilder().setSetTablePropertyRequest(
         SetTablePropertyRequest.newBuilder().setTableArgs(
             TableArgs.newBuilder().setTableName(tableName)
                 .setDatabaseName(databaseName)
-                .setUsedCapacityInBytes(usedCapacityInBytes)
+                .setUsedBytes(usedBytes)
                 .setStorageType(StorageType.SSD.toProto())
                 .setNumReplicas(3)
-                .addAllColumns(columnSchemaProtos)
+                .setSchema(getSchema().toProtobuf())
+                .setBuckets(8)
                 .setIsVersionEnabled(isVersionEnabled).build()))
         .setCmdType(OzoneManagerProtocolProtos.Type.SetTableProperty)
         .setClientId(UUID.randomUUID().toString()).build();

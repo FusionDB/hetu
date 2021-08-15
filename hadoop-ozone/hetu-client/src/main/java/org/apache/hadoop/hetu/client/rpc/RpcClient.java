@@ -118,6 +118,7 @@ import java.util.stream.Collectors;
 
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_CLIENT_KEY_PROVIDER_CACHE_EXPIRY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConsts.HETU_OLD_QUOTA_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConsts.OLD_QUOTA_DEFAULT;
 
 /**
@@ -368,14 +369,14 @@ public class RpcClient implements ClientProtocol {
   public void createDatabase(String databaseName, DatabaseArgs databaseArgs) throws IOException {
     verifyDatabaseName(databaseName);
     Preconditions.checkNotNull(databaseArgs);
-    verifyCountsQuota(databaseArgs.getQuotaInNamespace());
+    verifyCountsQuota(databaseArgs.getQuotaInTable());
     verifySpaceQuota(databaseArgs.getQuotaInBytes());
 
     String admin = databaseArgs.getAdmin() == null ?
             ugi.getUserName() : databaseArgs.getAdmin();
     String owner = databaseArgs.getOwner() == null ?
             ugi.getUserName() : databaseArgs.getOwner();
-    long quotaInNamespace = databaseArgs.getQuotaInNamespace();
+    int quotaInTable = databaseArgs.getQuotaInTable();
     long quotaInBytes = databaseArgs.getQuotaInBytes();
 
     //Group ACLs of the User
@@ -387,7 +388,7 @@ public class RpcClient implements ClientProtocol {
     builder.setAdminName(admin);
     builder.setOwnerName(owner);
     builder.setQuotaInBytes(quotaInBytes);
-    builder.setQuotaInNamespace(quotaInNamespace);
+    builder.setQuotaInTable(quotaInTable);
     builder.setUsedNamespace(0L);
     builder.addAllMetadata(databaseArgs.getMetadata());
 
@@ -395,8 +396,8 @@ public class RpcClient implements ClientProtocol {
       LOG.info("Creating Database: {}, with {} as owner.", databaseName, owner);
     } else {
       LOG.info("Creating Database: {}, with {} as owner "
-              + "and space quota set to {} bytes, counts quota set" +
-              " to {}", databaseName, owner, quotaInBytes, quotaInNamespace);
+              + "and space quota set to {} bytes, table counts quota set" +
+              " to {}", databaseName, owner, quotaInBytes, quotaInTable);
     }
     ozoneManagerClient.createDatabase(builder.build());
   }
@@ -418,7 +419,7 @@ public class RpcClient implements ClientProtocol {
               database.getAdminName(),
               database.getOwnerName(),
               database.getQuotaInBytes(),
-              database.getQuotaInNamespace(),
+              database.getQuotaInTable(),
               database.getUsedNamespace(),
               database.getCreationTime(),
               database.getModificationTime(),
@@ -443,7 +444,7 @@ public class RpcClient implements ClientProtocol {
             db.getAdminName(),
             db.getOwnerName(),
             db.getQuotaInBytes(),
-            db.getQuotaInNamespace(),
+            db.getQuotaInTable(),
             db.getUsedNamespace(),
             db.getCreationTime(),
             db.getModificationTime(),
@@ -463,7 +464,7 @@ public class RpcClient implements ClientProtocol {
             db.getAdminName(),
             db.getOwnerName(),
             db.getQuotaInBytes(),
-            db.getQuotaInNamespace(),
+            db.getQuotaInTable(),
             db.getUsedNamespace(),
             db.getCreationTime(),
             db.getModificationTime()))
@@ -509,11 +510,11 @@ public class RpcClient implements ClientProtocol {
     verifyDatabaseName(databaseName);
     verifyTableName(tableName);
     Preconditions.checkNotNull(tableArgs);
-    verifyCountsQuota(tableArgs.getQuotaInNamespace());
+    verifyCountsQuota(tableArgs.getQuotaInBucket());
     verifySpaceQuota(tableArgs.getQuotaInBytes());
 
-    Boolean isVersionEnabled = tableArgs.getVersioning() == null ?
-        Boolean.FALSE : tableArgs.getVersioning();
+    Boolean isVersionEnabled = tableArgs.getIsVersionEnabled() == null ?
+        Boolean.FALSE : tableArgs.getIsVersionEnabled();
     StorageType storageType = tableArgs.getStorageType() == null ?
         StorageType.DEFAULT : tableArgs.getStorageType();
     StorageEngine storageEngine = tableArgs.getStorageEngine() == null ?
@@ -524,19 +525,18 @@ public class RpcClient implements ClientProtocol {
     OmTableInfo.Builder builder = OmTableInfo.newBuilder();
     builder.setDatabaseName(databaseName)
         .setTableName(tableName)
+        .setSchema(tableArgs.getSchema())
         .setIsVersionEnabled(isVersionEnabled)
         .addAllMetadata(tableArgs.getMetadata())
         .setStorageType(storageType)
-        .setDistributedKey(tableArgs.getDistributedKeyProto())
-        .setColumnKey(tableArgs.getColumnKey())
-        .setPartitions(tableArgs.getPartitions())
+        .setStorageEngine(storageEngine)
         .setNumReplicas(numReplicas)
-        .setStorageEngine(storageEngine.toProto())
-        .setColumns(tableArgs.getColumns())
+        .setBuckets(tableArgs.getBuckets())
         .setCreationTime(Time.now())
-        .setUsedInBytes(0L)
+        .setUsedBytes(0L)
+        .setUsedBucket(0)
         .setQuotaInBytes(tableArgs.getQuotaInBytes())
-        .setQuotaInNamespace(tableArgs.getQuotaInNamespace());
+        .setQuotaInBucket(tableArgs.getQuotaInBucket());
 
     LOG.info("Creating Table: {}/{}, with Versioning {} and " +
             "Storage Type set to {} ",
@@ -677,24 +677,24 @@ public class RpcClient implements ClientProtocol {
 
   @Override
   public void setTableQuota(String databaseName, String tableName,
-      long quotaInNamespace, long quotaInBytes) throws IOException {
+      int quotaInBucket, long quotaInBytes) throws IOException {
     HddsClientUtils.verifyResourceName(databaseName);
     HddsClientUtils.verifyResourceName(tableName);
-    verifyCountsQuota(quotaInNamespace);
+    verifyCountsQuota(quotaInBucket);
     verifySpaceQuota(quotaInBytes);
     OmTableArgs.Builder builder = OmTableArgs.newBuilder();
     builder.setDatabaseName(databaseName)
         .setTableName(tableName)
         .setQuotaInBytes(quotaInBytes)
-        .setQuotaInNamespace(quotaInNamespace);
+        .setQuotaInBucket(quotaInBucket);
     // If the table is old, we need to remind the user on the client side
     // that it is not recommended to enable quota.
     OmTableInfo omTableInfo = ozoneManagerClient.getTableInfo(
         databaseName, tableName);
-    if (omTableInfo.getQuotaInNamespace() == OLD_QUOTA_DEFAULT ||
-            omTableInfo.getUsedInBytes() == OLD_QUOTA_DEFAULT) {
+    if (omTableInfo.getQuotaInBytes() == HETU_OLD_QUOTA_DEFAULT ||
+            omTableInfo.getUsedBytes() == HETU_OLD_QUOTA_DEFAULT) {
       LOG.warn("Table {} is created before version 1.1.0, usedBytes or " +
-          "usedNamespace may be inaccurate and it is not recommended to " +
+          "usedBucket may be inaccurate and it is not recommended to " +
           "enable quota.", tableName);
     }
     ozoneManagerClient.setTableProperty(builder.build());
@@ -732,12 +732,9 @@ public class RpcClient implements ClientProtocol {
         this,
         tableInfo.getDatabaseName(),
         tableInfo.getTableName(),
-        tableInfo.getColumns(),
-        tableInfo.getColumnKey(),
-        tableInfo.getDistributedKeyProto(),
-        tableInfo.getPartitions(),
-        tableInfo.getUsedInBytes(),
-        tableInfo.getQuotaInNamespace(),
+        tableInfo.getSchema(),
+        tableInfo.getUsedBytes(),
+        tableInfo.getUsedBucket(),
         tableInfo.getCreationTime(),
         tableInfo.getIsVersionEnabled(),
         tableInfo.getMetadata());
@@ -755,12 +752,9 @@ public class RpcClient implements ClientProtocol {
         this,
         table.getDatabaseName(),
         table.getTableName(),
-        table.getColumns(),
-        table.getColumnKey(),
-        table.getDistributedKeyProto(),
-        table.getPartitions(),
-        table.getUsedInBytes(),
-        table.getQuotaInNamespace(),
+        table.getSchema(),
+        table.getUsedBytes(),
+        table.getQuotaInBucket(),
         table.getCreationTime(),
         table.getIsVersionEnabled(),
         table.getMetadata()))

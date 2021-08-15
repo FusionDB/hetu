@@ -20,28 +20,17 @@ package org.apache.hadoop.ozone.om.helpers;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.StorageType;
+import org.apache.hadoop.hetu.hm.meta.table.Schema;
+import org.apache.hadoop.hetu.hm.meta.table.StorageEngine;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.Auditable;
-import org.apache.hadoop.hetu.hm.meta.table.ColumnKey;
-import org.apache.hadoop.hetu.hm.meta.table.ColumnSchema;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-        .TableInfo;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-        .TableInfo.StorageEngineProto;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-        .TableInfo.PartitionsProto;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-        .TableInfo.DistributedKeyProto;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-        .ColumnSchemaProto;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.TableInfo;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import static java.util.stream.Collectors.toList;
 
 /**
  * A class that encapsulates Table Info.
@@ -58,11 +47,7 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
   /**
    * Schema of the table.
    */
-  private List<ColumnSchema> columns;
-  /**
-   * Table storage engine: lucene or parquet
-   */
-  private final StorageEngineProto storageEngine;
+  private Schema schema;
 
   /**
    * Table Version flag.
@@ -73,6 +58,11 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
    * [RAM_DISK, SSD, DISK, ARCHIVE]
    */
   private StorageType storageType;
+  /**
+   * Type of storage to be used for this table.
+   * [LSTORE, CSTORE]
+   */
+  private StorageEngine storageEngine;
   /**
    * Creation time of table.
    */
@@ -86,53 +76,45 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
    */
   private int numReplicas;
   /**
-   * Table of partitions
+   * Table num of bucket: default 8
    */
-  private PartitionsProto partitions;
+  private int buckets;
   /**
    * Table of usedBytes
    */
-  private long usedInBytes;
+  private long usedBytes;
   /**
    * Table of quotaBytes
    */
   private long quotaInBytes;
   /**
-   * Table of quotaInNamespace
+   * Table of usedBucket
    */
-  public long quotaInNamespace;
-
+  private int usedBucket;
   /**
-   * Table of column key
+   * Table of quotaInBucket
    */
-  private ColumnKey columnKey;
-
-  /**
-   * Table of distributeKey
-   */
-  private DistributedKeyProto distributedKeyProto;
+  public int quotaInBucket;
 
   /**
    * Private constructor, constructed via builder.
    * @param databaseName - Database name.
    * @param tableName - Table name.
-   * @param isVersionEnabled - Bucket version flag.
+   * @param isVersionEnabled - Table version flag.
    * @param storageType - Storage type to be used.
-   * @param creationTime - Bucket creation time.
-   * @param modificationTime - Bucket modification time.
+   * @param creationTime - Table creation time.
+   * @param modificationTime - Table modification time.
    * @param metadata - metadata.
    */
   @SuppressWarnings("checkstyle:ParameterNumber")
   private OmTableInfo(String databaseName,
                       String tableName,
+                      Schema schema,
                       boolean isVersionEnabled,
                       StorageType storageType,
-                      List<ColumnSchema> columns,
-                      ColumnKey columnKey,
-                      StorageEngineProto storageEngine,
+                      StorageEngine storageEngine,
                       int numReplicas,
-                      PartitionsProto partitions,
-                      DistributedKeyProto distributedKeyProto,
+                      int buckets,
                       long creationTime,
                       long modificationTime,
                       long objectID,
@@ -140,25 +122,25 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
                       Map<String, String> metadata,
                       long usedBytes,
                       long quotaInBytes,
-                      long quotaInNamespace) {
+                      int usedBucket,
+                      int quotaInBcuket) {
     this.databaseName = databaseName;
     this.tableName = tableName;
+    this.schema = schema;
     this.isVersionEnabled = isVersionEnabled;
     this.storageType = storageType;
+    this.storageEngine = storageEngine;
     this.creationTime = creationTime;
     this.modificationTime = modificationTime;
     this.objectID = objectID;
     this.updateID = updateID;
     this.metadata = metadata;
-    this.columns = columns;
-    this.columnKey = columnKey;
-    this.storageEngine = storageEngine;
     this.numReplicas = numReplicas;
-    this.partitions = partitions;
-    this.distributedKeyProto = distributedKeyProto;
-    this.usedInBytes = usedInBytes;
+    this.buckets = buckets;
+    this.usedBytes = usedBytes;
     this.quotaInBytes = quotaInBytes;
-    this.quotaInNamespace = quotaInNamespace;
+    this.usedBucket = usedBucket;
+    this.quotaInBucket = quotaInBcuket;
   }
 
   /**
@@ -212,17 +194,17 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
 
   /**
    * Returns table schema
-   * @return Field
+   * @return Schema
    */
-  public List<ColumnSchema> getColumns() {
-    return columns;
+  public Schema getSchema() {
+    return schema;
   }
 
   /**
    * Returns StorageEngine format
    * @return
    */
-  public StorageEngineProto getStorageEngine() {
+  public StorageEngine getStorageEngine() {
     return storageEngine;
   }
 
@@ -235,43 +217,43 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
   }
 
   /**
-   * Returns table partitions info
+   * Returns table bucket is data shard number
    * @return
    */
-  public PartitionsProto getPartitions() {
-    return partitions;
+  public int getBuckets() {
+    return buckets;
   }
 
   /**
    * Returns table used capacity in bytes
    * @return
    */
-  public long getUsedInBytes() {
-    return usedInBytes;
+  public long getUsedBytes() {
+    return usedBytes;
   }
 
-  public long getQuotaInNamespace() {
-    return quotaInNamespace;
-  }
-
+  /**
+   * Returns Quota in Bytes.
+   * @return long, Quota in bytes.
+   */
   public long getQuotaInBytes() {
     return quotaInBytes;
   }
 
   /**
-   * Returns table column key
+   * Retruns table used count in buckets
    * @return
    */
-  public ColumnKey getColumnKey() {
-    return columnKey;
+  public int getUsedBucket() {
+    return usedBucket;
   }
 
   /**
-   * Returns table distributed key
+   * Returns Quota in Bucket Number
    * @return
    */
-  public DistributedKeyProto getDistributedKeyProto() {
-    return distributedKeyProto;
+  public int getQuotaInBucket() {
+    return quotaInBucket;
   }
 
   /**
@@ -297,15 +279,14 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
     auditMap.put(OzoneConsts.CREATION_TIME, String.valueOf(this.creationTime));
     auditMap.put(OzoneConsts.MODIFICATION_TIME,
         String.valueOf(this.modificationTime));
-    auditMap.put(OzoneConsts.TABLE_SCHEMA, String.valueOf(this.columns));
-    auditMap.put(OzoneConsts.COLUMN_KEY, columnKey.toString());
-    auditMap.put(OzoneConsts.DISTRIBUTED_KEY, this.distributedKeyProto.toString());
+    auditMap.put(OzoneConsts.TABLE_SCHEMA, schema.toString());
     auditMap.put(OzoneConsts.STORAGE_ENGINE, String.valueOf(this.storageEngine));
     auditMap.put(OzoneConsts.NUM_REPLICAS, String.valueOf(this.numReplicas));
-    auditMap.put(OzoneConsts.TABLE_PARTITIONS, String.valueOf(this.partitions));
-    auditMap.put(OzoneConsts.USED_CAPACITY_IN_BYTES, String.valueOf(this.usedInBytes));
+    auditMap.put(OzoneConsts.USED_IN_BYTES, String.valueOf(this.usedBytes));
     auditMap.put(OzoneConsts.QUOTA_IN_BYTES, String.valueOf(this.quotaInBytes));
-    auditMap.put(OzoneConsts.QUOTA_IN_NAMESPACE, String.valueOf(this.quotaInNamespace));
+    auditMap.put(OzoneConsts.USED_IN_BUCKET, String.valueOf(this.usedBucket));
+    auditMap.put(OzoneConsts.QUOTA_IN_BUCKET, String.valueOf(this.quotaInBucket));
+    auditMap.put(OzoneConsts.BUCKETS, String.valueOf(this.buckets));
     return auditMap;
   }
 
@@ -321,6 +302,7 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
     return new Builder()
         .setDatabaseName(databaseName)
         .setTableName(tableName)
+        .setSchema(schema)
         .setStorageType(storageType)
         .setIsVersionEnabled(isVersionEnabled)
         .setCreationTime(creationTime)
@@ -328,13 +310,13 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
         .setObjectID(objectID)
         .setUpdateID(updateID)
         .addAllMetadata(metadata)
-        .setColumns(columns)
         .setStorageEngine(storageEngine)
         .setNumReplicas(numReplicas)
-        .setPartitions(partitions)
-        .setColumnKey(columnKey)
-        .setDistributedKey(distributedKeyProto)
-        .setUsedInBytes(usedInBytes);
+        .setBuckets(buckets)
+        .setUsedBytes(usedBytes)
+        .setQuotaInBytes(quotaInBytes)
+        .setUsedBucket(usedBucket)
+        .setQuotaInBucket(quotaInBucket);
   }
 
     /**
@@ -343,19 +325,18 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
   public static class Builder {
     private String databaseName;
     private String tableName;
-    private List<ColumnSchema> columns;
-    private ColumnKey columnKey;
-    private StorageEngineProto storageEngine;
+    private Schema schema;
+    private StorageEngine storageEngine;
     private Boolean isVersionEnabled;
     private StorageType storageType;
     private long creationTime;
     private long modificationTime;
     private int numReplicas;
-    private PartitionsProto partitions;
-    private DistributedKeyProto distributedKey;
-    private long usedInBytes;
+    private int buckets;
+    private long usedBytes;
     private long quotaInBytes;
-    private long quotaInNamespace;
+    private int usedBucket;
+    private int quotaInBucket;
     private long objectID;
     private long updateID;
     private Map<String, String> metadata;
@@ -364,9 +345,12 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
       //Default values
       this.isVersionEnabled = false;
       this.storageType = StorageType.DISK;
-      this.storageEngine = StorageEngineProto.LSTORE;
+      this.storageEngine = StorageEngine.LSTORE;
       this.metadata = new HashMap<>();
-      this.usedInBytes = OzoneConsts.USED_CAPACITY_IN_BYTES_RESET;
+      this.usedBytes = OzoneConsts.USED_IN_BYTES_RESET;
+      this.quotaInBytes = OzoneConsts.HETU_QUOTA_RESET;
+      this.usedBucket = OzoneConsts.USED_IN_BUCKET_RESET;
+      this.quotaInBucket = OzoneConsts.HETU_BUCKET_QUOTA_RESET;
     }
 
     public Builder setDatabaseName(String databaseName) {
@@ -404,8 +388,8 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
       return this;
     }
 
-    public Builder setColumnKey(ColumnKey columnKey) {
-      this.columnKey = columnKey;
+    public Builder setSchema(Schema schema) {
+      this.schema = schema;
       return this;
     }
 
@@ -426,12 +410,7 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
       return this;
     }
 
-    public Builder setColumns(List<ColumnSchema> columns) {
-      this.columns = columns;
-      return this;
-    }
-
-    public Builder setStorageEngine(StorageEngineProto storageEngine) {
+    public Builder setStorageEngine(StorageEngine storageEngine) {
       this.storageEngine = storageEngine;
       return this;
     }
@@ -441,18 +420,13 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
       return this;
     }
 
-    public Builder setPartitions(PartitionsProto partitions) {
-      this.partitions = partitions;
+    public Builder setBuckets(int buckets) {
+      this.buckets = buckets;
       return this;
     }
 
-    public Builder setUsedInBytes(long usedBytes) {
-      this.usedInBytes = usedInBytes;
-      return this;
-    }
-
-    public Builder setDistributedKey(DistributedKeyProto distributedKey) {
-      this.distributedKey = distributedKey;
+    public Builder setUsedBytes(long usedBytes) {
+      this.usedBytes = usedBytes;
       return this;
     }
 
@@ -461,8 +435,12 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
         return this;
     }
 
-    public Builder setQuotaInNamespace(long quotaInNamespace) {
-      this.quotaInNamespace = quotaInNamespace;
+    public Builder setUsedBucket(int usedBucket) {
+      this.usedBucket = usedBucket;
+      return this;
+    }
+    public Builder setQuotaInBucket(int quotaInBucket) {
+      this.quotaInBucket = quotaInBucket;
       return this;
     }
 
@@ -473,43 +451,41 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
     public OmTableInfo build() {
       Preconditions.checkNotNull(databaseName);
       Preconditions.checkNotNull(tableName);
-      Preconditions.checkArgument(columns.size() > 0);
+      Preconditions.checkNotNull(schema);
       Preconditions.checkNotNull(isVersionEnabled);
       Preconditions.checkNotNull(storageType);
       Preconditions.checkNotNull(numReplicas);
-      Preconditions.checkNotNull(columnKey);
+      Preconditions.checkNotNull(buckets);
 
-      return new OmTableInfo(databaseName, tableName, isVersionEnabled,
-          storageType, columns, columnKey, storageEngine, numReplicas, partitions, distributedKey,
+      return new OmTableInfo(databaseName, tableName, schema, isVersionEnabled,
+          storageType, storageEngine, numReplicas, buckets,
           creationTime, modificationTime, objectID, updateID,
-          metadata, usedInBytes, quotaInBytes, quotaInNamespace);
+          metadata, usedBytes, quotaInBytes, usedBucket, quotaInBucket);
     }
   }
 
   /**
-   * Creates BucketInfo protobuf from OmBucketInfo.
+   * Creates TableInfo protobuf from OmTableInfo.
    */
   public TableInfo getProtobuf() {
-    List<ColumnSchemaProto> columnSchemaProtos = columns.stream()
-            .map(proto -> ColumnSchema.toProtobuf(proto))
-            .collect(toList());
-
     TableInfo.Builder bib =  TableInfo.newBuilder()
         .setDatabaseName(databaseName)
         .setTableName(tableName)
+        .setSchema(schema.toProtobuf())
         .setIsVersionEnabled(isVersionEnabled)
         .setStorageType(storageType.toProto())
         .setCreationTime(creationTime)
         .setModificationTime(modificationTime)
         .setObjectID(objectID)
         .setUpdateID(updateID)
-        .addAllColumns(columnSchemaProtos)
-        .setStorageEngine(storageEngine)
+        .setStorageEngine(storageEngine.toProto())
         .setNumReplicas(numReplicas)
-        .setPartitions(partitions)
-        .setColumnKey(columnKey.toProtobuf())
-        .setDistributedKey(distributedKeyProto)
-        .setUsedCapacityInBytes(usedInBytes);
+        .setBuckets(buckets)
+        .addAllMetadata(KeyValueUtil.toProtobuf(metadata))
+        .setUsedBytes(usedBytes)
+        .setQuotaInBytes(quotaInBytes)
+        .setQuotaInBucket(quotaInBucket)
+        .setUsedBucket(usedBucket);
     return bib.build();
   }
 
@@ -519,23 +495,21 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
    * @return instance of OmTableInfo
    */
   public static OmTableInfo getFromProtobuf(TableInfo tableInfo) {
-    List<ColumnSchema> columnSchemas = tableInfo.getColumnsList().stream()
-        .map(columnSchemaProto -> ColumnSchema.fromProtobuf(columnSchemaProto))
-        .collect(toList());
     OmTableInfo.Builder obib = OmTableInfo.newBuilder()
         .setDatabaseName(tableInfo.getDatabaseName())
         .setTableName(tableInfo.getTableName())
+        .setSchema(Schema.fromProtobuf(tableInfo.getSchema()))
         .setIsVersionEnabled(tableInfo.getIsVersionEnabled())
         .setStorageType(StorageType.valueOf(tableInfo.getStorageType()))
         .setCreationTime(tableInfo.getCreationTime())
         .setModificationTime(tableInfo.getModificationTime())
-        .setColumns(columnSchemas)
-        .setStorageEngine(tableInfo.getStorageEngine())
+        .setStorageEngine(StorageEngine.valueOf(tableInfo.getStorageEngine()))
         .setNumReplicas(tableInfo.getNumReplicas())
-        .setPartitions(tableInfo.getPartitions())
-        .setColumnKey(ColumnKey.fromProtobuf(tableInfo.getColumnKey()))
-        .setDistributedKey(tableInfo.getDistributedKey())
-        .setUsedInBytes(tableInfo.getUsedCapacityInBytes());
+        .setBuckets(tableInfo.getBuckets())
+        .setUsedBytes(tableInfo.getUsedBytes())
+        .setQuotaInBytes(tableInfo.getQuotaInBytes())
+        .setUsedBucket(tableInfo.getUsedBucket())
+        .setQuotaInBucket(tableInfo.getQuotaInBucket());
 
     if (tableInfo.hasObjectID()) {
       obib.setObjectID(tableInfo.getObjectID());
@@ -553,71 +527,76 @@ public final class OmTableInfo extends WithObjectID implements Auditable {
   @Override
   public String getObjectInfo() {
     return "OmTableInfo{" +
-        "databaseName='" + databaseName + '\'' +
-        ", tableName='" + tableName + '\'' +
-        ", columns=" + columns +
-        ", storageEngine=" + storageEngine +
-        ", isVersionEnabled=" + isVersionEnabled +
-        ", storageType=" + storageType +
-        ", creationTime=" + creationTime +
-        ", modificationTime=" + modificationTime +
-        ", numReplicas=" + numReplicas +
-        ", partitions=" + partitions +
-        ", distributedKey=" + distributedKeyProto +
-        ", usedInBytes='" + usedInBytes + '\'' +
-        ", quotaInNamespace='" + quotaInNamespace + '\'' +
-        '}';
+            "databaseName='" + databaseName + '\'' +
+            ", tableName='" + tableName + '\'' +
+            ", schema=" + schema +
+            ", isVersionEnabled=" + isVersionEnabled +
+            ", storageType=" + storageType +
+            ", storageEngine=" + storageEngine +
+            ", creationTime=" + creationTime +
+            ", modificationTime=" + modificationTime +
+            ", numReplicas=" + numReplicas +
+            ", buckets=" + buckets +
+            ", usedBytes=" + usedBytes +
+            ", quotaInBytes=" + quotaInBytes +
+            ", usedBucket=" + usedBucket +
+            ", quotaInBucket=" + quotaInBucket +
+            ", objectID=" + objectID +
+            ", updateID=" + updateID +
+            ", metadata=" + metadata +
+            '}';
   }
 
   @Override
   public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
     OmTableInfo that = (OmTableInfo) o;
     return creationTime == that.creationTime &&
-        modificationTime == that.modificationTime &&
-        databaseName.equals(that.databaseName) &&
-        tableName.equals(that.tableName) &&
-        Objects.equals(isVersionEnabled, that.isVersionEnabled) &&
-        storageType == that.storageType &&
-        objectID == that.objectID &&
-        updateID == that.updateID &&
-        columns == that.columns &&
-        storageEngine == that.storageEngine &&
-        numReplicas == that.numReplicas &&
-        partitions == that.partitions &&
-        distributedKeyProto == this.distributedKeyProto &&
-        usedInBytes == that.usedInBytes &&
-        quotaInNamespace == that.quotaInNamespace &&
-        Objects.equals(metadata, that.metadata);
+            modificationTime == that.modificationTime &&
+            numReplicas == that.numReplicas &&
+            buckets == that.buckets &&
+            usedBytes == that.usedBytes &&
+            quotaInBytes == that.quotaInBytes &&
+            usedBucket == that.usedBucket &&
+            quotaInBucket == that.quotaInBucket &&
+            databaseName.equals(that.databaseName) &&
+            tableName.equals(that.tableName) &&
+            schema.equals(that.schema) &&
+            isVersionEnabled.equals(that.isVersionEnabled) &&
+            storageType == that.storageType &&
+            storageEngine == that.storageEngine;
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(databaseName, tableName);
+    return Objects.hash(databaseName, tableName, schema,
+            isVersionEnabled, storageType, storageEngine,
+            creationTime, modificationTime, numReplicas,
+            buckets, usedBytes, quotaInBytes, usedBucket,
+            quotaInBucket);
   }
 
   @Override
   public String toString() {
     return "OmTableInfo{" +
-        "databaseName='" + databaseName + '\'' +
-        ", tableName='" + tableName + '\'' +
-        ", columns=" + columns +
-        ", columnKey=" + columnKey +
-        ", storageEngine=" + storageEngine +
-        ", isVersionEnabled=" + isVersionEnabled +
-        ", storageType=" + storageType +
-        ", creationTime=" + creationTime +
-        ", modificationTime=" + modificationTime +
-        ", numReplicas=" + numReplicas +
-        ", partitions=" + partitions +
-        ", distributedKey=" + distributedKeyProto +
-        ", usedInBytes='" + usedInBytes + '\'' +
-        ", quotaInNamespace='" + quotaInNamespace + '\'' +
-        '}';
+            "databaseName='" + databaseName + '\'' +
+            ", tableName='" + tableName + '\'' +
+            ", schema=" + schema +
+            ", isVersionEnabled=" + isVersionEnabled +
+            ", storageType=" + storageType +
+            ", storageEngine=" + storageEngine +
+            ", creationTime=" + creationTime +
+            ", modificationTime=" + modificationTime +
+            ", numReplicas=" + numReplicas +
+            ", buckets=" + buckets +
+            ", usedBytes=" + usedBytes +
+            ", quotaInBytes=" + quotaInBytes +
+            ", usedBucket=" + usedBucket +
+            ", quotaInBucket=" + quotaInBucket +
+            ", objectID=" + objectID +
+            ", updateID=" + updateID +
+            ", metadata=" + metadata +
+            '}';
   }
 }
