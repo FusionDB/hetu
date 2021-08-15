@@ -20,11 +20,11 @@
 package org.apache.hadoop.hetu.om.request.tablet;
 
 
+import org.apache.hadoop.hetu.om.request.TestOMRequestUtils;
+import org.apache.hadoop.hetu.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.om.helpers.OmTabletInfo;
 import org.apache.hadoop.ozone.om.helpers.OmTabletLocationInfo;
-import org.apache.hadoop.hetu.om.request.TestOMRequestUtils;
-import org.apache.hadoop.hetu.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateTabletRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;

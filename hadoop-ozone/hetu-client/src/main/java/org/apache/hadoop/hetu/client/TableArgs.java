@@ -242,8 +242,9 @@ public final class TableArgs {
      * Constructs a builder.
      */
     public Builder() {
-      usedBytes = OzoneConsts.USED_IN_BYTES_RESET;
-      usedBucket = OzoneConsts.USED_IN_BUCKET_RESET;
+      this.metadata = new HashMap<>();
+      this.usedBytes = OzoneConsts.USED_IN_BYTES_RESET;
+      this.usedBucket = OzoneConsts.USED_IN_BUCKET_RESET;
     }
 
     public TableArgs.Builder setDatabaseName(String databaseName) {
@@ -261,8 +262,13 @@ public final class TableArgs {
       return this;
     }
 
-    public TableArgs.Builder addMetadata(Map<String, String> metadataMap) {
+    public TableArgs.Builder addAllMetadata(Map<String, String> metadataMap) {
       this.metadata = metadataMap;
+      return this;
+    }
+
+    public TableArgs.Builder addMetadata(String key, String value) {
+      metadata.put(key, value);
       return this;
     }
 

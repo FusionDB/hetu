@@ -21,4 +21,4 @@
 /**
  * OMMetadataManager.
  */
-package org.apache.hadoop.hetu.hm;
+package org.apache.hadoop.hetu.photon;

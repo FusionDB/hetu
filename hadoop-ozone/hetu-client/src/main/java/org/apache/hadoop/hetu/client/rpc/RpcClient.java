@@ -572,14 +572,14 @@ public class RpcClient implements ClientProtocol {
   }
 
   private static void verifyCountsQuota(long quota) throws OMException {
-    if (quota < OzoneConsts.QUOTA_RESET || quota == 0) {
+    if (quota < OzoneConsts.HETU_QUOTA_RESET || quota == 0) {
       throw new IllegalArgumentException("Invalid values for quota : " +
           "counts quota is :" + quota + ".");
     }
   }
 
   private static void verifySpaceQuota(long quota) throws OMException {
-    if (quota < OzoneConsts.QUOTA_RESET || quota == 0) {
+    if (quota < OzoneConsts.HETU_QUOTA_RESET || quota == 0) {
       throw new IllegalArgumentException("Invalid values for quota : " +
           "space quota is :" + quota + ".");
     }

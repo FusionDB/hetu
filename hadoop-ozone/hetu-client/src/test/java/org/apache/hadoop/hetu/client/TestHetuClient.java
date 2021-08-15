@@ -156,12 +156,13 @@ public class TestHetuClient {
             .setDatabaseName(databaseName)
             .setTableName(tableName)
             .setSchema(new Schema(getColumnSchemas(), getColumnKey(), getDistributedKey(), getPartitionKey()))
-            .setQuotaInBytes(-2)
-            .setQuotaInBucket(-2)
+            .setQuotaInBytes(OzoneConsts.HETU_QUOTA_RESET)
+            .setQuotaInBucket(OzoneConsts.HETU_BUCKET_QUOTA_RESET)
             .setUsedBucket(0)
             .setUsedBytes(0L)
             .setBuckets(8)
             .setStorageEngine(StorageEngine.LSTORE)
+            .addMetadata("key1", "value1")
             .setStorageType(StorageType.DISK)
             .build();
   }
