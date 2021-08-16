@@ -22,16 +22,11 @@ import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hetu.hm.meta.table.Schema;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.Auditable;
-import org.apache.hadoop.hetu.hm.meta.table.ColumnSchema;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.TableArgs;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ColumnSchemaProto;
 
-import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
-import static java.util.stream.Collectors.toList;
 
 /**
  * A class that encapsulates Table Arguments.

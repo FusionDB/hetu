@@ -261,6 +261,14 @@ public final class OmUtils {
     case GetAcl:
     case DBUpdates:
     case ListMultipartUploads:
+    case GetDatabase:
+    case ListDatabase:
+    case InfoTable:
+    case ListTable:
+    case InfoPartition:
+    case ListPartitions:
+    case LookupTablet:
+    case ListTablets:
       return true;
     case CreateVolume:
     case SetVolumeProperty:
@@ -292,6 +300,23 @@ public final class OmUtils {
     case RecoverTrash:
     case DeleteOpenKeys:
     case RevokeS3Secret:
+    case CreateDatabase:
+    case SetDatabaseProperty:
+    case DeleteDatabase:
+    case CreateTable:
+    case SetTableProperty:
+    case DeleteTable:
+    case CreatePartition:
+    case SetPartitionProperty:
+    case DeletePartition:
+    case DeletePartitions:
+    case CreateTablet:
+    case DeleteTablet:
+    case DeleteTablets:
+    case DeleteOpenTablets:
+    case CommitTablet:
+    case AllocateTablet:
+    case PurgeTablets:
       return false;
     default:
       LOG.error("CmdType {} is not categorized as readOnly or not.", cmdType);
