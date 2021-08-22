@@ -28,17 +28,18 @@ import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
-import org.apache.hadoop.hetu.hm.Type;
-import org.apache.hadoop.hetu.hm.meta.table.ColumnKeyType;
-import org.apache.hadoop.hetu.hm.meta.table.DistributedKey;
-import org.apache.hadoop.hetu.hm.meta.table.PartitionKey;
-import org.apache.hadoop.hetu.hm.meta.table.Schema;
+import org.apache.hadoop.hetu.hm.TestBase;
+import org.apache.hadoop.hetu.photon.meta.RuleType;
+import org.apache.hadoop.hetu.photon.meta.common.ColumnKeyType;
+import org.apache.hadoop.hetu.photon.meta.table.DistributedKey;
+import org.apache.hadoop.hetu.photon.meta.table.PartitionKey;
+import org.apache.hadoop.hetu.photon.meta.table.Schema;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
-import org.apache.hadoop.hetu.hm.meta.table.ColumnKey;
-import org.apache.hadoop.hetu.hm.meta.table.ColumnSchema;
+import org.apache.hadoop.hetu.photon.meta.common.ColumnKey;
+import org.apache.hadoop.hetu.photon.meta.table.ColumnSchema;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
@@ -81,12 +82,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static java.util.stream.Collectors.toList;
-
 /**
  * Helper class to test OMClientRequest classes.
  */
-public final class TestOMRequestUtils {
+public final class TestOMRequestUtils extends TestBase {
 
   private TestOMRequestUtils() {
     //Do nothing
@@ -657,51 +656,6 @@ public final class TestOMRequestUtils {
             .setBuckets(8)
             .setCreationTime(Time.now())
             .setUsedBytes(0L).build();
-  }
-
-  @NotNull
-  public static Schema getSchema() {
-    return new Schema(getColumnSchemas(), getColumnKey(), getDistributedKey(), getPartitionKey());
-  }
-
-  @NotNull
-  public static PartitionKey getPartitionKey() {
-    return new PartitionKey(Type.RANGE, Arrays.asList("ds"));
-  }
-
-  @NotNull
-  public static DistributedKey getDistributedKey() {
-    return new DistributedKey(Type.HASH, Arrays.asList("id"));
-  }
-
-  @NotNull
-  public static List<ColumnSchema> getColumnSchemas() {
-    ColumnSchema col1 = new ColumnSchema(
-            "city",
-            "varchar",
-            1,
-            "",
-            -1,
-            "",
-            "用户",
-            true);
-
-    ColumnSchema col2 = new ColumnSchema(
-            "id",
-            "Long",
-            0,
-            "",
-            -1,
-            "",
-            "ID",
-            true);
-
-    return Arrays.asList(col1, col2);
-  }
-
-  @NotNull
-  public static ColumnKey getColumnKey() {
-    return new ColumnKey(ColumnKeyType.PRIMARY_KEY, Arrays.asList("id"));
   }
 
   /**

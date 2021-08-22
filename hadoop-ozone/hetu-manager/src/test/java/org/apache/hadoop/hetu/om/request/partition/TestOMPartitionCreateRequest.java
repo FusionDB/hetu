@@ -19,14 +19,7 @@
 
 package org.apache.hadoop.hetu.om.request.partition;
 
-import org.apache.hadoop.hetu.hm.Type;
 import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
-import org.apache.hadoop.hetu.hm.meta.table.ColumnKey;
-import org.apache.hadoop.hetu.hm.meta.table.ColumnKeyType;
-import org.apache.hadoop.hetu.hm.meta.table.ColumnSchema;
-import org.apache.hadoop.hetu.hm.meta.table.DistributedKey;
-import org.apache.hadoop.hetu.hm.meta.table.PartitionKey;
-import org.apache.hadoop.hetu.hm.meta.table.Schema;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmPartitionInfo;
@@ -39,12 +32,9 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRespo
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.StorageTypeProto;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
-import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -251,49 +241,4 @@ public class TestOMPartitionCreateRequest extends TestPartitionRequest {
             .build();
   }
 
-
-  @NotNull
-  private static Schema getSchema() {
-    return new Schema(getColumnSchemas(), getColumnKey(), getDistributedKey(), getPartitionKey());
-  }
-
-  @NotNull
-  public static PartitionKey getPartitionKey() {
-    return new PartitionKey(Type.RANGE, Arrays.asList("ds"));
-  }
-
-  @NotNull
-  public static DistributedKey getDistributedKey() {
-    return new DistributedKey(Type.HASH, Arrays.asList("id"));
-  }
-
-  @NotNull
-  public static List<ColumnSchema> getColumnSchemas() {
-    ColumnSchema col1 = new ColumnSchema(
-            "city",
-            "varchar",
-            1,
-            "",
-            -1,
-            "",
-            "用户",
-            true);
-
-    ColumnSchema col2 = new ColumnSchema(
-            "id",
-            "Long",
-            0,
-            "",
-            -1,
-            "",
-            "ID",
-            true);
-
-    return Arrays.asList(col1, col2);
-  }
-
-  @NotNull
-  public static ColumnKey getColumnKey() {
-    return new ColumnKey(ColumnKeyType.PRIMARY_KEY, Arrays.asList("id"));
-  }
 }

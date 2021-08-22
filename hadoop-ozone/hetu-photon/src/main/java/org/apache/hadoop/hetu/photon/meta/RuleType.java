@@ -1,4 +1,4 @@
-package org.apache.hadoop.hetu.hm;
+package org.apache.hadoop.hetu.photon.meta;
 
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
    .SchemaProto.TypeProto;
@@ -6,7 +6,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 /**
  * Created by xiliu on 2021/8/10
  */
-public enum Type {
+public enum RuleType {
     HASH,
     RANGE,
     LIST;
@@ -25,7 +25,7 @@ public enum Type {
         }
     }
 
-    public static Type valueOf(TypeProto type) {
+    public static RuleType valueOf(TypeProto type) {
         switch (type) {
             case HASH:
                 return HASH;

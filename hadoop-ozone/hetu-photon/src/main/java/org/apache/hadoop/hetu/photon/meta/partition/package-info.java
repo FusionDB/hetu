@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hetu.hm.meta.tablet;
+package org.apache.hadoop.hetu.photon.meta.partition;
 
 /**
  * Classes related to hetu interface.

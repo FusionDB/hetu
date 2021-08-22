@@ -20,12 +20,11 @@ package org.apache.hadoop.hetu.client;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.StorageType;
-import org.apache.hadoop.hetu.hm.meta.table.Schema;
-import org.apache.hadoop.hetu.hm.meta.table.StorageEngine;
+import org.apache.hadoop.hetu.photon.meta.table.Schema;
+import org.apache.hadoop.hetu.photon.meta.common.StorageEngine;
 import org.apache.hadoop.ozone.OzoneConsts;
 
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**

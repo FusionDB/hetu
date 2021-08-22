@@ -21,17 +21,21 @@ import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.server.ServerUtils;
-import org.apache.hadoop.hetu.hm.meta.table.ColumnKeyType;
-import org.apache.hadoop.hetu.hm.meta.table.DistributedKey;
-import org.apache.hadoop.hetu.hm.meta.table.PartitionKey;
-import org.apache.hadoop.hetu.hm.meta.table.Schema;
+import org.apache.hadoop.hetu.photon.meta.RuleType;
+import org.apache.hadoop.hetu.photon.meta.common.ColumnKeyType;
+import org.apache.hadoop.hetu.photon.meta.common.ColumnType;
+import org.apache.hadoop.hetu.photon.meta.common.ColumnTypeAttributes;
+import org.apache.hadoop.hetu.photon.meta.common.DataType;
+import org.apache.hadoop.hetu.photon.meta.table.DistributedKey;
+import org.apache.hadoop.hetu.photon.meta.table.PartitionKey;
+import org.apache.hadoop.hetu.photon.meta.table.Schema;
 import org.apache.hadoop.hetu.om.OmMetadataManagerImpl;
 import org.apache.hadoop.hetu.om.TableManager;
 import org.apache.hadoop.hetu.om.TableManagerImpl;
 import org.apache.hadoop.hetu.om.request.TestOMRequestUtils;
 import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
-import org.apache.hadoop.hetu.hm.meta.table.ColumnKey;
-import org.apache.hadoop.hetu.hm.meta.table.ColumnSchema;
+import org.apache.hadoop.hetu.photon.meta.common.ColumnKey;
+import org.apache.hadoop.hetu.photon.meta.table.ColumnSchema;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
@@ -60,7 +64,7 @@ import java.util.List;
  */
 @RunWith(MockitoJUnitRunner.class)
 @Ignore("Table Manager does not use cache, Disable it for now.")
-public class TestTableManagerImpl {
+public class TestTableManagerImpl extends TestBase {
   @Rule
   public ExpectedException thrown = ExpectedException.none();
 
@@ -121,51 +125,6 @@ public class TestTableManagerImpl {
             .setSchema(getSchema())
             .setCreationTime(Time.now())
             .setUsedBytes(0L).build();
-  }
-
-  @NotNull
-  private static Schema getSchema() {
-    return new Schema(getColumnSchemas(), getColumnKey(), getDistributedKey(), getPartitionKey());
-  }
-
-  @NotNull
-  public static PartitionKey getPartitionKey() {
-    return new PartitionKey(Type.RANGE, Arrays.asList("ds"));
-  }
-
-  @NotNull
-  public static DistributedKey getDistributedKey() {
-    return new DistributedKey(Type.HASH, Arrays.asList("id"));
-  }
-
-  @NotNull
-  public static List<ColumnSchema> getColumnSchemas() {
-    ColumnSchema col1 = new ColumnSchema(
-            "city",
-            "varchar",
-            1,
-            "",
-            -1,
-            "",
-            "用户",
-            true);
-
-    ColumnSchema col2 = new ColumnSchema(
-            "id",
-            "Long",
-            0,
-            "",
-            -1,
-            "",
-            "ID",
-            true);
-
-    return Arrays.asList(col1, col2);
-  }
-
-  @NotNull
-  public static ColumnKey getColumnKey() {
-    return new ColumnKey(ColumnKeyType.PRIMARY_KEY, Arrays.asList("id"));
   }
 
   @Test

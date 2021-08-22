@@ -25,20 +25,26 @@ import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.scm.XceiverClientFactory;
 import org.apache.hadoop.hetu.client.io.HetuInputStream;
 import org.apache.hadoop.hetu.client.io.HetuOutputStream;
-import org.apache.hadoop.hetu.hm.Type;
-import org.apache.hadoop.hetu.hm.meta.table.ColumnKeyType;
-import org.apache.hadoop.hetu.hm.meta.table.DistributedKey;
-import org.apache.hadoop.hetu.hm.meta.table.PartitionKey;
-import org.apache.hadoop.hetu.hm.meta.table.Schema;
+import org.apache.hadoop.hetu.photon.helpers.InsertOperation;
+import org.apache.hadoop.hetu.photon.helpers.Operation;
+import org.apache.hadoop.hetu.photon.helpers.OperationType;
+import org.apache.hadoop.hetu.photon.meta.RuleType;
+import org.apache.hadoop.hetu.photon.meta.common.ColumnKeyType;
+import org.apache.hadoop.hetu.photon.meta.common.ColumnType;
+import org.apache.hadoop.hetu.photon.meta.common.ColumnTypeAttributes;
+import org.apache.hadoop.hetu.photon.meta.common.DataType;
+import org.apache.hadoop.hetu.photon.meta.table.DistributedKey;
+import org.apache.hadoop.hetu.photon.meta.table.PartitionKey;
+import org.apache.hadoop.hetu.photon.meta.table.Schema;
+import org.apache.hadoop.hetu.photon.proto.HetuPhotonProtos;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.hetu.client.rpc.RpcClient;
-import org.apache.hadoop.hetu.hm.meta.table.ColumnKey;
-import org.apache.hadoop.hetu.hm.meta.table.ColumnSchema;
-import org.apache.hadoop.hetu.hm.meta.table.StorageEngine;
+import org.apache.hadoop.hetu.photon.meta.common.ColumnKey;
+import org.apache.hadoop.hetu.photon.meta.table.ColumnSchema;
+import org.apache.hadoop.hetu.photon.meta.common.StorageEngine;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.protocolPB.OmTransport;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.ozone.test.LambdaTestUtils.VoidCallable;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
@@ -62,7 +68,7 @@ import static org.apache.hadoop.hdds.client.ReplicationFactor.ONE;
  * <p>
  * Used for testing Hetu client without external network calls.
  */
-public class TestHetuClient {
+public class TestHetuClient extends TestHetuUtil {
 
   private HetuClient client;
   private HetuStore store;
@@ -169,35 +175,36 @@ public class TestHetuClient {
 
   @NotNull
   public static PartitionKey getPartitionKey() {
-    return new PartitionKey(Type.RANGE, Arrays.asList("ds"));
+    return new PartitionKey(RuleType.RANGE, Arrays.asList("ds"));
   }
 
   @NotNull
   public static DistributedKey getDistributedKey() {
-    return new DistributedKey(Type.HASH, Arrays.asList("id"));
+    return new DistributedKey(RuleType.HASH, Arrays.asList("id"));
   }
 
   @NotNull
   public static List<ColumnSchema> getColumnSchemas() {
-    ColumnSchema col1 = new ColumnSchema(
-            "city",
-            "varchar",
-            1,
-            "",
-            -1,
-            "",
-            "用户",
-            true);
+    ColumnSchema col1 = ColumnSchema.newBuilder()
+            .setName("city")
+            .setType(ColumnType.VARCHAR)
+            .setDesiredSize(1)
+            .setWireType(DataType.VARCHAR)
+            .setDefaultValue("")
+            .setTypeAttributes(ColumnTypeAttributes.newBuilder().length(110).build())
+            .setNullable(false)
+            .setComment("城市")
+            .build();
 
-    ColumnSchema col2 = new ColumnSchema(
-            "id",
-            "Long",
-            0,
-            "",
-            -1,
-            "",
-            "ID",
-            true);
+    ColumnSchema col2 = ColumnSchema.newBuilder()
+            .setName("id")
+            .setType(ColumnType.INT64)
+            .setDesiredSize(1)
+            .setWireType(DataType.UINT64)
+            .setDefaultValue(-1)
+            .setNullable(true)
+            .setComment("ID")
+            .build();
 
     return Arrays.asList(col1, col2);
   }
@@ -213,7 +220,11 @@ public class TestHetuClient {
     String tableName = UUID.randomUUID().toString();
     Instant testStartTime = Instant.now();
 
-    String value = "sample value";
+//    String value = "sample value";
+    Operation operation = new InsertOperation(getPartialRowWithAllTypes());
+    HetuPhotonProtos.OperationProto operationProto = operation.toProto();
+    byte[] data = operationProto.toByteArray();
+
     store.createDatabase(databaseName);
     OzoneDatabase database = store.getDatabase(databaseName);
     TableArgs tableArgs = builderTableArgs(databaseName, tableName);
@@ -233,17 +244,20 @@ public class TestHetuClient {
     for (int i = 0; i < 10; i++) {
       String tabletName = UUID.randomUUID().toString();
       HetuOutputStream out = partition.createTablet(tabletName,
-          value.getBytes(UTF_8).length, ReplicationType.RATIS,
+          data.length, ReplicationType.RATIS,
           ONE, new HashMap<>());
-      out.write(value.getBytes(UTF_8));
+//      out.write(value.getBytes(UTF_8));
+      out.write(operationProto.toByteArray());
       out.close();
       OzoneTablet tablet = partition.getTablet(tabletName);
       Assert.assertEquals(tabletName, tablet.getTabletName());
       HetuInputStream is = partition.readTablet(tabletName);
-      byte[] fileContent = new byte[value.getBytes(UTF_8).length];
-      Assert.assertEquals(value.length(), is.read(fileContent));
+      byte[] fileContent = new byte[data.length];
+      Assert.assertEquals(data.length, is.read(fileContent));
       is.close();
-      Assert.assertEquals(value, new String(fileContent, UTF_8));
+
+      // TODO encode decode proto file
+//      Assert.assertEquals(data, fileContent);
       Assert.assertFalse(tablet.getCreationTime().isBefore(testStartTime));
       Assert.assertFalse(tablet.getModificationTime().isBefore(testStartTime));
     }

@@ -24,14 +24,9 @@ import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hetu.client.protocol.ClientProtocol;
-import org.apache.hadoop.hetu.hm.meta.table.ColumnKey;
-import org.apache.hadoop.hetu.hm.meta.table.ColumnSchema;
-import org.apache.hadoop.hetu.hm.meta.table.Schema;
-import org.apache.hadoop.hetu.hm.meta.table.StorageEngine;
-import org.apache.hadoop.ozone.audit.SCMAction;
+import org.apache.hadoop.hetu.photon.meta.table.Schema;
+import org.apache.hadoop.hetu.photon.meta.common.StorageEngine;
 import org.apache.hadoop.ozone.om.helpers.WithMetadata;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-        .TableInfo.StorageEngineProto;
 
 import java.io.IOException;
 import java.time.Instant;

@@ -24,13 +24,17 @@ import org.apache.hadoop.hdds.utils.TransactionInfo;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
-import org.apache.hadoop.hetu.hm.meta.table.ColumnKey;
-import org.apache.hadoop.hetu.hm.meta.table.ColumnKeyType;
-import org.apache.hadoop.hetu.hm.meta.table.ColumnSchema;
-import org.apache.hadoop.hetu.hm.meta.table.DistributedKey;
-import org.apache.hadoop.hetu.hm.meta.table.PartitionKey;
-import org.apache.hadoop.hetu.hm.meta.table.Schema;
-import org.apache.hadoop.hetu.hm.meta.table.StorageEngine;
+import org.apache.hadoop.hetu.photon.meta.RuleType;
+import org.apache.hadoop.hetu.photon.meta.common.ColumnKey;
+import org.apache.hadoop.hetu.photon.meta.common.ColumnKeyType;
+import org.apache.hadoop.hetu.photon.meta.common.ColumnType;
+import org.apache.hadoop.hetu.photon.meta.common.ColumnTypeAttributes;
+import org.apache.hadoop.hetu.photon.meta.common.DataType;
+import org.apache.hadoop.hetu.photon.meta.table.ColumnSchema;
+import org.apache.hadoop.hetu.photon.meta.table.DistributedKey;
+import org.apache.hadoop.hetu.photon.meta.table.PartitionKey;
+import org.apache.hadoop.hetu.photon.meta.table.Schema;
+import org.apache.hadoop.hetu.photon.meta.common.StorageEngine;
 import org.apache.hadoop.hetu.om.OmMetadataManagerImpl;
 import org.apache.hadoop.hetu.om.request.TestOMRequestUtils;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
@@ -59,7 +63,7 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_DB_DIRS;
 /**
  * Tests HetuManager MetadataManager.
  */
-public class TestHmMetadataManager {
+public class TestHmMetadataManager extends TestBase {
 
   private OMMetadataManager omMetadataManager;
   private OzoneConfiguration ozoneConfiguration;
@@ -325,46 +329,6 @@ public class TestHmMetadataManager {
     omMetadataManager.getMetaTable().addCacheEntry(
         new CacheKey<>(omMetadataManager.getMetaTableKey(databaseName, tableName)),
         new CacheValue<>(Optional.of(omTableInfo), 1));
-  }
-
-  @NotNull
-  public static PartitionKey getPartitionKey() {
-    return new PartitionKey(Type.LIST, Arrays.asList("ds"));
-  }
-
-  @NotNull
-  public static DistributedKey getDistributedKey() {
-    return new DistributedKey(Type.HASH, Arrays.asList("id"));
-  }
-
-  @NotNull
-  public static List<ColumnSchema> getColumnSchemas() {
-    ColumnSchema col1 = new ColumnSchema(
-            "city",
-            "varcher",
-            0,
-            "",
-            4,
-            "",
-            "用户",
-            true);
-
-    ColumnSchema col2 = new ColumnSchema(
-            "id",
-            "Long",
-            1,
-            "",
-            -1,
-            "",
-            "唯一ID",
-            true);
-
-    return Arrays.asList(col1, col2);
-  }
-
-  @NotNull
-  public static ColumnKey getColumnKey() {
-    return new ColumnKey(ColumnKeyType.PRIMARY_KEY, Arrays.asList("id"));
   }
 
   @Test

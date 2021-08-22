@@ -596,14 +596,22 @@ message PartitionInfo {
 }
 
 message ColumnSchemaProto {
+  message ColumnTypeAttributesProto {
+    required int32  precision = 1;
+    required int32 scale = 2;
+    required int32 length = 3;
+  }
+
   required string columnName = 1;
   required string columnType = 2;
-  required int32  ordinalPosition = 3;
-  optional int64  desiredSize = 4;
+  optional int32 desiredSize = 4;
   optional string defaultValue = 5;
-  optional string extra = 7 [default = "DEFAULT_GENERATED"];
+  optional string extra = 7;
   optional string columnComment = 8;
   optional bool   isNullable = 9;
+  optional string wireType = 10;
+  optional int32 typeSize = 11;
+  optional ColumnTypeAttributesProto columnTypeAttributes = 12;
 }
 
 message TabletInfo {

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hetu.om.request.database;
 
-import org.apache.hadoop.hetu.hm.meta.table.ColumnSchema;
 import org.apache.hadoop.ozone.om.helpers.OmTableInfo;
 import org.apache.hadoop.hetu.om.request.TestOMRequestUtils;
 import org.apache.hadoop.hetu.om.response.OMClientResponse;
@@ -28,7 +27,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMReque
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
 import java.util.UUID;
 
 import static org.apache.hadoop.hetu.om.request.TestOMRequestUtils.getSchema;

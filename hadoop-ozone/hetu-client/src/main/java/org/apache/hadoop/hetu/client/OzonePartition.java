@@ -456,6 +456,10 @@ public class OzonePartition extends WithMetadata {
         .createTablet(databaseName, tableName, partitionName, tablet, size, type, factor, keyMetadata);
   }
 
+  public HetuOutputStream openTablet(String tablet) {
+    return proxy.openTablet(databaseName, tableName, partitionName, tablet);
+  }
+
   /**
    * Creates a new tablet in the partition.
    *

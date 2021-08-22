@@ -25,6 +25,10 @@
             <artifactId>ozone-common</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.apache.ozone</groupId>
+            <artifactId>hetu-photon</artifactId>
+        </dependency>
+        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <scope>test</scope>

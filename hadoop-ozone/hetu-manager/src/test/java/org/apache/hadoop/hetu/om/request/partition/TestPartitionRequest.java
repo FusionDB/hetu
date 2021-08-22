@@ -20,6 +20,7 @@
 package org.apache.hadoop.hetu.om.request.partition;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hetu.hm.TestBase;
 import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.audit.AuditMessage;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
@@ -41,7 +42,7 @@ import static org.mockito.Mockito.when;
  * Base test class for partition request.
  */
 @SuppressWarnings("visibilityModifier")
-public class TestPartitionRequest {
+public class TestPartitionRequest extends TestBase {
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
 

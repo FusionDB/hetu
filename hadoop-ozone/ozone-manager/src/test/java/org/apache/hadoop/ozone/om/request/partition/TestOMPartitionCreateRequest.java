@@ -20,8 +20,8 @@
 package org.apache.hadoop.ozone.om.request.partition;
 
 import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
-import org.apache.hadoop.hetu.hm.meta.table.ColumnKey;
-import org.apache.hadoop.hetu.hm.meta.table.ColumnSchema;
+import org.apache.hadoop.hetu.photon.meta.common.ColumnKey;
+import org.apache.hadoop.hetu.photon.meta.table.ColumnSchema;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmPartitionInfo;

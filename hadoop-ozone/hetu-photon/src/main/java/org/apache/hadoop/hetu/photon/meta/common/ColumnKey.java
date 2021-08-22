@@ -1,4 +1,4 @@
-package org.apache.hadoop.hetu.hm.meta.table;
+package org.apache.hadoop.hetu.photon.meta.common;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SchemaProto.ColumnKeyProto;

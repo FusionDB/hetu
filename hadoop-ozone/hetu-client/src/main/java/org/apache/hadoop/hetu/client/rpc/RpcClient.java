@@ -61,7 +61,7 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.apache.hadoop.ozone.client.io.LengthInputStream;
 import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
-import org.apache.hadoop.hetu.hm.meta.table.StorageEngine;
+import org.apache.hadoop.hetu.photon.meta.common.StorageEngine;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmDeleteTablets;
@@ -119,7 +119,6 @@ import java.util.stream.Collectors;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_CLIENT_KEY_PROVIDER_CACHE_EXPIRY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConsts.HETU_OLD_QUOTA_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConsts.OLD_QUOTA_DEFAULT;
 
 /**
  * Ozone RPC Client Implementation, it connects to OM, SCM and DataNode
@@ -1050,6 +1049,12 @@ public class RpcClient implements ClientProtocol {
         ozoneManagerClient.openTablet(tabletArgs);
     return createOutputStream(tabletSession, UUID.randomUUID().toString(),
         replicationConfig);
+  }
+
+  @Override
+  public HetuOutputStream openTablet(String databaseName, String tableName, String partitionName, String tablet) {
+    // TODO open tablet write mode
+    return null;
   }
 
   @Override

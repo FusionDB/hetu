@@ -16,12 +16,6 @@
  * limitations under the License.
  */
 
-/**
- * These .proto interfaces are private and unstable.
- * Please see http://wiki.apache.org/hadoop/Compatibility
- * for what changes are allowed for a *unstable* .proto interface.
- */
-
 syntax = "proto2";
 option java_package = "org.apache.hadoop.hetu.photon.proto";
 option java_outer_classname = "HetuPhotonProtos";
@@ -34,28 +28,33 @@ import "OmClientProtocol.proto";
 /**
  * RowResult represents one row from a scanner, in row-wise layout.
  */
-message PartialRow {
-  repeated bytes rowData = 1;
-  required int64 rowSize = 2;
-  repeated int32 columnOffsets = 3;
-  required int32 offset = 4;
-  required bytes nullsBitSet = 5;
-}
-
-enum OperationType {
-  INSERT = 1;
-  UPDATE = 2;
-  DELETE = 3;
-  UPSERT = 4;
-  SCAN_QUERY = 5;
-}
-
-message Operation {
-  required OperationType operationType = 1;
-  optional string conditionalExpression = 2;
-}
-
-message Dataset {
+message PartialRowProto {
   required hadoop.ozone.SchemaProto schema = 1;
-  repeated PartialRow partialRow = 2;
+
+  // Variable length data. If string, will be UTF-8 encoded. Elements of this list _must_ have a
+  // mark that we can reset() to. Readers of these fields (encoders, etc) must call reset() before
+  // attempting to read these values.
+  repeated bytes varLengthData = 2;
+  required bytes rowAlloc = 3;
+  required bytes columnsBitSet = 4;
+  optional bytes nullsBitSet = 5;
+}
+
+message OperationProto {
+  enum OperationTypeProto {
+    INSERT = 1;
+    UPDATE = 2;
+    DELETE = 3;
+    UPSERT = 4;
+    SCAN_QUERY = 5;
+  }
+
+  /**
+  * This size will be set when serialize is called. It stands for the size of the row in this
+  * operation.
+  */
+  required uint64 rowOperationSizeBytes = 1;
+  required PartialRowProto row = 2;
+  required OperationTypeProto operationType = 3;
+  optional string conditionalExpression = 4;
 }

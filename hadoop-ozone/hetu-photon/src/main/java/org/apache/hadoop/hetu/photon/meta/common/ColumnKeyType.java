@@ -1,4 +1,4 @@
-package org.apache.hadoop.hetu.hm.meta.table;
+package org.apache.hadoop.hetu.photon.meta.common;
 
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SchemaProto.ColumnKeyTypeProto;
 

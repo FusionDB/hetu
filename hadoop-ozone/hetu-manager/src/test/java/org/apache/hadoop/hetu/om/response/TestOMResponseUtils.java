@@ -20,13 +20,10 @@
 package org.apache.hadoop.hetu.om.response;
 
 import org.apache.hadoop.hdds.protocol.StorageType;
-import org.apache.hadoop.hetu.hm.meta.table.ColumnKey;
-import org.apache.hadoop.hetu.hm.meta.table.StorageEngine;
+import org.apache.hadoop.hetu.photon.meta.common.StorageEngine;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmPartitionInfo;
 import org.apache.hadoop.ozone.om.helpers.OmTableInfo;
-import org.apache.hadoop.hetu.om.request.TestOMRequestUtils;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.util.Time;
 
 import static org.apache.hadoop.hetu.om.request.TestOMRequestUtils.getSchema;

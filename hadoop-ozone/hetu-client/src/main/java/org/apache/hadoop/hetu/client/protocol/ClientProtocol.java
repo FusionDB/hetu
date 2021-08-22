@@ -639,4 +639,6 @@ public interface ClientProtocol {
    * Getter for OzoneManagerClient.
    */
   OzoneManagerProtocol getOzoneManagerClient();
+
+  HetuOutputStream openTablet(String databaseName, String tableName, String partitionName, String tablet);
 }
