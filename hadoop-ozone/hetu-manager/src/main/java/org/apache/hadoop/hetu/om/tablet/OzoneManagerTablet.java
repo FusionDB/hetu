@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hetu.om.block;
+package org.apache.hadoop.hetu.om.tablet;
 
 import org.apache.hadoop.hetu.om.IOzoneAcl;
 import org.apache.hadoop.ozone.om.helpers.*;

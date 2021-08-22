@@ -28,7 +28,6 @@ public class Operation {
     public Operation(PartialRow row, OperationType operationType) {
         this.row = row;
         this.operationType = operationType;
-        this.rowOperationSizeBytes = rowOperationSizeBytes;
     }
 
     public PartialRow getRow() {
@@ -76,5 +75,10 @@ public class Operation {
                 ", rowOperationSizeBytes=" + rowOperationSizeBytes +
                 ", conditionalExpression='" + conditionalExpression + '\'' +
                 '}';
+    }
+
+    public Operation copyObject() {
+        return new Operation(row, operationType,
+                rowOperationSizeBytes, conditionalExpression);
     }
 }

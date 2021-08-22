@@ -25,9 +25,11 @@ import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.scm.XceiverClientFactory;
 import org.apache.hadoop.hetu.client.io.HetuInputStream;
 import org.apache.hadoop.hetu.client.io.HetuOutputStream;
+import org.apache.hadoop.hetu.photon.encoder.InsertOperationEncoder;
 import org.apache.hadoop.hetu.photon.helpers.InsertOperation;
 import org.apache.hadoop.hetu.photon.helpers.Operation;
 import org.apache.hadoop.hetu.photon.helpers.OperationType;
+import org.apache.hadoop.hetu.photon.helpers.PartialRow;
 import org.apache.hadoop.hetu.photon.meta.RuleType;
 import org.apache.hadoop.hetu.photon.meta.common.ColumnKeyType;
 import org.apache.hadoop.hetu.photon.meta.common.ColumnType;
@@ -221,9 +223,9 @@ public class TestHetuClient extends TestHetuUtil {
     Instant testStartTime = Instant.now();
 
 //    String value = "sample value";
-    Operation operation = new InsertOperation(getPartialRowWithAllTypes());
-    HetuPhotonProtos.OperationProto operationProto = operation.toProto();
-    byte[] data = operationProto.toByteArray();
+    PartialRow row = getPartialRowWithAllTypes();
+    Operation operation = new InsertOperation(row, row.toProtobuf().getSerializedSize());
+    byte[] data = new InsertOperationEncoder().toPersistedFormat(operation);
 
     store.createDatabase(databaseName);
     OzoneDatabase database = store.getDatabase(databaseName);
@@ -247,7 +249,7 @@ public class TestHetuClient extends TestHetuUtil {
           data.length, ReplicationType.RATIS,
           ONE, new HashMap<>());
 //      out.write(value.getBytes(UTF_8));
-      out.write(operationProto.toByteArray());
+      out.write(data);
       out.close();
       OzoneTablet tablet = partition.getTablet(tabletName);
       Assert.assertEquals(tabletName, tablet.getTabletName());
@@ -256,8 +258,12 @@ public class TestHetuClient extends TestHetuUtil {
       Assert.assertEquals(data.length, is.read(fileContent));
       is.close();
 
-      // TODO encode decode proto file
-//      Assert.assertEquals(data, fileContent);
+      Operation readOperation = new InsertOperationEncoder()
+              .fromPersistedFormat(fileContent);
+      Assert.assertEquals(operation.getOperationType(), readOperation.getOperationType());
+      Assert.assertEquals(operation.getRow().getSchema(), readOperation.getRow().getSchema());
+      Assert.assertEquals(operation.getRow().getByte("int8"),
+              readOperation.getRow().getByte("int8"));
       Assert.assertFalse(tablet.getCreationTime().isBefore(testStartTime));
       Assert.assertFalse(tablet.getModificationTime().isBefore(testStartTime));
     }

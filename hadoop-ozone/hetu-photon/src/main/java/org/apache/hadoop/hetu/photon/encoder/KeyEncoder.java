@@ -1,4 +1,4 @@
-package org.apache.hadoop.hetu.photon.codec;
+package org.apache.hadoop.hetu.photon.encoder;
 
 import org.apache.hadoop.hetu.photon.meta.common.ColumnType;
 import org.apache.hadoop.hetu.photon.meta.table.ColumnSchema;

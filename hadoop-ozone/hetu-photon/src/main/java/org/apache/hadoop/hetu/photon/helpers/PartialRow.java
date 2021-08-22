@@ -23,7 +23,7 @@ import com.google.protobuf.ByteString;
 import org.apache.hadoop.hetu.photon.meta.table.ColumnSchema;
 import org.apache.hadoop.hetu.photon.meta.common.ColumnType;
 import org.apache.hadoop.hetu.photon.meta.common.ColumnTypeAttributes;
-import org.apache.hadoop.hetu.photon.codec.KeyEncoder;
+import org.apache.hadoop.hetu.photon.encoder.KeyEncoder;
 import org.apache.hadoop.hetu.photon.meta.util.StringUtil;
 import org.apache.hadoop.hetu.photon.meta.util.TimestampUtil;
 import org.apache.hadoop.hetu.photon.meta.util.DateUtil;
