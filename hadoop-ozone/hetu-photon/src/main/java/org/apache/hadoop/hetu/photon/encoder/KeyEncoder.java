@@ -49,7 +49,6 @@ public class KeyEncoder {
                     column.getTypeSize(),
                     buf);
         }
-        System.out.println(column.getColumnName() + ": " + column.getTypeSize());
     }
 
     /**

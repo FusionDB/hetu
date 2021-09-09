@@ -18,6 +18,7 @@ package org.apache.hadoop.ozone.tablet.lstore.interfaces;
  *  limitations under the License.
  */
 
+import com.google.protobuf.ByteString;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.common.ChunkBuffer;
@@ -73,6 +74,24 @@ public interface ChunkManager {
    */
   ChunkBuffer readChunk(Container container, BlockID blockID, ChunkInfo info,
       DispatcherContext dispatcherContext) throws StorageContainerException;
+
+  /**
+   * reads the data defined by a chunk.
+   *
+   * @param container - Container for the chunk
+   * @param blockID - ID of the block.
+   * @param info - ChunkInfo.
+   * @param scanQueryOperation - Scan query push down to the chunk.
+   * @param dispatcherContext - dispatcher context info.
+   * @return  byte array
+   * @throws StorageContainerException
+   *
+   * TODO: Right now we do not support partial reads and writes of chunks.
+   * TODO: Explore if we need to do that for ozone.
+   */
+  ChunkBuffer readChunk(Container container, BlockID blockID, ChunkInfo info,
+                        ByteBuffer scanQueryOperation,
+                        DispatcherContext dispatcherContext) throws StorageContainerException;
 
   /**
    * Deletes a given chunk.

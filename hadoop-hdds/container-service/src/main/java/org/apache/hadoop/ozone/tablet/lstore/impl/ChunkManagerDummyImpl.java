@@ -53,7 +53,8 @@ public class ChunkManagerDummyImpl implements ChunkManager {
     if (stage == DispatcherContext.WriteChunkStage.WRITE_DATA
         || stage == DispatcherContext.WriteChunkStage.COMBINED) {
 
-      ChunkUtils.validateBufferSize(info.getLen(), data.remaining());
+//      ChunkUtils.validateBufferSize(info.getLen(), data.remaining());
+      ChunkUtils.validateBufferSize(info.getLen(), data.limit());
 
       HddsVolume volume = containerData.getVolume();
       VolumeIOStats volumeIOStats = volume.getVolumeIOStats();
@@ -76,6 +77,14 @@ public class ChunkManagerDummyImpl implements ChunkManager {
 
     // stats are handled in ChunkManagerImpl
     return ChunkBuffer.wrap(ByteBuffer.allocate((int) info.getLen()));
+  }
+
+  @Override
+  public ChunkBuffer readChunk(Container container, BlockID blockID,
+                               ChunkInfo info, ByteBuffer scanQueryOperation,
+                               DispatcherContext dispatcherContext)
+          throws StorageContainerException {
+    throw new UnsupportedOperationException();
   }
 
   @Override

@@ -61,7 +61,19 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
   </pluginRepositories>
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>org.apache.ozone</groupId>
+        <artifactId>hetu-photon</artifactId>
+        <version>${hdds.version}</version>
+      </dependency>
 
+      <dependency>
+        <groupId>org.apache.ozone</groupId>
+        <artifactId>hetu-photon</artifactId>
+        <version>${hdds.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
 
       <dependency>
         <groupId>org.apache.ozone</groupId>

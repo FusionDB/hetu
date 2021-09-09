@@ -186,9 +186,7 @@ public class LStoreContainerCheck {
     }
 
     dbType = onDiskContainerData.getContainerDBType();
-    if (!dbType.equals(CONTAINER_DB_TYPE_ROCKSDB) ||
-        !dbType.equals(CONTAINER_DB_TYPE_LSTORE) ||
-        !dbType.equals(CONTAINER_DB_TYPE_CSTORE)) {
+    if (!dbType.equals(CONTAINER_DB_TYPE_ROCKSDB)) {
       String errStr = "Unknown DBType [" + dbType
           + "] in Container File for  [" + containerID + "]";
       throw new IOException(errStr);

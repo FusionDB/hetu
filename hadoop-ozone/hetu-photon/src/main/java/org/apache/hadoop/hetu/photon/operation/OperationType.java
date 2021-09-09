@@ -1,7 +1,7 @@
-package org.apache.hadoop.hetu.photon.helpers;
+package org.apache.hadoop.hetu.photon.operation;
 
 import org.apache.hadoop.hetu.photon.proto.HetuPhotonProtos
-        .OperationProto.OperationTypeProto;
+        .OperationTypeProto;
 
 /**
  * Created by xiliu on 2021/8/16

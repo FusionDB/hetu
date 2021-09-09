@@ -184,6 +184,14 @@ public class FilePerBlockStrategy implements ChunkManager {
   }
 
   @Override
+  public ChunkBuffer readChunk(Container container, BlockID blockID,
+                               ChunkInfo info, ByteBuffer scanQueryOperation,
+                               DispatcherContext dispatcherContext)
+          throws StorageContainerException {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public void deleteChunk(Container container, BlockID blockID, ChunkInfo info)
       throws StorageContainerException {
     deleteChunk(container, blockID, info, true);

@@ -56,6 +56,9 @@ public enum ChunkLayOutVersion {
     @Override
     public File getChunkFile(File chunkDir, BlockID blockID,
                              ChunkInfo info) {
+      if (info.getChunkName() != null) {
+        return new File(chunkDir, info.getChunkName());
+      }
       return new File(chunkDir, blockID.getLocalID() + ".segment");
     }
   };

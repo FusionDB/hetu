@@ -22,6 +22,7 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.RemovalListener;
 import com.google.common.collect.Lists;
+import com.google.protobuf.ByteString;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
@@ -191,6 +192,62 @@ public class FilePerSegmentStrategy implements ChunkManager {
   }
 
   @Override
+  public ChunkBuffer readChunk(Container container, BlockID blockID,
+                               ChunkInfo info, ByteBuffer scanQueryOperation,
+                               DispatcherContext dispatcherContext)
+          throws StorageContainerException {
+
+    checkLayoutVersion(container);
+
+    if (info.getLen() <= 0) {
+      LOG.debug("Skip reading empty chunk {}", info);
+      return ChunkBuffer.wrap(ByteBuffer.wrap(new byte[0]));
+    }
+
+    LStoreContainerData containerData = (LStoreContainerData) container
+            .getContainerData();
+
+    HddsVolume volume = containerData.getVolume();
+    VolumeIOStats volumeIOStats = volume.getVolumeIOStats();
+
+    File chunkFile = getChunkFile(container, blockID, info);
+
+    long len = info.getLen();
+    long offset = info.getOffset();
+
+    long bufferCapacity = 0;
+    if (info.isReadDataIntoSingleBuffer()) {
+      // Older client - read all chunk data into one single buffer.
+      bufferCapacity = len;
+    } else {
+      // Set buffer capacity to checksum boundary size so that each buffer
+      // corresponds to one checksum. If checksum is NONE, then set buffer
+      // capacity to default (OZONE_CHUNK_READ_BUFFER_DEFAULT_SIZE_KEY = 64KB).
+      ChecksumData checksumData = info.getChecksumData();
+
+      if (checksumData != null) {
+        if (checksumData.getChecksumType() ==
+                ContainerProtos.ChecksumType.NONE) {
+          bufferCapacity = defaultReadBufferCapacity;
+        } else {
+          bufferCapacity = checksumData.getBytesPerChecksum();
+        }
+      }
+    }
+    // If the buffer capacity is 0, set all the data into one ByteBuffer
+    if (bufferCapacity == 0) {
+      bufferCapacity = len;
+    }
+
+    ByteBuffer[] dataBuffers = BufferUtils.assignByteBuffers(len,
+            bufferCapacity);
+
+    LStoreUtils.readData(chunkFile.toPath(), dataBuffers, scanQueryOperation, offset, len, volumeIOStats);
+
+    return ChunkBuffer.wrap(Lists.newArrayList(dataBuffers));
+  }
+
+  @Override
   public void deleteChunk(Container container, BlockID blockID, ChunkInfo info)
       throws StorageContainerException {
     deleteChunk(container, blockID, info, true);
@@ -246,7 +303,9 @@ public class FilePerSegmentStrategy implements ChunkManager {
   private static void checkFullDelete(ChunkInfo info, File chunkFile)
       throws StorageContainerException {
     long fileLength = chunkFile.length();
-    if ((info.getOffset() > 0)) {
+    // TODO：check file row size
+//    if ((info.getOffset() > 0) || (info.getLen() != fileLength)) {
+      if ((info.getOffset() > 0)) {
       String msg = String.format(
           "Trying to delete partial chunk %s from file %s with length %s",
           info, chunkFile, fileLength);

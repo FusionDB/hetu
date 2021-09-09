@@ -40,21 +40,77 @@ message PartialRowProto {
   optional bytes nullsBitSet = 5;
 }
 
-message OperationProto {
-  enum OperationTypeProto {
-    INSERT = 1;
-    UPDATE = 2;
-    DELETE = 3;
-    UPSERT = 4;
-    SCAN_QUERY = 5;
-  }
+enum OperationTypeProto {
+  INSERT = 1;
+  UPDATE = 2;
+  DELETE = 3;
+  UPSERT = 4;
+  SCAN_QUERY = 5;
+}
 
+message OperationRequestProto {
+  required OperationTypeProto operationType = 1; // Type of the command
+
+  optional InsertOperationRequestProto insertOperation = 4;
+  optional UpdateOperationRequestProto updateOperation = 5;
+  optional DeleteOperationRequestProto deleteOperation = 6;
+  optional UpsertOperationRequestProto upsertOperation = 7;
+  optional ScanQueryOperationRequestProto scanQueryOperation = 8;
+}
+
+message OperationResponseProto {
+  required OperationTypeProto operationType = 1; // Type of the command
+  optional string message = 2;
+
+  optional InsertOperationResponseProto insertOperation = 4;
+  optional UpdateOperationResponseProto updateOperation = 5;
+  optional DeleteOperationResponseProto deleteOperation = 6;
+  optional UpsertOperationResponseProto upsertOperation = 7;
+  optional ScanQueryOperationResponseProto scanQueryOperation = 8;
+}
+
+message InsertOperationRequestProto {
   /**
   * This size will be set when serialize is called. It stands for the size of the row in this
   * operation.
   */
-  required uint64 rowOperationSizeBytes = 1;
+  required uint64 rowSizeBytes = 1;
   required PartialRowProto row = 2;
-  required OperationTypeProto operationType = 3;
-  optional string conditionalExpression = 4;
+}
+
+message InsertOperationResponseProto {
+}
+
+message UpdateOperationRequestProto {
+  optional string conditionalExpression = 1;
+}
+
+message UpdateOperationResponseProto {
+}
+
+message DeleteOperationRequestProto {
+  required string conditionalExpression = 1;
+}
+
+message DeleteOperationResponseProto {
+}
+
+message UpsertOperationRequestProto {
+  optional string conditionalExpression = 1;
+}
+
+message UpsertOperationResponseProto {
+}
+
+message ScanQueryOperationRequestProto {
+  required string conditionalExpression = 1;
+}
+
+message ScanQueryOperationResponseProto {
+  /**
+  * This size will be set when serialize is called. It stands for the size of the row in this
+  * operation.
+  */
+  required uint64 rowSizeBytes = 1;
+  repeated PartialRowProto row = 2;
 }

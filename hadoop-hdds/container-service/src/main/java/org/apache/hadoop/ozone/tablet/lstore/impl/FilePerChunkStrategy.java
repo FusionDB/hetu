@@ -301,6 +301,13 @@ public class FilePerChunkStrategy implements ChunkManager {
         UNABLE_TO_FIND_CHUNK);
   }
 
+  @Override
+  public ChunkBuffer readChunk(Container container, BlockID blockID, ChunkInfo info,
+                               ByteBuffer scanQueryOperation, DispatcherContext dispatcherContext)
+          throws StorageContainerException {
+   throw new UnsupportedOperationException();
+  }
+
   /**
    * Deletes a given chunk.
    *

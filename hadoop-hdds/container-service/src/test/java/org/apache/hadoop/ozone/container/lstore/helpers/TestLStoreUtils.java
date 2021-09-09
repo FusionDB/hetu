@@ -2,11 +2,18 @@ package org.apache.hadoop.ozone.container.lstore.helpers;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.hdds.utils.BatchOperation;
+import org.apache.hadoop.hetu.photon.ClientTestUtil;
+import org.apache.hadoop.hetu.photon.helpers.PartialRow;
+import org.apache.hadoop.hetu.photon.operation.OperationType;
+import org.apache.hadoop.hetu.photon.operation.request.InsertOperationRequest;
+import org.apache.hadoop.hetu.photon.operation.request.OperationRequest;
+import org.apache.hadoop.hetu.photon.operation.request.ScanQueryOperationRequest;
+import org.apache.hadoop.hetu.photon.operation.response.OperationResponse;
+import org.apache.hadoop.hetu.photon.proto.HetuPhotonProtos;
 import org.apache.hadoop.ozone.common.ChunkBuffer;
 import org.apache.hadoop.ozone.common.utils.BufferUtils;
-import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.volume.VolumeIOStats;
-import org.apache.hadoop.ozone.container.keyvalue.helpers.ChunkUtils;
 import org.apache.hadoop.ozone.tablet.lstore.helpers.LStoreUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -16,7 +23,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,7 +36,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.UNABLE_TO_FIND_CHUNK;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -47,8 +52,13 @@ public class TestLStoreUtils {
 
     @Test
     public void concurrentReadOfSameFile() throws Exception {
-        String s = "{\"name\":\"小明\",\"id\":\"1\",\"age\":\"18\",\"content\":\"Hello world!\"}";
-        byte[] array = s.getBytes(UTF_8);
+        PartialRow raw = ClientTestUtil.getPartialRowWithAllTypes();
+        OperationRequest operationRequest = OperationRequest.newBuilder()
+                .setOperationType(OperationType.INSERT)
+                .setInsertOperationRequest(new InsertOperationRequest(raw))
+                .build();
+        Assert.assertTrue(operationRequest.getOperationType().equals(OperationType.INSERT));
+        byte[] array = operationRequest.toProto().toByteArray();
         ChunkBuffer data = ChunkBuffer.wrap(ByteBuffer.wrap(array));
         Path tempPath = Files.createTempDirectory(PREFIX);
         try {
@@ -66,18 +76,23 @@ public class TestLStoreUtils {
                 executor.execute(() -> {
                     try {
                         ByteBuffer[] readBuffers = BufferUtils.assignByteBuffers(len, len);
-                        LStoreUtils.readData(tempPath, readBuffers, offset, len, stats);
+                        LStoreUtils.readData(tempPath, readBuffers, null, offset, len, stats);
 
                         // There should be only one element in readBuffers
                         Assert.assertEquals(1, readBuffers.length);
                         ByteBuffer readBuffer = readBuffers[0];
 
-                        LOG.info("Read data ({}): {}", threadNumber,
-                                new String(readBuffer.array(), UTF_8));
-                        if (!Arrays.equals(array, readBuffer.array())) {
+                        PartialRow partialRow = PartialRow.fromProtobuf(HetuPhotonProtos.PartialRowProto.parseFrom(readBuffer.array()));
+                        LOG.info("Read data ({}): {}", threadNumber, partialRow.toString());
+                        if (!Arrays.equals(operationRequest.getInsertOperationRequest().getRow().encodeColumnKey(),
+                                partialRow.encodeColumnKey())) {
                             failed.set(true);
                         }
-                        assertEquals(len, readBuffer.remaining());
+                        if (!Arrays.equals(raw.toProtobuf().toByteArray(), readBuffer.array())) {
+                            failed.set(true);
+                        }
+                        assertEquals(operationRequest.getInsertOperationRequest().getRow().getVarLengthData().size(),
+                                partialRow.getVarLengthData().size());
                     } catch (Exception e) {
                         LOG.error("Failed to read data ({})", threadNumber, e);
                         failed.set(true);
@@ -107,8 +122,13 @@ public class TestLStoreUtils {
 
     @Test
     public void serialRead() throws Exception {
-        String s = "{\"name\":\"小明\",\"id\":\"1\",\"age\":\"18\",\"content\":\"Hello world!\"}";
-        byte[] array = s.getBytes(UTF_8);
+        PartialRow raw = ClientTestUtil.getPartialRowWithAllTypes();
+
+        OperationRequest operation = OperationRequest.newBuilder()
+                .setOperationType(OperationType.INSERT)
+                .setInsertOperationRequest(new InsertOperationRequest(raw))
+                .build();
+        byte[] array = operation.toProto().toByteArray();
         ChunkBuffer data = ChunkBuffer.wrap(ByteBuffer.wrap(array));
         Path tempFile = Files.createTempDirectory(PREFIX);
         try {
@@ -117,15 +137,22 @@ public class TestLStoreUtils {
             long offset = 0;
             LStoreUtils.writeData(tempFile, data, offset, len, stats, true);
 
+            OperationRequest operationRequest = OperationRequest.newBuilder()
+                    .setOperationType(OperationType.SCAN_QUERY)
+                    .setScanQueryOperationRequest(new ScanQueryOperationRequest("id = 1"))
+                    .build();
             ByteBuffer[] readBuffers = BufferUtils.assignByteBuffers(len, len);
-            LStoreUtils.readData(tempFile, readBuffers, offset, len, stats);
+            LStoreUtils.readData(tempFile, readBuffers, ByteBuffer.wrap(operationRequest.toProto().toByteArray()), offset, len, stats);
 
             // There should be only one element in readBuffers
             Assert.assertEquals(1, readBuffers.length);
             ByteBuffer readBuffer = readBuffers[0];
+            PartialRow partialRow = PartialRow.fromProtobuf(HetuPhotonProtos.PartialRowProto.parseFrom(readBuffer.array()));
 
-            assertArrayEquals(array, readBuffer.array());
-            assertEquals(len, readBuffer.remaining());
+            assertArrayEquals(raw.encodeColumnKey(), partialRow.encodeColumnKey());
+            assertEquals(raw.getVarLengthData().size(),
+                    partialRow.getVarLengthData().size());
+            LOG.info("Read data: {}", partialRow);
         } catch (Exception e) {
             LOG.error("Failed to read data", e);
         } finally {

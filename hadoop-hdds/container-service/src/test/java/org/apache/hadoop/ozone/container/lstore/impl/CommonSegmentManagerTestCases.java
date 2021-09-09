@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.ozone.container.lstore.impl;
 
 import org.apache.hadoop.hdds.client.BlockID;
@@ -135,7 +136,7 @@ public abstract class CommonSegmentManagerTestCases
       chunkManager.writeChunk(getLStoreContainer(), getBlockID(),
           getChunkInfo(), getData(),
           getDispatcherContext());
-      long randomLength = 200L;
+      long randomLength = 1000L;
       ChunkInfo chunkInfo = new ChunkInfo(String.format("%d.data.%d",
           getBlockID().getLocalID(), 0), 0, randomLength);
 
@@ -195,7 +196,7 @@ public abstract class CommonSegmentManagerTestCases
     assertTrue(getHddsVolume().getVolumeIOStats().getWriteTime() > 0);
 
     // WHEN
-    for (int i = 0; i< count; i++) {
+    for (int i = 0; i < count; i++) {
       ChunkInfo info = new ChunkInfo(String.format("%d.data.%d", localID, i),
           i * len, len);
       chunkManager.readChunk(container, blockID, info, context);

@@ -28,7 +28,7 @@ import org.apache.hadoop.hetu.photon.meta.util.StringUtil;
 import org.apache.hadoop.hetu.photon.meta.util.TimestampUtil;
 import org.apache.hadoop.hetu.photon.meta.util.DateUtil;
 import org.apache.hadoop.hetu.photon.meta.util.DecimalUtil;
-import org.apache.hadoop.hetu.photon.proto.HetuPhotonProtos;
+import org.apache.hadoop.hetu.photon.proto.HetuPhotonProtos.PartialRowProto;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -50,7 +50,7 @@ import org.apache.hadoop.hetu.photon.meta.table.Schema;
 /**
  * Class used to represent parts of a row along with its schema.<p>
  *
- * Values can be replaced as often as needed, but once the enclosing {@link Operation} is applied
+ * Values can be replaced as often as needed, but once the enclosing {@link OperationRequest} is applied
  * then they cannot be changed again. This means that a PartialRow cannot be reused.<p>
  *
  * Each PartialRow is backed by an byte array where all the cells (except strings and binary data)
@@ -92,7 +92,7 @@ public class PartialRow {
         this.varLengthData = Arrays.asList(new ByteBuffer[this.schema.getColumnCount()]);
     }
 
-    public PartialRow(Schema schema, List<ByteBuffer> varLengthData, byte[] rowAlloc, BitSet columnsBitSet, BitSet nullsBitSet) {
+    private PartialRow(Schema schema, List<ByteBuffer> varLengthData, byte[] rowAlloc, BitSet columnsBitSet, BitSet nullsBitSet) {
         this.schema = schema;
         this.varLengthData = varLengthData;
         this.rowAlloc = rowAlloc;
@@ -767,8 +767,21 @@ public class PartialRow {
      */
     public String getString(int columnIndex) {
         checkColumn(schema.getColumnByIndex(columnIndex), ColumnType.STRING);
+        ByteBuffer byteBuffer = getVarLengthData(columnIndex);
+        if (byteBuffer.limit() <= 0) {
+            return "NULL";
+        }
         checkValue(columnIndex);
-        return new String(getVarLengthData(columnIndex).array(), StandardCharsets.UTF_8);
+        return copyReadByteBuffer(columnIndex, byteBuffer);
+    }
+
+    private String copyReadByteBuffer(int columnIndex, ByteBuffer byteBuffer) {
+        if (byteBuffer.hasArray()) {
+            return new String(getVarLengthData(columnIndex).array(), StandardCharsets.UTF_8);
+        }
+        byte[] bytes = new byte[byteBuffer.limit()];
+        byteBuffer.get(bytes);
+        return new String(bytes, StandardCharsets.UTF_8);
     }
 
     /**
@@ -794,7 +807,8 @@ public class PartialRow {
     public String getVarchar(int columnIndex) {
         checkColumn(schema.getColumnByIndex(columnIndex), ColumnType.VARCHAR);
         checkValue(columnIndex);
-        return new String(getVarLengthData(columnIndex).array(), StandardCharsets.UTF_8);
+        ByteBuffer byteBuffer = getVarLengthData(columnIndex);
+        return copyReadByteBuffer(columnIndex, byteBuffer);
     }
 
     /**
@@ -908,7 +922,9 @@ public class PartialRow {
     public byte[] getBinaryCopy(int columnIndex) {
         checkColumn(schema.getColumnByIndex(columnIndex), ColumnType.BINARY);
         checkValue(columnIndex);
-        byte[] data = getVarLengthData(columnIndex).array();
+        ByteBuffer byteBuffer = getVarLengthData(columnIndex);
+        byte[] data = new byte[byteBuffer.limit()];
+        byteBuffer.get(data);
         byte[] ret = new byte[data.length];
         System.arraycopy(data, 0, ret, 0, data.length);
         return ret;
@@ -1435,7 +1451,9 @@ public class PartialRow {
         Preconditions.checkState(columnsBitSet.get(idx), "Column %s is not set", col.getColumnName());
 
         if (nullsBitSet != null && nullsBitSet.get(idx)) {
+            sb.append('"');
             sb.append("NULL");
+            sb.append('"');
             return;
         }
 
@@ -1923,20 +1941,26 @@ public class PartialRow {
         this.frozen = true;
     }
 
-    public HetuPhotonProtos.PartialRowProto toProtobuf() {
+    public PartialRowProto toProtobuf() {
         List<ByteString> byteStrings = varLengthData.stream()
                 .map(data ->
                         {
                             if (data == null) {
                                 return ByteString.EMPTY;
                             } else {
-                                return ByteString.copyFrom(data.array());
+                                if (data.hasArray()) {
+                                    return ByteString.copyFrom(data.array());
+                                } else {
+                                    byte[] bytes = new byte[data.limit()];
+                                    data.get(bytes);
+                                    return ByteString.copyFrom(bytes);
+                                }
                             }
                         }
                 )
                 .collect(Collectors.toList());
 
-        HetuPhotonProtos.PartialRowProto partialRowProto = HetuPhotonProtos.PartialRowProto.newBuilder()
+        PartialRowProto partialRowProto = PartialRowProto.newBuilder()
                 .setSchema(schema.toProtobuf())
                 .setColumnsBitSet(ByteString.copyFrom(columnsBitSet.toByteArray()))
                 .setNullsBitSet(ByteString.copyFrom(nullsBitSet.toByteArray()))
@@ -1947,7 +1971,7 @@ public class PartialRow {
         return partialRowProto;
     }
 
-    public static PartialRow fromProtobuf(HetuPhotonProtos.PartialRowProto partialRowProto) {
+    public static PartialRow fromProtobuf(PartialRowProto partialRowProto) {
         List<ByteBuffer> byteBuffers = partialRowProto.getVarLengthDataList()
                 .stream()
                 .map(data -> data.asReadOnlyByteBuffer())

@@ -108,7 +108,7 @@ public class TestFilePerSegmentStrategy extends CommonSegmentManagerTestCases {
         new VolumeIOStats(), true);
     checkChunkFileCount(1);
     assertTrue(file.exists());
-    assertEquals(offset + chunkInfo.getLen(), getData().limit());
+    assertEquals(offset + chunkInfo.getLen(), getRealDataSerializedSize());
 
     // WHEN
     chunkManager.deleteChunk(container, blockID, oldDatanodeChunkInfo);

@@ -25,10 +25,6 @@ import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.scm.XceiverClientFactory;
 import org.apache.hadoop.hetu.client.io.HetuInputStream;
 import org.apache.hadoop.hetu.client.io.HetuOutputStream;
-import org.apache.hadoop.hetu.photon.encoder.InsertOperationEncoder;
-import org.apache.hadoop.hetu.photon.helpers.InsertOperation;
-import org.apache.hadoop.hetu.photon.helpers.Operation;
-import org.apache.hadoop.hetu.photon.helpers.OperationType;
 import org.apache.hadoop.hetu.photon.helpers.PartialRow;
 import org.apache.hadoop.hetu.photon.meta.RuleType;
 import org.apache.hadoop.hetu.photon.meta.common.ColumnKeyType;
@@ -38,7 +34,9 @@ import org.apache.hadoop.hetu.photon.meta.common.DataType;
 import org.apache.hadoop.hetu.photon.meta.table.DistributedKey;
 import org.apache.hadoop.hetu.photon.meta.table.PartitionKey;
 import org.apache.hadoop.hetu.photon.meta.table.Schema;
-import org.apache.hadoop.hetu.photon.proto.HetuPhotonProtos;
+import org.apache.hadoop.hetu.photon.operation.OperationType;
+import org.apache.hadoop.hetu.photon.operation.request.InsertOperationRequest;
+import org.apache.hadoop.hetu.photon.operation.request.OperationRequest;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.hetu.client.rpc.RpcClient;
 import org.apache.hadoop.hetu.photon.meta.common.ColumnKey;
@@ -62,7 +60,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.hadoop.hdds.client.ReplicationFactor.ONE;
 
 /**
@@ -224,8 +221,11 @@ public class TestHetuClient extends TestHetuUtil {
 
 //    String value = "sample value";
     PartialRow row = getPartialRowWithAllTypes();
-    Operation operation = new InsertOperation(row, row.toProtobuf().getSerializedSize());
-    byte[] data = new InsertOperationEncoder().toPersistedFormat(operation);
+    OperationRequest operationRequest = OperationRequest.newBuilder()
+            .setOperationType(OperationType.INSERT)
+            .setInsertOperationRequest(new InsertOperationRequest(row))
+            .build();
+    byte[] data = OperationRequest.toPersistedFormat(operationRequest);
 
     store.createDatabase(databaseName);
     OzoneDatabase database = store.getDatabase(databaseName);
@@ -258,12 +258,10 @@ public class TestHetuClient extends TestHetuUtil {
       Assert.assertEquals(data.length, is.read(fileContent));
       is.close();
 
-      Operation readOperation = new InsertOperationEncoder()
-              .fromPersistedFormat(fileContent);
-      Assert.assertEquals(operation.getOperationType(), readOperation.getOperationType());
-      Assert.assertEquals(operation.getRow().getSchema(), readOperation.getRow().getSchema());
-      Assert.assertEquals(operation.getRow().getByte("int8"),
-              readOperation.getRow().getByte("int8"));
+      // TODO: data by mock data node storage
+      OperationRequest orRes = OperationRequest.fromPersistedFormat(fileContent);
+      Assert.assertEquals(orRes.getInsertOperationRequest().getRow().getVarLengthData().size(), row.getVarLengthData().size());
+      Assert.assertEquals(orRes.getInsertOperationRequest().getRow().toString(), row.toString());
       Assert.assertFalse(tablet.getCreationTime().isBefore(testStartTime));
       Assert.assertFalse(tablet.getModificationTime().isBefore(testStartTime));
     }

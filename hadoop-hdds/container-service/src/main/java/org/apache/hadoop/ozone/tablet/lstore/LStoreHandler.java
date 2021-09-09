@@ -122,6 +122,7 @@ public class LStoreHandler extends Handler {
                        ContainerSet contSet, VolumeSet volSet, ContainerMetrics metrics,
                        Consumer<ContainerReplicaProto> icrSender) {
     super(config, datanodeId, contSet, volSet, metrics, icrSender);
+    // TODO: Default ContainerType is LStore
     containerType = ContainerType.LStoreContainer;
     blockManager = new BlockManagerImpl(config);
     chunkManager = ChunkManagerFactory.createChunkManager(config, blockManager);
@@ -615,8 +616,14 @@ public class LStoreHandler extends Handler {
         chunkInfo.setReadDataIntoSingleBuffer(true);
       }
 
-      data = chunkManager.readChunk(lStoreContainer, blockID, chunkInfo,
-          dispatcherContext);
+      if (request.getReadChunk().hasScanQueryOperation()) {
+        data = chunkManager.readChunk(lStoreContainer, blockID, chunkInfo,
+                request.getReadChunk().getScanQueryOperation().asReadOnlyByteBuffer(),
+                dispatcherContext);
+      } else {
+        data = chunkManager.readChunk(lStoreContainer, blockID, chunkInfo,
+                dispatcherContext);
+      }
       metrics.incContainerBytesStats(Type.ReadChunk, chunkInfo.getLen());
     } catch (StorageContainerException ex) {
       return ContainerUtils.logAndReturnError(LOG, ex, request);

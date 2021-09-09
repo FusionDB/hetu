@@ -100,6 +100,7 @@ enum Type {
   GetSmallFile = 16;
   CloseContainer = 17;
   GetCommittedBlockLength = 18;
+
 }
 
 
@@ -199,6 +200,7 @@ message ContainerCommandRequestProto {
 
   optional   string encodedToken = 23;
   optional   uint32 version = 24;
+
 }
 
 message ContainerCommandResponseProto {
@@ -371,25 +373,6 @@ message ChunkInfo {
   required uint64 len = 3;
   repeated KeyValue metadata = 4;
   required ChecksumData checksumData = 5;
-  repeated ColumnSchemaProto columns = 6;
-}
-
-message ColumnSchemaProto {
-  enum ColumnKeyProto {
-    PRIMARY_KEY = 1;
-    UNIQUE_KEY = 2;
-    AGGREGATE_KEY = 3;
-    NO_KEY = 4;
-  }
-  required string columnType = 1;
-  required string columnName = 2;
-  required string dataType = 3;
-  required int32 ordinalPosition = 4;
-  optional ColumnKeyProto columnKey = 5;
-  optional string columnDefault = 6;
-  optional string extra = 7 [default = "DEFAULT_GENERATED"];
-  optional string columnComment = 8;
-  optional bool isNullable = 9;
 }
 
 message ChunkInfoList {
@@ -410,7 +393,7 @@ enum ChecksumType {
     MD5 = 5;
 }
 
-message  WriteChunkRequestProto  {
+message WriteChunkRequestProto  {
   required DatanodeBlockID blockID = 1;
   required ChunkInfo chunkData = 2;
   optional bytes data = 3;
@@ -424,10 +407,11 @@ enum ReadChunkVersion {
   V1 = 1; // Response data is split into multiple buffers
 }
 
-message  ReadChunkRequestProto  {
+message ReadChunkRequestProto {
   required DatanodeBlockID blockID = 1;
   required ChunkInfo chunkData = 2;
   optional ReadChunkVersion readChunkVersion = 3;
+  optional bytes scanQueryOperation = 4;
 }
 
 message  ReadChunkResponseProto {
