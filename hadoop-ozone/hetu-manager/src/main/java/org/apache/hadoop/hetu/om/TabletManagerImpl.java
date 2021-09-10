@@ -424,6 +424,13 @@ public class TabletManagerImpl implements TabletManager {
     OmPartitionInfo partitionInfo;
     try {
       partitionInfo = getPartitionInfo(databaseName, tableName, partitionName);
+      // the tablet if exist return are this openTabletSession
+      OmTabletInfo dbTabletInfo = metadataManager.getTabletTable().get(dbTabletName);
+      if (metadataManager.getTabletTable().isExist(dbTabletName) &&
+              dbTabletInfo.getTabletLocationVersions().size() > 0) {
+        long currentVersion = dbTabletInfo.getLatestVersionLocations().getVersion();
+        return new OpenTabletSession(currentTime, dbTabletInfo, currentVersion);
+      }
       tabletInfo = prepareTabletInfo(args, dbTabletName, size, locations);
     } catch (OMException e) {
       throw e;
@@ -444,11 +451,11 @@ public class TabletManagerImpl implements TabletManager {
     openVersion = tabletInfo.getLatestVersionLocations().getVersion();
     LOG.debug("Tablet {} allocated in database {} table {} partition {}",
         tabletName, databaseName, tableName, partitionName);
-    allocateTabletInKey(tabletInfo, size, currentTime);
+    allocateBlockInKey(tabletInfo, size, currentTime);
     return new OpenTabletSession(currentTime, tabletInfo, openVersion);
   }
 
-  private void allocateTabletInKey(OmTabletInfo tabletInfo, long size, long sessionId)
+  private void allocateBlockInKey(OmTabletInfo tabletInfo, long size, long sessionId)
       throws IOException {
     String openTablet = metadataManager
         .getOpenTablet(tabletInfo.getDatabaseName(), tabletInfo.getTableName(),
@@ -458,7 +465,8 @@ public class TabletManagerImpl implements TabletManager {
     // the point, if client needs more blocks, client can always call
     // allocateBlock. But if requested size is not 0, OM will preallocate
     // some blocks and piggyback to client, to save RPC calls.
-    if (size > 0) {
+    // TODO: Only allocate once block in LStore or CStore
+    if (size > 0 && tabletInfo.getTabletLocationVersions().size() == 0) {
       List<OmTabletLocationInfo> locationInfos =
           allocateBlock(tabletInfo, new ExcludeList(), size);
       tabletInfo.appendNewBlocks(locationInfos, true);
