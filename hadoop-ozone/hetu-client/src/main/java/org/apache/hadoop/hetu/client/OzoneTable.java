@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hetu.client.protocol.ClientProtocol;
+import org.apache.hadoop.hetu.photon.helpers.PartialRow;
 import org.apache.hadoop.hetu.photon.meta.table.Schema;
 import org.apache.hadoop.hetu.photon.meta.common.StorageEngine;
 import org.apache.hadoop.ozone.om.helpers.WithMetadata;
@@ -345,6 +346,7 @@ public class OzoneTable extends WithMetadata {
    * @param partitionName Name of the Partition
    * @throws IOException
    */
+  @Deprecated
   public void createPartition(String partitionName)
           throws IOException {
     proxy.createPartition(databaseName, tableName, partitionName);
@@ -409,6 +411,13 @@ public class OzoneTable extends WithMetadata {
     proxy.deletePartition(databaseName, tableName, partitionName);
   }
 
+  public void insertTable(String tableName, PartialRow... rows) {
+
+  }
+
+  public void scanQueryTable(String tableName, String queryBuilder) {
+
+  }
 
   /**
    * An Iterator to iterate over {@link OzonePartition} list.

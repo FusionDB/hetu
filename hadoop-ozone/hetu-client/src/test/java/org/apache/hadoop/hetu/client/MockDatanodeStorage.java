@@ -21,24 +21,47 @@ import org.apache.commons.collections.map.HashedMap;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.BlockData;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ChunkInfo;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.DatanodeBlockID;
+import org.apache.hadoop.ozone.common.Checksum;
+import org.apache.hadoop.ozone.common.ChecksumData;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * State represents persisted data of one specific datanode.
  */
 public class MockDatanodeStorage {
+  static final Logger LOG = LoggerFactory.getLogger(MockDatanodeStorage.class);
 
   private final Map<DatanodeBlockID, BlockData> blocks = new HashedMap();
 
   private final Map<String, ChunkInfo> chunks = new HashMap<>();
 
-  private final Map<String, ByteString> data = new HashMap<>();
+  private final Map<String, List<ByteString>> data = new HashMap<>();
+  private int i = 0;
 
   public void putBlock(DatanodeBlockID blockID, BlockData blockData) {
-    blocks.put(blockID, blockData);
+    // append mode: update block length, Get the latest chunkInfo
+    List<ChunkInfo> chunkInfoList = blockData.getChunksList();
+    List<ChunkInfo> targetChunkInfoList = chunkInfoList.stream()
+            .map(chunkInfo ->  chunks.get(createKey(blockID, chunkInfo)))
+            .collect(Collectors.toList());
+
+    BlockData targetBlockData = BlockData.newBuilder()
+            .setBlockID(blockID)
+            .addAllMetadata(blockData.getMetadataList())
+            .addAllChunks(targetChunkInfoList)
+            .setFlags(blockData.getFlags())
+            .build();
+    blocks.put(blockID, targetBlockData);
+    i++;
+    LOG.info("Exec batch [{}] of putBlock", i);
   }
 
   public BlockData getBlock(DatanodeBlockID blockID) {
@@ -48,8 +71,28 @@ public class MockDatanodeStorage {
   public void writeChunk(
       DatanodeBlockID blockID,
       ChunkInfo chunkInfo, ByteString bytes) {
-    data.put(createKey(blockID, chunkInfo), bytes);
-    chunks.put(createKey(blockID, chunkInfo), chunkInfo);
+    List<ByteString> byteStringList = data.get(createKey(blockID, chunkInfo));
+    if (null == byteStringList) {
+      byteStringList = new ArrayList<>();
+      chunks.put(createKey(blockID, chunkInfo), chunkInfo);
+    } else {
+      // append mode: update chunk length
+      long newLength = chunkInfo.getLen();
+      ChunkInfo currentChunkInfo = chunks.get(createKey(blockID, chunkInfo));
+
+      ChunkInfo.Builder targetChunkInfo = ChunkInfo.newBuilder()
+              .setChunkName(currentChunkInfo.getChunkName())
+              .setLen(currentChunkInfo.getLen() + newLength)
+              .addAllMetadata(currentChunkInfo.getMetadataList())
+              .setOffset(currentChunkInfo.getOffset());
+
+      // TODO: recount check sum data
+      targetChunkInfo.setChecksumData(currentChunkInfo.getChecksumData());
+
+      chunks.put(createKey(blockID, chunkInfo), targetChunkInfo.build());
+    }
+    byteStringList.add(bytes);
+    data.put(createKey(blockID, chunkInfo), byteStringList);
   }
 
   public ChunkInfo readChunkInfo(
@@ -58,11 +101,10 @@ public class MockDatanodeStorage {
     return chunks.get(createKey(blockID, chunkInfo));
   }
 
-  public ByteString readChunkData(
+  public List<ByteString> readChunkData(
       DatanodeBlockID blockID,
       ChunkInfo chunkInfo) {
     return data.get(createKey(blockID, chunkInfo));
-
   }
 
   private String createKey(DatanodeBlockID blockId, ChunkInfo chunkInfo) {

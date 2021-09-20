@@ -3,7 +3,8 @@ package org.apache.hadoop.hetu.photon;
 import static org.junit.Assert.assertEquals;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.hadoop.hetu.photon.meta.RuleType;
+import org.apache.hadoop.hetu.photon.meta.DistributedKeyType;
+import org.apache.hadoop.hetu.photon.meta.PartitionKeyType;
 import org.apache.hadoop.hetu.photon.meta.common.ColumnType;
 import org.apache.hadoop.hetu.photon.meta.common.ColumnKey;
 import org.apache.hadoop.hetu.photon.meta.common.ColumnKeyType;
@@ -73,8 +74,8 @@ public class ClientTestUtil {
                         new ColumnSchema.Builder("date", ColumnType.DATE).build());
 
         ColumnKey columnKey = new ColumnKey(ColumnKeyType.PRIMARY_KEY, Arrays.asList("int8", "int16", "int32"));
-        DistributedKey distributedKey = new DistributedKey(RuleType.HASH, Arrays.asList("int8", "string"));
-        PartitionKey partitionKey = new PartitionKey(RuleType.LIST, Arrays.asList("date"));
+        DistributedKey distributedKey = new DistributedKey(DistributedKeyType.HASH, Arrays.asList("int8", "string"), 8);
+        PartitionKey partitionKey = new PartitionKey(PartitionKeyType.LIST, Arrays.asList("date"));
         return new Schema(columns, columnKey, distributedKey, partitionKey);
     }
 }

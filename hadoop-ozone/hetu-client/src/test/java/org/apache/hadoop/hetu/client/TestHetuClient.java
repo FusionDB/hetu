@@ -18,15 +18,17 @@
 
 package org.apache.hadoop.hetu.client;
 
-import org.apache.hadoop.hdds.client.ReplicationType;
+import org.apache.hadoop.hdds.client.RatisReplicationConfig;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.conf.InMemoryConfiguration;
 import org.apache.hadoop.hdds.protocol.StorageType;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.XceiverClientFactory;
 import org.apache.hadoop.hetu.client.io.HetuInputStream;
 import org.apache.hadoop.hetu.client.io.HetuOutputStream;
 import org.apache.hadoop.hetu.photon.helpers.PartialRow;
-import org.apache.hadoop.hetu.photon.meta.RuleType;
+import org.apache.hadoop.hetu.photon.meta.DistributedKeyType;
+import org.apache.hadoop.hetu.photon.meta.PartitionKeyType;
 import org.apache.hadoop.hetu.photon.meta.common.ColumnKeyType;
 import org.apache.hadoop.hetu.photon.meta.common.ColumnType;
 import org.apache.hadoop.hetu.photon.meta.common.ColumnTypeAttributes;
@@ -59,8 +61,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
-
-import static org.apache.hadoop.hdds.client.ReplicationFactor.ONE;
 
 /**
  * Real unit test for HetuClient.
@@ -156,63 +156,6 @@ public class TestHetuClient extends TestHetuUtil {
     Assert.assertFalse(database.getCreationTime().isBefore(testStartTime));
   }
 
-  private TableArgs builderTableArgs(String databaseName, String tableName) {
-    return TableArgs.newBuilder()
-            .setDatabaseName(databaseName)
-            .setTableName(tableName)
-            .setSchema(new Schema(getColumnSchemas(), getColumnKey(), getDistributedKey(), getPartitionKey()))
-            .setQuotaInBytes(OzoneConsts.HETU_QUOTA_RESET)
-            .setQuotaInBucket(OzoneConsts.HETU_BUCKET_QUOTA_RESET)
-            .setUsedBucket(0)
-            .setUsedBytes(0L)
-            .setBuckets(8)
-            .setStorageEngine(StorageEngine.LSTORE)
-            .addMetadata("key1", "value1")
-            .setStorageType(StorageType.DISK)
-            .build();
-  }
-
-  @NotNull
-  public static PartitionKey getPartitionKey() {
-    return new PartitionKey(RuleType.RANGE, Arrays.asList("ds"));
-  }
-
-  @NotNull
-  public static DistributedKey getDistributedKey() {
-    return new DistributedKey(RuleType.HASH, Arrays.asList("id"));
-  }
-
-  @NotNull
-  public static List<ColumnSchema> getColumnSchemas() {
-    ColumnSchema col1 = ColumnSchema.newBuilder()
-            .setName("city")
-            .setType(ColumnType.VARCHAR)
-            .setDesiredSize(1)
-            .setWireType(DataType.VARCHAR)
-            .setDefaultValue("")
-            .setTypeAttributes(ColumnTypeAttributes.newBuilder().length(110).build())
-            .setNullable(false)
-            .setComment("城市")
-            .build();
-
-    ColumnSchema col2 = ColumnSchema.newBuilder()
-            .setName("id")
-            .setType(ColumnType.INT64)
-            .setDesiredSize(1)
-            .setWireType(DataType.UINT64)
-            .setDefaultValue(-1)
-            .setNullable(true)
-            .setComment("ID")
-            .build();
-
-    return Arrays.asList(col1, col2);
-  }
-
-  @NotNull
-  public static ColumnKey getColumnKey() {
-    return new ColumnKey(ColumnKeyType.PRIMARY_KEY, Arrays.asList("id"));
-  }
-
   @Test
   public void testPutTabletRatisOneNode() throws IOException {
     String databaseName = UUID.randomUUID().toString();
@@ -246,8 +189,9 @@ public class TestHetuClient extends TestHetuUtil {
     for (int i = 0; i < 10; i++) {
       String tabletName = UUID.randomUUID().toString();
       HetuOutputStream out = partition.createTablet(tabletName,
-          data.length, ReplicationType.RATIS,
-          ONE, new HashMap<>());
+          data.length,
+          new RatisReplicationConfig(HddsProtos.ReplicationFactor.ONE),
+          new HashMap<>());
 //      out.write(value.getBytes(UTF_8));
       out.write(data);
       out.close();
@@ -265,5 +209,24 @@ public class TestHetuClient extends TestHetuUtil {
       Assert.assertFalse(tablet.getCreationTime().isBefore(testStartTime));
       Assert.assertFalse(tablet.getModificationTime().isBefore(testStartTime));
     }
+  }
+
+  @Test
+  public void testInsertAndScanOneNode() throws IOException, HetuClientException {
+    String databaseName = UUID.randomUUID().toString();
+    String tableName = UUID.randomUUID().toString();
+
+    store.createDatabase(databaseName);
+    OzoneDatabase database = store.getDatabase(databaseName);
+    TableArgs tableArgs = builderTableArgs(databaseName, tableName);
+    database.createTable(tableName, tableArgs);
+
+    for (int i = 0; i < 10; i++) {
+      PartialRow row = generateRowData();
+      database.insertTable(tableName, row);
+    }
+
+    List<PartialRow> partialRows = database.scanQueryTable(tableName, null);
+    Assert.assertTrue(partialRows.size() == 10);
   }
 }

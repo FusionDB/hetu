@@ -26,6 +26,7 @@ import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.fs.FileEncryptionInfo;
+import org.apache.hadoop.hdds.client.RatisReplicationConfig;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
@@ -291,6 +292,7 @@ public class RpcClient implements ClientProtocol {
     builder.setDatabaseName(partitionArgs.getDatabaseName());
     builder.setTableName(partitionArgs.getTableName());
     builder.setPartitionName(partitionArgs.getPartitionName());
+    // TODO: partition value is empty
     builder.setPartitionValue(partitionArgs.getPartitionValue());
     builder.setIsVersionEnabled(isVersionEnabled);
     builder.setStorageType(storageType);
@@ -348,7 +350,7 @@ public class RpcClient implements ClientProtocol {
                                        int maxListResult)
           throws IOException {
     List<OmPartitionInfo> partitions = ozoneManagerClient.listPartitions(
-            databaseName, tableName, partitionPrefix, prevPartition, maxListResult);
+            databaseName, tableName, prevPartition, partitionPrefix, maxListResult);
 
     return partitions.stream().map(partition -> new OzonePartition(
             conf,
@@ -1052,9 +1054,14 @@ public class RpcClient implements ClientProtocol {
   }
 
   @Override
-  public HetuOutputStream openTablet(String databaseName, String tableName, String partitionName, String tablet) {
-    // TODO open tablet write mode
-    return null;
+  public HetuOutputStream openTablet(String databaseName, String tableName,
+                                     String partitionName, String tabletName, long size,
+                                     ReplicationConfig replicationConfig)
+          throws IOException {
+    // create or open a tablet
+    return createTablet(databaseName, tableName,
+            partitionName, tabletName, size,
+            replicationConfig, false, false);
   }
 
   @Override

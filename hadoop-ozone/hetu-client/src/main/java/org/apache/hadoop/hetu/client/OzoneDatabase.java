@@ -20,19 +20,37 @@ package org.apache.hadoop.hetu.client;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.hash.HashCode;
+import com.google.common.hash.Hashing;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hdds.client.OzoneQuota;
+import org.apache.hadoop.hdds.client.RatisReplicationConfig;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
+import org.apache.hadoop.hetu.client.io.HetuInputStream;
+import org.apache.hadoop.hetu.client.io.HetuOutputStream;
 import org.apache.hadoop.hetu.client.protocol.ClientProtocol;
+import org.apache.hadoop.hetu.photon.helpers.PartialRow;
+import org.apache.hadoop.hetu.photon.meta.DistributedKeyType;
+import org.apache.hadoop.hetu.photon.meta.PartitionKeyType;
+import org.apache.hadoop.hetu.photon.meta.table.ColumnSchema;
+import org.apache.hadoop.hetu.photon.meta.table.Schema;
+import org.apache.hadoop.hetu.photon.proto.HetuPhotonProtos;
 import org.apache.hadoop.ozone.om.helpers.WithMetadata;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.ozone.OzoneConsts.QUOTA_RESET;
 
@@ -40,6 +58,7 @@ import static org.apache.hadoop.ozone.OzoneConsts.QUOTA_RESET;
  * A class that encapsulates OzoneDatabase.
  */
 public class OzoneDatabase extends WithMetadata {
+  static final Logger LOG = LoggerFactory.getLogger(OzoneDatabase.class);
 
   /**
    * The proxy used for connecting to the cluster and perform
@@ -318,7 +337,21 @@ public class OzoneDatabase extends WithMetadata {
    */
   public void createTable(String tableName, TableArgs tableArgs)
       throws IOException {
+    Schema schema = tableArgs.getSchema();
     proxy.createTable(databaseName, tableName, tableArgs);
+    if (tableArgs.getSchema().getPartitionKey().getPartitionKeyType().equals(PartitionKeyType.HASH)) {
+      // TODO: init hash partition
+      for (int i=0; i < schema.getPartitionKey().getPartitions(); i++) {
+        PartitionArgs partitionArgs = PartitionArgs.newBuilder()
+                .setDatabaseName(tableArgs.getDatabaseName())
+                .setTableName(tableArgs.getTableName())
+                .setPartitionName("part" + i)
+                .setPartitionValue("hash partition")
+                .build();
+        OzoneTable ozoneTable = this.getTable(tableName);
+        ozoneTable.createPartition(partitionArgs.getPartitionName(), partitionArgs);
+      }
+    }
   }
 
   /**
@@ -456,4 +489,233 @@ public class OzoneDatabase extends WithMetadata {
       }
     }
   }
+
+  private void insertPartition(String tableName, String partitionName, PartialRow... rows)
+          throws IOException, HetuClientException {
+    OzoneTable ozoneTable = getTable(tableName);
+    OzonePartition ozonePartition = ozoneTable.getPartition(partitionName);
+    Schema schema = ozoneTable.getSchema();
+    DistributedKeyType distributedKeyType = schema.getDistributedKey().getDistributedKeyType();
+    List<String> distributedKeyFields = schema.getDistributedKey().getFields();
+    List<ColumnSchema> distributedKeyCols = distributedKeyFields.stream()
+            .map(colName -> schema.getColumn(colName))
+            .collect(Collectors.toList());
+
+    int buckets = schema.getDistributedKey().getBuckets();
+    if (distributedKeyType.equals(DistributedKeyType.HASH)) {
+      Arrays.stream(rows).forEach(row -> {
+        // TODO: primary key or unique key
+        byte[] colKey = row.encodeColumnKey();
+        HashCode hashCode = Hashing.sha256().hashBytes(colKey);
+        int bucketNum = Hashing.consistentHash(hashCode, buckets);
+        String tabletName = "tablet_" + bucketNum;
+        HetuOutputStream hetuOutputStream = null;
+        byte[] data = row.toProtobuf().toByteArray();
+        try {
+          LOG.info("Insert into [{}.{}], row: {}", partitionName, tabletName, row);
+          hetuOutputStream = ozonePartition.openTablet(databaseName, tableName,
+                  partitionName, tabletName, data.length,
+                  new RatisReplicationConfig(HddsProtos.ReplicationFactor.ONE));
+          hetuOutputStream.write(data);
+        } catch (IOException e) {
+          e.printStackTrace();
+        } finally {
+          // TODO close output stream
+          try {
+              if (hetuOutputStream != null) {
+                hetuOutputStream.close();
+              }
+          } catch (IOException e) {
+            e.printStackTrace();
+          }
+        }
+      });
+    } else if (distributedKeyType.equals(DistributedKeyType.LIST)) {
+      throw new UnsupportedOperationException("Unsupported distributedKeyType = "
+              + distributedKeyType);
+    } else if (distributedKeyType.equals(DistributedKeyType.RANGE)) {
+      throw new UnsupportedOperationException("Unsupported distributedKeyType = "
+              + distributedKeyType);
+    } else {
+      throw new HetuClientException(
+              "BUG: DistributedKeyType not found, type = "
+                      + distributedKeyType);
+    }
+  }
+
+  public void insertTable(String tableName, PartialRow... rows)
+          throws IOException, HetuClientException {
+    OzoneTable ozoneTable = getTable(tableName);
+    Schema schema = ozoneTable.getSchema();
+    PartitionKeyType partitionKeyType = schema.getPartitionKey().getPartitionKeyType();
+    List<String> partitionKeyFields = schema.getPartitionKey().getFields();
+    List<ColumnSchema> partitionKeyCols = partitionKeyFields.stream()
+            .map(colName -> schema.getColumn(colName))
+            .collect(Collectors.toList());
+
+    if (partitionKeyType.equals(PartitionKeyType.HASH)) {
+      int partitions = schema.getPartitionKey().getPartitions();
+      Arrays.stream(rows).forEach(row -> {
+        if (partitionKeyCols.size() == 1) {
+          ColumnSchema columnSchema = partitionKeyCols.get(0);
+          HashCode hashCode = getPartitionFieldsValueByHashCode(row, columnSchema);
+          int partitionNum = Hashing.consistentHash(hashCode, partitions);
+          try {
+            String partitionName = "part" + partitionNum;
+            insertPartition(tableName, partitionName, row);
+          } catch (IOException e) {
+            e.printStackTrace();
+          } catch (HetuClientException e) {
+            e.printStackTrace();
+          }
+        } else {
+          throw new RuntimeException("Partition key type: " + partitionKeyType
+                  + " of fields size != 1 : " + partitionKeyFields);
+        }
+      });
+    } else if (partitionKeyType.equals(PartitionKeyType.LIST)) {
+      throw new UnsupportedOperationException("Unsupported partitionKeyType = "
+              + partitionKeyType);
+    } else if (partitionKeyType.equals(PartitionKeyType.RANGE)) {
+      throw new UnsupportedOperationException("Unsupported partitionKeyType = "
+              + partitionKeyType);
+    } else {
+      throw new HetuClientException(
+              "BUG: PartitionKeyType not found, type = "
+                      + partitionKeyType);
+    }
+  }
+
+  private HashCode getPartitionFieldsValueByHashCode(PartialRow row, ColumnSchema columnSchema) {
+    HashCode hashCode;
+    switch (columnSchema.getColumnType()) {
+      case BOOL:
+      case INT8:
+      case INT16:
+        hashCode = Hashing.sha256().hashInt(row.getShort(columnSchema.getColumnName()));
+        break;
+      case INT32:
+        hashCode = Hashing.sha256().hashInt(row.getInt(columnSchema.getColumnName()));
+        break;
+      case INT64:
+        hashCode = Hashing.sha256().hashLong(row.getInt(columnSchema.getColumnName()));
+        break;
+      case DOUBLE:
+      case FLOAT:
+      case STRING:
+        hashCode = Hashing.sha256().hashBytes(row.getString(columnSchema.getColumnName()).getBytes());
+        break;
+      case DATE:
+        hashCode = Hashing.sha256().hashLong(row.getDate(columnSchema.getColumnName()).getTime());
+        break;
+      case DECIMAL:
+      case BINARY:
+      case VARCHAR:
+        hashCode = Hashing.sha256().hashBytes(row.getVarchar(columnSchema.getColumnName()).getBytes());
+        break;
+      case UNIXTIME_MICROS:
+        hashCode = Hashing.sha256().hashLong(row.getTimestamp(columnSchema.getColumnName()).getTime());
+        break;
+      default:
+        throw new RuntimeException("Unsupported data type: " + columnSchema.getColumnType()
+                + " of column name: " + columnSchema.getColumnName());
+    }
+    return hashCode;
+  }
+
+  public List<PartialRow> scanQueryTable(String tableName, String queryBuilder)
+          throws IOException, HetuClientException {
+    OzoneTable ozoneTable = getTable(tableName);
+    Schema schema = ozoneTable.getSchema();
+    PartitionKeyType partitionKeyType = schema.getPartitionKey().getPartitionKeyType();
+    List<String> partitionKeyFields = schema.getPartitionKey().getFields();
+    List<ColumnSchema> partitionKeyCols = partitionKeyFields.stream()
+            .map(colName -> schema.getColumn(colName))
+            .collect(Collectors.toList());
+
+    if (partitionKeyType.equals(PartitionKeyType.HASH)) {
+      Iterator<OzonePartition> it = (Iterator<OzonePartition>) ozoneTable.listPartitions("part");
+      List<PartialRow> rows = new ArrayList<>();
+      while (it.hasNext()) {
+        OzonePartition ozonePartition = it.next();
+        List<PartialRow> scanInRows = scanQueryPartition(ozonePartition.getTableName(), ozonePartition.getPartitionName(), queryBuilder);
+        rows.addAll(scanInRows);
+      }
+      return rows;
+    } else if (partitionKeyType.equals(DistributedKeyType.LIST)) {
+      throw new UnsupportedOperationException("Unsupported partitionKeyType = "
+              + partitionKeyType);
+    } else if (partitionKeyType.equals(DistributedKeyType.RANGE)) {
+      throw new UnsupportedOperationException("Unsupported partitionKeyType = "
+              + partitionKeyType);
+    } else {
+      throw new HetuClientException(
+              "BUG: PartitionKeyType not found, type = "
+                      + partitionKeyType);
+    }
+  }
+
+  private List<PartialRow> scanQueryPartition(String tableName, String partitionName, String queryBuilder)
+          throws IOException, HetuClientException {
+    OzoneTable ozoneTable = getTable(tableName);
+    OzonePartition ozonePartition = ozoneTable.getPartition(partitionName);
+    Schema schema = ozoneTable.getSchema();
+    DistributedKeyType distributedKeyType = schema.getDistributedKey().getDistributedKeyType();
+    List<String> distributedKeyFields = schema.getDistributedKey().getFields();
+    List<ColumnSchema> distributedKeyCols = distributedKeyFields.stream()
+            .map(colName -> schema.getColumn(colName))
+            .collect(Collectors.toList());
+
+    if (distributedKeyType.equals(DistributedKeyType.HASH)) {
+      int buckets = schema.getDistributedKey().getBuckets();
+      List<PartialRow> rows = new ArrayList<>();
+      Iterator<OzoneTablet> it = (Iterator<OzoneTablet>) ozonePartition.listTablets("tablet_");
+      HetuInputStream hetuInputStream;
+      while (it.hasNext()) {
+        OzoneTablet ozoneTablet = it.next();
+        hetuInputStream = ozonePartition.readTablet(ozoneTablet.getTabletName());
+        byte[] content = IOUtils.toByteArray(hetuInputStream);
+        PartialRow partialRow = PartialRow.fromProtobuf(HetuPhotonProtos.PartialRowProto.parseFrom(content));
+        rows.add(partialRow);
+        LOG.info("Scan query [{}.{}], row: {}", partitionName, ozoneTablet.getTabletName(), partialRow);
+      }
+      return rows;
+    } else if (distributedKeyType.equals(DistributedKeyType.LIST)) {
+      throw new UnsupportedOperationException("Unsupported distributedKeyType = "
+              + distributedKeyType);
+    } else if (distributedKeyType.equals(DistributedKeyType.RANGE)) {
+      throw new UnsupportedOperationException("Unsupported distributedKeyType = "
+              + distributedKeyType);
+    } else {
+      throw new HetuClientException(
+              "BUG: DistributedKeyType not found, type = "
+                      + distributedKeyType);
+    }
+  }
+
+  public void addPartition(PartitionArgs partitionArgs) throws IOException, HetuClientException {
+    OzoneTable ozoneTable = getTable(partitionArgs.getTableName());
+    int buckets = ozoneTable.getBuckets();
+    Schema schema = ozoneTable.getSchema();
+    PartitionKeyType partitionKeyType = schema.getPartitionKey().getPartitionKeyType();
+    List<String> fields = schema.getPartitionKey().getFields();
+
+    OzonePartition ozonePartition = ozoneTable.getPartition(partitionArgs.getPartitionName());
+    if (partitionKeyType.equals(PartitionKeyType.HASH)) {
+      throw new HetuClientException(
+              "BUG: Add partition, not support partitionKeyType = "
+                      + partitionKeyType);
+    } else if (partitionKeyType.equals(DistributedKeyType.LIST)) {
+      throw new UnsupportedOperationException("Unsupported partitionKeyType = "
+              + partitionKeyType);
+    } else if (partitionKeyType.equals(DistributedKeyType.RANGE)) {
+      throw new UnsupportedOperationException("Unsupported partitionKeyType = "
+              + partitionKeyType);
+    } else {
+      throw new HetuClientException(
+              "BUG: PartitionKeyType not found, type = "
+                      + partitionKeyType);
+    }
+  }
+
 }

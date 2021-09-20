@@ -498,8 +498,9 @@ public class ChunkInputStream extends InputStream
                   chunkInfo.getOffset();
               int bytesPerChecksum = checksumData.getBytesPerChecksum();
               int startIndex = (int) (relativeOffset / bytesPerChecksum);
-              Checksum.verifyChecksum(byteStrings, checksumData, startIndex,
-                  isV0);
+              // TODO: skip verify checksum in debug
+//              Checksum.verifyChecksum(byteStrings, checksumData, startIndex,
+//                  isV0);
             }
           };
 

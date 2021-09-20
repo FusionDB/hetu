@@ -22,6 +22,7 @@ public class KeyEncoder {
     public static byte[] encodePrimaryKey(final PartialRow row) {
         ByteVec buf = ByteVec.create();
         final Schema schema = row.getSchema();
+        // TODO: primary key or uniqueKey is first one column
         for (int columnIdx = 0; columnIdx < schema.getPrimaryKeyColumnCount(); columnIdx++) {
             final boolean isLast = columnIdx + 1 == schema.getPrimaryKeyColumnCount();
             encodeColumn(row, columnIdx, isLast, buf);

@@ -1,7 +1,7 @@
 package org.apache.hadoop.hetu.photon.meta.table;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.hetu.photon.meta.RuleType;
+import org.apache.hadoop.hetu.photon.meta.PartitionKeyType;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SchemaProto;
 
 import java.util.List;
@@ -11,35 +11,59 @@ import java.util.Objects;
  * Created by xiliu on 2021/8/13
  */
 public class PartitionKey {
-    private RuleType partitionKeyRuleType;
+    private PartitionKeyType partitionKeyType;
     private List<String> fields;
+    private int partitions;
 
-    public PartitionKey(RuleType partitionKeyRuleType,
+    public PartitionKey(PartitionKeyType partitionKeyType,
                         List<String> fields) {
-       Preconditions.checkNotNull(partitionKeyRuleType);
-       Preconditions.checkArgument(fields.size() > 0);
-       this.partitionKeyRuleType = partitionKeyRuleType;
-       this.fields = fields;
+        Preconditions.checkNotNull(partitionKeyType);
+        Preconditions.checkArgument(fields.size() > 0);
+        this.partitionKeyType = partitionKeyType;
+        this.fields = fields;
+    }
+
+    public PartitionKey(PartitionKeyType partitionKeyType,
+                        List<String> fields,
+                        int partitions) {
+        Preconditions.checkNotNull(partitionKeyType);
+        Preconditions.checkArgument(fields.size() > 0);
+        if (partitionKeyType.equals(PartitionKeyType.HASH)) {
+            Preconditions.checkArgument(partitions > 0);
+        }
+        this.partitionKeyType = partitionKeyType;
+        this.fields = fields;
+        this.partitions = partitions;
     }
 
     public SchemaProto.PartitionKeyProto toProtobuf() {
         SchemaProto.PartitionKeyProto builder = SchemaProto.PartitionKeyProto.newBuilder()
-        .setPartitionKeyType(partitionKeyRuleType.toProto())
-        .addAllFields(fields).build();
+                .setPartitionKeyType(partitionKeyType.toProto())
+                .addAllFields(fields)
+                .setPartitions(partitions).build();
         return builder;
     }
 
-    public RuleType getDistributedKeyType() {
-        return partitionKeyRuleType;
+    public PartitionKeyType getPartitionKeyType() {
+        return partitionKeyType;
     }
 
     public List<String> getFields() {
         return fields;
     }
 
+    public int getPartitions() {
+        return partitions;
+    }
+
     public static PartitionKey fromProtobuf(SchemaProto.PartitionKeyProto partitionKeyProto) {
-        return new PartitionKey(RuleType.valueOf(partitionKeyProto.getPartitionKeyType()),
-                partitionKeyProto.getFieldsList());
+        if (partitionKeyProto.hasPartitions()) {
+            return new PartitionKey(PartitionKeyType.valueOf(partitionKeyProto.getPartitionKeyType()),
+                    partitionKeyProto.getFieldsList(), partitionKeyProto.getPartitions());
+        } else {
+            return new PartitionKey(PartitionKeyType.valueOf(partitionKeyProto.getPartitionKeyType()),
+                    partitionKeyProto.getFieldsList());
+        }
     }
 
     @Override
@@ -47,20 +71,22 @@ public class PartitionKey {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         PartitionKey that = (PartitionKey) o;
-        return partitionKeyRuleType == that.partitionKeyRuleType &&
+        return partitions == that.partitions &&
+                partitionKeyType == that.partitionKeyType &&
                 fields.equals(that.fields);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(partitionKeyRuleType, fields);
+        return Objects.hash(partitionKeyType, fields, partitions);
     }
 
     @Override
     public String toString() {
         return "PartitionKey{" +
-                "partitionKeyType=" + partitionKeyRuleType +
+                "partitionKeyType=" + partitionKeyType +
                 ", fields=" + fields +
+                ", partitions=" + partitions +
                 '}';
     }
 }

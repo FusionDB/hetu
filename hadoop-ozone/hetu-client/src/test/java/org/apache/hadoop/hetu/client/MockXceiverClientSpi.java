@@ -19,6 +19,7 @@
 package org.apache.hadoop.hetu.client;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.DataBuffers;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ChunkInfo;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandResponseProto;
@@ -37,7 +38,9 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.scm.XceiverClientReply;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -100,11 +103,18 @@ public class MockXceiverClientSpi extends XceiverClientSpi {
   }
 
   private ReadChunkResponseProto readChunk(ReadChunkRequestProto readChunk) {
+    List<ByteString> byteStringList = datanodeStorage
+            .readChunkData(readChunk.getBlockID(), readChunk.getChunkData());
+    ChunkInfo chunkInfo = datanodeStorage
+            .readChunkInfo(readChunk.getBlockID(), readChunk.getChunkData());
+
     return ReadChunkResponseProto.newBuilder()
-        .setChunkData(datanodeStorage
-            .readChunkInfo(readChunk.getBlockID(), readChunk.getChunkData()))
-        .setData(datanodeStorage
-            .readChunkData(readChunk.getBlockID(), readChunk.getChunkData()))
+        .setChunkData(chunkInfo)
+        .setDataBuffers(
+                DataBuffers
+                  .newBuilder()
+                  .addAllBuffers(byteStringList)
+                  .build())
         .setBlockID(readChunk.getBlockID())
         .build();
   }

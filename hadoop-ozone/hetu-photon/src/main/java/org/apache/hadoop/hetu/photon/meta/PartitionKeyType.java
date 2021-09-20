@@ -6,7 +6,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 /**
  * Created by xiliu on 2021/8/10
  */
-public enum RuleType {
+public enum PartitionKeyType {
     HASH,
     RANGE,
     LIST;
@@ -25,7 +25,7 @@ public enum RuleType {
         }
     }
 
-    public static RuleType valueOf(TypeProto type) {
+    public static PartitionKeyType valueOf(TypeProto type) {
         switch (type) {
             case HASH:
                 return HASH;

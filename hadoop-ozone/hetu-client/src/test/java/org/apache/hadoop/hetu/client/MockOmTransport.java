@@ -18,7 +18,13 @@
 package org.apache.hadoop.hetu.client;
 
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ozone.om.helpers.OmTabletLocationInfo;
 import org.apache.hadoop.ozone.om.protocolPB.OmTransport;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ListPartitionsRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ListPartitionsResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ListTabletsRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ListTabletsResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.TableInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.PartitionInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.TabletInfo;
@@ -51,17 +57,26 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Status;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DatabaseInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetDatabaseResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetDatabaseRequest;
+import org.apache.hadoop.tools.TableListing;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * OM transport for testing with in-memory state.
  */
 public class MockOmTransport implements OmTransport {
+  static final Logger LOG = LoggerFactory.getLogger(MockOmTransport.class);
 
   private final MockTabletAllocator tabletAllocator;
   //databaseName -> databaseInfo
@@ -119,6 +134,10 @@ public class MockOmTransport implements OmTransport {
       return response(payload,
           r -> r.setCreatePartitionResponse(
               createPartition(payload.getCreatePartitionRequest())));
+    case ListPartitions:
+      return response(payload,
+          r -> r.setListPartitionsResponse(
+              listPartitions(payload.getListPartitionsRequest())));
     case CreateTablet:
       return response(payload,
           r -> r.setCreateTabletResponse(
@@ -131,6 +150,10 @@ public class MockOmTransport implements OmTransport {
       return response(payload,
           r -> r.setLookupTabletResponse(
               lookupTablet(payload.getLookupTabletRequest())));
+    case ListTablets:
+      return response(payload,
+         r -> r.setListTabletsResponse(
+             listTablets(payload.getListTabletsRequest())));
     case ServiceList:
       return response(payload,
           r -> r.setServiceListResponse(
@@ -160,45 +183,193 @@ public class MockOmTransport implements OmTransport {
         .build();
   }
 
-  private CommitTabletResponse commitTablet(CommitTabletRequest commitTabletRequest) {
+  private synchronized CommitTabletResponse commitTablet(CommitTabletRequest commitTabletRequest) {
     final TabletArgs tabletArgs = commitTabletRequest.getTabletArgs();
-    final TabletInfo remove =
-        openTablets.get(tabletArgs.getDatabaseName()).get(tabletArgs.getTableName())
-            .get(tabletArgs.getPartitionName())
-            .remove(tabletArgs.getTabletName());
-    tablets.get(tabletArgs.getDatabaseName()).get(tabletArgs.getTableName())
-        .get(tabletArgs.getPartitionName())
-        .put(tabletArgs.getTabletName(), remove);
+
+    Set<String> tabletNameList = tablets.get(tabletArgs.getDatabaseName())
+            .get(tabletArgs.getTableName())
+            .get(tabletArgs.getPartitionName()).keySet();
+
+    if (!tabletNameList.contains(tabletArgs.getTabletName())) {
+      final TabletInfo remove =
+              openTablets.get(tabletArgs.getDatabaseName())
+                      .get(tabletArgs.getTableName())
+                      .get(tabletArgs.getPartitionName())
+                      .remove(tabletArgs.getTabletName());
+      tablets.get(tabletArgs.getDatabaseName())
+              .get(tabletArgs.getTableName())
+              .get(tabletArgs.getPartitionName())
+              .put(tabletArgs.getTabletName(), remove);
+    } else {
+      // update tablet length
+      TabletInfo tabletInfo = tablets.get(tabletArgs.getDatabaseName())
+              .get(tabletArgs.getTableName())
+              .get(tabletArgs.getPartitionName())
+              .get(tabletArgs.getTabletName());
+      updateTabletDataSize(tabletArgs, tabletInfo);
+    }
     return CommitTabletResponse.newBuilder()
-        .build();
+            .build();
   }
 
-  private CreateTabletResponse createTablet(CreateTabletRequest createTabletRequest) {
+  private void updateTabletDataSize(TabletArgs tabletArgs, TabletInfo tabletInfo) {
+    long currentLength = tabletInfo.getDataSize();
+    long newLength = tabletArgs.getDataSize();
+    List<TabletLocationList> tabletLocationLists = tabletInfo.getTabletLocationListList();
+
+    List<OzoneManagerProtocolProtos.TabletLocation> targetTabletLocationLists = new ArrayList<>();
+    tabletLocationLists.stream().forEach(tabletLocationList -> {
+      tabletLocationList.getTabletLocationList().stream().forEach(tabletLocation -> {
+        OzoneManagerProtocolProtos.TabletLocation tl = OzoneManagerProtocolProtos.TabletLocation.newBuilder()
+                .setBlockID(tabletLocation.getBlockID())
+                .setLength(tabletLocation.getLength() + newLength)
+                .setOffset(tabletLocation.getOffset())
+                .setCreateVersion(tabletLocation.getCreateVersion())
+//                    .setToken(tabletLocation.getToken())
+                .setPipeline(tabletLocation.getPipeline())
+                .setPartNumber(tabletLocation.getPartNumber())
+                .build();
+        targetTabletLocationLists.add(tl);
+      });
+    });
+
+    List<TabletLocationList> newTabletLocationLists = Collections.singletonList(TabletLocationList.newBuilder()
+            .addAllTabletLocation(targetTabletLocationLists)
+            .build());
+
+    TabletInfo targetTabletInfo = TabletInfo
+            .newBuilder()
+            .setDatabaseName(tabletInfo.getDatabaseName())
+            .setTableName(tabletInfo.getTableName())
+            .setPartitionName(tabletInfo.getPartitionName())
+            .setTabletName(tabletInfo.getTabletName())
+            .setDataSize(currentLength + newLength)
+            .setType(tabletInfo.getType())
+            .setFactor(tabletInfo.getFactor())
+            .addAllTabletLocationList(newTabletLocationLists)
+            .setLatestVersion(tabletInfo.getLatestVersion())
+            .setCreationTime(tabletInfo.getCreationTime())
+            .setModificationTime(tabletInfo.getModificationTime())
+            .addAllMetadata(tabletInfo.getMetadataList())
+            .setObjectID(tabletInfo.getObjectID())
+            .setUpdateID(tabletInfo.getUpdateID())
+            .build();
+
+    tablets.get(tabletArgs.getDatabaseName())
+            .get(tabletArgs.getTableName())
+            .get(tabletArgs.getPartitionName())
+            .put(tabletArgs.getTabletName(), targetTabletInfo);
+  }
+
+  private ListTabletsResponse listTablets(ListTabletsRequest listTabletsRequest) {
+    final String tabletPrefix = listTabletsRequest.getPrefix();
+    final String prevTablet = listTabletsRequest.getStartTablet();
+    // Simulate start, end and offset to read data
+    if (prevTablet.length() > 0) {
+      return ListTabletsResponse.newBuilder().build();
+    }
+    Map<String, TabletInfo> tabletInfoMap = tablets.get(listTabletsRequest.getDatabaseName())
+            .get(listTabletsRequest.getTableName())
+            .get(listTabletsRequest.getPartitionName());
+    List<TabletInfo> tabletInfoList = tabletInfoMap.keySet()
+            .parallelStream()
+            .filter(tabletName -> tabletName.startsWith(tabletPrefix))
+            .map(tabletName -> tabletInfoMap.get(tabletName))
+            .collect(Collectors.toList());
+    return ListTabletsResponse.newBuilder()
+            .addAllTabletInfo(tabletInfoList)
+            .build();
+  }
+
+  private synchronized CreateTabletResponse createTablet(CreateTabletRequest createTabletRequest) {
     final TabletArgs tabletArgs = createTabletRequest.getTabletArgs();
     final long now = System.currentTimeMillis();
-    final TabletInfo tabletInfo = TabletInfo.newBuilder()
-        .setDatabaseName(tabletArgs.getDatabaseName())
-        .setTableName(tabletArgs.getTableName())
-        .setPartitionName(tabletArgs.getPartitionName())
-        .setTabletName(tabletArgs.getTabletName())
-        .setCreationTime(now)
-        .setModificationTime(now)
-        .setType(tabletArgs.getType())
-        .setFactor(tabletArgs.getFactor())
-        .setDataSize(tabletArgs.getDataSize())
-        .setLatestVersion(0L)
-        .addTabletLocationList(TabletLocationList.newBuilder()
-            .addAllTabletLocation(
-                tabletAllocator.allocateTablet(createTabletRequest.getTabletArgs()))
-            .build())
-        .build();
-    openTablets.get(tabletInfo.getDatabaseName()).get(tabletInfo.getTableName())
-        .get(tabletInfo.getPartitionName())
-        .put(tabletInfo.getTabletName(), tabletInfo);
-    return CreateTabletResponse.newBuilder()
-        .setOpenVersion(0L)
-        .setTabletInfo(tabletInfo)
-        .build();
+
+    Set<String> tabletNameList = tablets.get(tabletArgs.getDatabaseName())
+            .get(tabletArgs.getTableName())
+            .get(tabletArgs.getPartitionName()).keySet();
+
+    if (tabletNameList.contains(tabletArgs.getTabletName())) {
+      LOG.info("OpenTablet is allocate and open mode: {}", tabletArgs.getTabletName());
+      TabletInfo mTabletInfo = tablets.get(tabletArgs.getDatabaseName())
+              .get(tabletArgs.getTableName())
+              .get(tabletArgs.getPartitionName())
+              .get(tabletArgs.getTabletName());
+
+      // TODO: update mTabletInfo data size
+      long newLength = tabletArgs.getDataSize();
+      List<TabletLocationList> tabletLocationLists = mTabletInfo.getTabletLocationListList();
+
+      List<OzoneManagerProtocolProtos.TabletLocation> targetTabletLocationLists = new ArrayList<>();
+      tabletLocationLists.stream().forEach(tabletLocationList -> {
+        tabletLocationList.getTabletLocationList().stream().forEach(tabletLocation -> {
+          OzoneManagerProtocolProtos.TabletLocation tl = OzoneManagerProtocolProtos.TabletLocation.newBuilder()
+                  .setBlockID(tabletLocation.getBlockID())
+                  .setLength(tabletLocation.getLength() + newLength)
+                  .setOffset(tabletLocation.getOffset())
+                  .setCreateVersion(tabletLocation.getCreateVersion())
+//                    .setToken(tabletLocation.getToken())
+                  .setPipeline(tabletLocation.getPipeline())
+                  .setPartNumber(tabletLocation.getPartNumber())
+                  .build();
+          targetTabletLocationLists.add(tl);
+        });
+      });
+
+      List<TabletLocationList> newTabletLocationLists = Collections.singletonList(TabletLocationList.newBuilder()
+              .addAllTabletLocation(targetTabletLocationLists)
+              .build());
+
+      TabletInfo targetTabletInfo = TabletInfo
+              .newBuilder()
+              .setDatabaseName(mTabletInfo.getDatabaseName())
+              .setTableName(mTabletInfo.getTableName())
+              .setPartitionName(mTabletInfo.getPartitionName())
+              .setTabletName(mTabletInfo.getTabletName())
+              .setDataSize(mTabletInfo.getDataSize() + newLength)
+              .setType(mTabletInfo.getType())
+              .setFactor(mTabletInfo.getFactor())
+              .addAllTabletLocationList(newTabletLocationLists)
+              .setLatestVersion(mTabletInfo.getLatestVersion())
+              .setCreationTime(mTabletInfo.getCreationTime())
+              .setModificationTime(mTabletInfo.getModificationTime())
+              .addAllMetadata(mTabletInfo.getMetadataList())
+              .setObjectID(mTabletInfo.getObjectID())
+              .setUpdateID(mTabletInfo.getUpdateID())
+              .build();
+
+      return CreateTabletResponse.newBuilder()
+              .setOpenVersion(0L)
+              .setTabletInfo(targetTabletInfo)
+              .build();
+    } else {
+      final TabletInfo tabletInfo = TabletInfo.newBuilder()
+              .setDatabaseName(tabletArgs.getDatabaseName())
+              .setTableName(tabletArgs.getTableName())
+              .setPartitionName(tabletArgs.getPartitionName())
+              .setTabletName(tabletArgs.getTabletName())
+              .setCreationTime(now)
+              .setModificationTime(now)
+              .setType(tabletArgs.getType())
+              .setFactor(tabletArgs.getFactor())
+              .setDataSize(tabletArgs.getDataSize())
+              .setLatestVersion(0L)
+              .addTabletLocationList(TabletLocationList.newBuilder()
+                      .addAllTabletLocation(
+                              tabletAllocator.allocateTablet(createTabletRequest.getTabletArgs()))
+                      .build())
+              .build();
+
+      LOG.info("OpenTablet is allocate and create mode: {}", tabletArgs.getTabletName());
+      openTablets.get(tabletInfo.getDatabaseName())
+              .get(tabletInfo.getTableName())
+              .get(tabletInfo.getPartitionName())
+              .put(tabletInfo.getTabletName(), tabletInfo);
+      return CreateTabletResponse.newBuilder()
+              .setOpenVersion(0L)
+              .setTabletInfo(tabletInfo)
+              .build();
+    }
   }
 
   private InfoTableResponse infoTable(InfoTableRequest infoTableRequest) {
@@ -298,6 +469,27 @@ public class MockOmTransport implements OmTransport {
     return InfoPartitionResponse.newBuilder()
             .setPartitionInfo(partitions.get(infoPartitionRequest.getDatabaseName())
                     .get(infoPartitionRequest.getTableName()).get(infoPartitionRequest.getPartitionName()))
+            .build();
+  }
+
+  private ListPartitionsResponse listPartitions(ListPartitionsRequest listPartitionsRequest) {
+    final String prefix = listPartitionsRequest.getPrefix();
+    final String prev = listPartitionsRequest.getStartKey();
+
+    // Simulate start, end and offset to read data
+    if (prev.length() > 0) {
+      return ListPartitionsResponse.newBuilder().build();
+    }
+    Map<String, PartitionInfo> partitionInfoMap = partitions.get(listPartitionsRequest.getDatabaseName())
+            .get(listPartitionsRequest.getTableName());
+    List<PartitionInfo> partitionInfoList = partitionInfoMap.keySet()
+            .parallelStream()
+            .filter(partitionName -> partitionName.startsWith(prefix))
+            .map(partitionName -> partitionInfoMap.get(partitionName))
+            .collect(Collectors.toList());
+
+    return ListPartitionsResponse.newBuilder()
+            .addAllPartitionInfo(partitionInfoList)
             .build();
   }
 

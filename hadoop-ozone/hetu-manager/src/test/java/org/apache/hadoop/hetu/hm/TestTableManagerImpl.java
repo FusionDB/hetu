@@ -21,21 +21,11 @@ import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.server.ServerUtils;
-import org.apache.hadoop.hetu.photon.meta.RuleType;
-import org.apache.hadoop.hetu.photon.meta.common.ColumnKeyType;
-import org.apache.hadoop.hetu.photon.meta.common.ColumnType;
-import org.apache.hadoop.hetu.photon.meta.common.ColumnTypeAttributes;
-import org.apache.hadoop.hetu.photon.meta.common.DataType;
-import org.apache.hadoop.hetu.photon.meta.table.DistributedKey;
-import org.apache.hadoop.hetu.photon.meta.table.PartitionKey;
-import org.apache.hadoop.hetu.photon.meta.table.Schema;
 import org.apache.hadoop.hetu.om.OmMetadataManagerImpl;
 import org.apache.hadoop.hetu.om.TableManager;
 import org.apache.hadoop.hetu.om.TableManagerImpl;
 import org.apache.hadoop.hetu.om.request.TestOMRequestUtils;
 import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
-import org.apache.hadoop.hetu.photon.meta.common.ColumnKey;
-import org.apache.hadoop.hetu.photon.meta.table.ColumnSchema;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
@@ -43,7 +33,6 @@ import org.apache.hadoop.ozone.om.helpers.OmPartitionInfo;
 import org.apache.hadoop.ozone.om.helpers.OmTableArgs;
 import org.apache.hadoop.ozone.om.helpers.OmTableInfo;
 import org.apache.hadoop.util.Time;
-import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -56,8 +45,6 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * Tests TableManagerImpl, mocks OMMetadataManager for testing.

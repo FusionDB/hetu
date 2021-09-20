@@ -252,7 +252,7 @@ public class TabletInputStream extends InputStream
       if (blockStreams.size() == 0 ||
           (blockStreams.size() - 1 <= blockIndex &&
               blockStreams.get(blockIndex)
-                  .getRemaining() == 0)) {
+                  .getRemaining() <= 0)) { // TODO: getRemaining < 0 error, IndexOutOfBoundsException
         return totalReadLen == 0 ? EOF : totalReadLen;
       }
 

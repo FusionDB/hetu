@@ -640,5 +640,7 @@ public interface ClientProtocol {
    */
   OzoneManagerProtocol getOzoneManagerClient();
 
-  HetuOutputStream openTablet(String databaseName, String tableName, String partitionName, String tablet);
+  HetuOutputStream openTablet(String databaseName, String tableName,
+                              String partitionName, String tabletName, long size,
+                              ReplicationConfig replicationConfig) throws IOException;
 }

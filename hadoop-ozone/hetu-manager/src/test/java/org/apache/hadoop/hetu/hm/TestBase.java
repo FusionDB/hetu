@@ -1,6 +1,6 @@
 package org.apache.hadoop.hetu.hm;
 
-import org.apache.hadoop.hetu.photon.meta.RuleType;
+import org.apache.hadoop.hetu.photon.meta.PartitionKeyType;
 import org.apache.hadoop.hetu.photon.meta.common.ColumnKey;
 import org.apache.hadoop.hetu.photon.meta.common.ColumnKeyType;
 import org.apache.hadoop.hetu.photon.meta.common.ColumnType;
@@ -21,12 +21,12 @@ import java.util.List;
 public class TestBase {
     @NotNull
     public static PartitionKey getPartitionKey() {
-        return new PartitionKey(RuleType.RANGE, Arrays.asList("ds"));
+        return new PartitionKey(PartitionKeyType.RANGE, Arrays.asList("ds"));
     }
 
     @NotNull
     public static DistributedKey getDistributedKey() {
-        return new DistributedKey(RuleType.HASH, Arrays.asList("id"));
+        return new DistributedKey(PartitionKeyType.HASH, Arrays.asList("id"));
     }
 
     @NotNull

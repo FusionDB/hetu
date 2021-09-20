@@ -528,11 +528,13 @@ message SchemaProto {
   message PartitionKeyProto {
     required TypeProto partitionKeyType = 1;
     repeated string fields = 2;
+    optional int32 partitions = 3;
   }
 
   message DistributedKeyProto {
     required TypeProto distributedKeyType = 1 [default = HASH];
     repeated string fields = 2;
+    optional int32 buckets = 3 [default = 8];
   }
 
   enum ColumnKeyTypeProto {
