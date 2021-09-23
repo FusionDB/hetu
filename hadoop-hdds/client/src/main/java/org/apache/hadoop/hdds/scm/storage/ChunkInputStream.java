@@ -49,6 +49,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -498,9 +499,8 @@ public class ChunkInputStream extends InputStream
                   chunkInfo.getOffset();
               int bytesPerChecksum = checksumData.getBytesPerChecksum();
               int startIndex = (int) (relativeOffset / bytesPerChecksum);
-              // TODO: skip verify checksum in debug
-//              Checksum.verifyChecksum(byteStrings, checksumData, startIndex,
-//                  isV0);
+              Checksum.verifyChecksum(byteStrings, checksumData, startIndex,
+                  isV0);
             }
           };
 
