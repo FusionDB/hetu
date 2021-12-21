@@ -20,7 +20,6 @@
 package org.apache.hadoop.hetu.om.response;
 
 import org.apache.hadoop.hdds.protocol.StorageType;
-import org.apache.hadoop.hetu.photon.meta.common.StorageEngine;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmPartitionInfo;
 import org.apache.hadoop.ozone.om.helpers.OmTableInfo;

@@ -250,7 +250,7 @@ message ContainerDataProto {
   optional int64 size = 7;
   optional int64 blockCount = 8;
   optional State state = 9 [default = OPEN];
-  optional ContainerType containerType = 10 [default = KeyValueContainer];
+  optional ContainerType containerType = 10 [default = LStoreContainer];
 }
 
 message Container2BCSIDMapProto {
@@ -268,7 +268,7 @@ enum ContainerType {
 // Container Messages.
 message  CreateContainerRequestProto {
   repeated KeyValue metadata = 2;
-  optional ContainerType containerType = 3 [default = KeyValueContainer];
+  optional ContainerType containerType = 3 [default = LStoreContainer];
 }
 
 message  CreateContainerResponseProto {
@@ -373,6 +373,7 @@ message ChunkInfo {
   required uint64 len = 3;
   repeated KeyValue metadata = 4;
   required ChecksumData checksumData = 5;
+  optional uint32 rows = 6;
 }
 
 message ChunkInfoList {
@@ -394,12 +395,23 @@ enum ChecksumType {
 }
 
 message WriteChunkRequestProto  {
+  enum WriteTypeProto {
+    INSERT = 1;
+    UPDATE = 2;
+    UPSERT = 3;
+    DELETE = 4;
+  }
+
   required DatanodeBlockID blockID = 1;
   required ChunkInfo chunkData = 2;
   optional bytes data = 3;
+  // LStore or CStore
+  optional WriteTypeProto writeType = 4;
+  optional bytes writeData = 5;
 }
 
 message  WriteChunkResponseProto {
+  optional bytes expressResponse = 1;
 }
 
 enum ReadChunkVersion {
@@ -408,16 +420,22 @@ enum ReadChunkVersion {
 }
 
 message ReadChunkRequestProto {
+  enum ReadTypeProto {
+    QUERY = 0;
+    SCAN = 1;
+  }
+
   required DatanodeBlockID blockID = 1;
   required ChunkInfo chunkData = 2;
   optional ReadChunkVersion readChunkVersion = 3;
-  optional bytes scanQueryOperation = 4;
+  optional ReadTypeProto readType = 4;
+  optional bytes readExpress = 5;
 }
 
 message  ReadChunkResponseProto {
   required DatanodeBlockID blockID = 1;
   required ChunkInfo chunkData = 2;
-  // Chunk data should be returned in one of the two for
+  // Chunk data should be returned in one of the three for
   oneof responseData {
     bytes data = 3; // Chunk data is returned as single buffer for V0
     DataBuffers dataBuffers = 4; // Chunk data is returned as a list of buffers

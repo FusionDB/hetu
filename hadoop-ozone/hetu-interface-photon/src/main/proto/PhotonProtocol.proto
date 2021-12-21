@@ -1,0 +1,139 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+option java_package = "org.apache.hadoop.hetu.photon.proto";
+option java_outer_classname = "HetuPhotonProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+package hadoop.hetu;
+
+import "PhotonSchemaProtocol.proto";
+
+/**
+ * RowResult represents one row from a scanner, in row-wise layout.
+ */
+message PartialRowProto {
+  required SchemaProto schema = 1;
+
+  // Variable length data. If string, will be UTF-8 encoded. Elements of this list _must_ have a
+  // mark that we can reset() to. Readers of these fields (encoders, etc) must call reset() before
+  // attempting to read these values.
+  repeated bytes varLengthData = 2;
+  required bytes rowAlloc = 3;
+  required bytes columnsBitSet = 4;
+  optional bytes nullsBitSet = 5;
+}
+
+message BlockBloomFilterPB {
+  // Log2 of the space required for the BlockBloomFilter.
+  optional int32 log_space_bytes = 1;
+  // The bloom filter bitmap.
+  optional bytes bloom_data = 2;
+  // Whether the BlockBloomFilter is empty and hence always returns false for lookups.
+  optional bool always_false = 3;
+  // Hash algorithm to generate 32-bit unsigned integer hash values before inserting
+  // in the BlockBloomFilter.
+  optional HashAlgorithm hash_algorithm = 4 [default = FAST_HASH];
+  // Seed used to hash the input values in the hash algorithm.
+  optional uint32 hash_seed = 5 [default = 0];
+}
+
+// Implemented hash algorithms.
+enum HashAlgorithm {
+  UNKNOWN_HASH = 1;
+  MURMUR_HASH_2 = 2;
+  CITY_HASH = 3;
+  FAST_HASH = 4;
+}
+
+// A predicate that can be applied on a hetu column.
+message ColumnPredicatePB {
+  // The predicate column name.
+  required string column = 1;
+
+  enum Sort {
+    ASC = 1;
+    DESC = 2;
+  }
+
+  message Limit {
+    required int32 rowNum = 1;
+    required int32 offset = 2;
+  }
+
+  message Range {
+
+    // Bounds should be encoded as follows:
+    // - STRING/BINARY values: simply the exact string value for the bound.
+    // - other type: the canonical x86 in-memory representation -- eg for
+    //   uint32s, a little-endian value.
+    //
+    // Note that this predicate type should not be used for NULL data --
+    // NULL is defined to neither be greater than or less than other values
+    // for the comparison operator.
+
+    // The inclusive lower bound.
+    optional bytes lower = 1;
+
+    // The exclusive upper bound.
+    optional bytes upper = 2;
+  }
+
+  message Equality {
+    // The inclusive lower bound. See comment in Range for notes on the
+    // encoding.
+    optional bytes value = 1;
+  }
+
+  message InList {
+    // A list of values for the field. See comment in Range for notes on
+    // the encoding.
+    repeated bytes values = 1;
+  }
+
+  message IsNotNull {}
+
+  message IsNull {}
+
+  message InBloomFilter {
+    // A list of bloom filters for the field.
+    repeated BlockBloomFilterPB bloom_filters = 1;
+
+    // lower and upper are optional for InBloomFilter.
+    // When using both InBloomFilter and Range predicate for the same column the
+    // merged result can be InBloomFilter within specified range.
+    //
+    // The inclusive lower bound.
+    optional bytes lower = 2;
+
+    // The exclusive upper bound.
+    optional bytes upper = 3;
+  }
+
+  oneof predicate {
+    Range range = 2;
+    Equality equality = 3;
+    IsNotNull is_not_null = 4;
+    InList in_list = 5;
+    IsNull is_null = 6;
+    InBloomFilter in_bloom_filter = 7;
+    Sort sort = 8;
+    Limit limit = 9;
+  }
+}

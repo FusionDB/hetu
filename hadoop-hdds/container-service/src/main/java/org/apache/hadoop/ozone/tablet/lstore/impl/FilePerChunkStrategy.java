@@ -24,6 +24,8 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.hetu.photon.ReadType;
+import org.apache.hadoop.hetu.photon.WriteType;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.common.ChecksumData;
 import org.apache.hadoop.ozone.common.ChunkBuffer;
@@ -302,10 +304,19 @@ public class FilePerChunkStrategy implements ChunkManager {
   }
 
   @Override
-  public ChunkBuffer readChunk(Container container, BlockID blockID, ChunkInfo info,
-                               ByteBuffer scanQueryOperation, DispatcherContext dispatcherContext)
+  public void writeChunk(Container container, BlockID blockID,
+                         ChunkInfo info, WriteType writeType,
+                         ChunkBuffer data, DispatcherContext dispatcherContext)
           throws StorageContainerException {
-   throw new UnsupportedOperationException();
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ChunkBuffer readChunk(Container container, BlockID blockID,
+                               ChunkInfo info, ReadType readType,
+                               ByteBuffer readExpress, DispatcherContext dispatcherContext)
+          throws StorageContainerException {
+    throw new UnsupportedOperationException();
   }
 
   /**

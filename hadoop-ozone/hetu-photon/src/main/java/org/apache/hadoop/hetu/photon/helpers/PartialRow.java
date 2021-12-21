@@ -20,7 +20,7 @@ package org.apache.hadoop.hetu.photon.helpers;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
-import org.apache.hadoop.hetu.photon.meta.table.ColumnSchema;
+import org.apache.hadoop.hetu.photon.meta.schema.ColumnSchema;
 import org.apache.hadoop.hetu.photon.meta.common.ColumnType;
 import org.apache.hadoop.hetu.photon.meta.common.ColumnTypeAttributes;
 import org.apache.hadoop.hetu.photon.encoder.KeyEncoder;
@@ -32,6 +32,9 @@ import org.apache.hadoop.hetu.photon.proto.HetuPhotonProtos.PartialRowProto;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -45,12 +48,12 @@ import java.util.ListIterator;
 import java.util.Objects;
 import java.util.stream.Collectors;;
 
-import org.apache.hadoop.hetu.photon.meta.table.Schema;
+import org.apache.hadoop.hetu.photon.meta.schema.Schema;
 
 /**
  * Class used to represent parts of a row along with its schema.<p>
  *
- * Values can be replaced as often as needed, but once the enclosing {@link OperationRequest} is applied
+ * Values can be replaced as often as needed, but once the enclosing {@link PartialRowProto} is applied
  * then they cannot be changed again. This means that a PartialRow cannot be reused.<p>
  *
  * Each PartialRow is backed by an byte array where all the cells (except strings and binary data)
@@ -1982,6 +1985,47 @@ public class PartialRow {
                 partialRowProto.getRowAlloc().toByteArray(),
                 BitSet.valueOf(partialRowProto.getColumnsBitSet().toByteArray()),
                 BitSet.valueOf(partialRowProto.getNullsBitSet().toByteArray()));
+    }
+
+    /**
+     * Serializes a list of {@code HetuPredicate} into a byte array.
+     * @return the serialized hetu rows
+     * @throws IOException
+     */
+    @InterfaceAudience.LimitedPrivate("hetu-fusiondb")
+    public static byte[] serialize(List<PartialRow> predicates) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        for (PartialRow row : predicates) {
+            PartialRowProto message = row.toProtobuf();
+            message.writeDelimitedTo(baos);
+        }
+        return baos.toByteArray();
+    }
+
+    /**
+     * Serializes a list of {@code HetuPredicate} into a byte array.
+     * @return the serialized kudu predicates
+     * @throws IOException
+     */
+    @InterfaceAudience.LimitedPrivate("hetu-fusiondb")
+    public static List<PartialRow> deserialize(byte[] bytes) throws IOException {
+        ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+        List<PartialRow> rows = new ArrayList<>();
+        while (bais.available() > 0) {
+            PartialRowProto message = PartialRowProto.parseDelimitedFrom(bais);
+            rows.add(PartialRow.fromProtobuf(message));
+        }
+        return rows;
+    }
+
+    public static PartialRow fromPersistedFormat(byte[] rawData) throws IOException {
+        return PartialRow.fromProtobuf(PartialRowProto.parseFrom(rawData));
+    }
+
+    public byte[] toPersistedFormat(PartialRow partialRow) throws IOException {
+        Preconditions
+                .checkNotNull(partialRow, "Null partialRow can't be converted to byte array.");
+        return partialRow.toProtobuf().toByteArray();
     }
 
     @Override

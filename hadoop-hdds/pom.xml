@@ -45,6 +45,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <module>docs</module>
     <module>config</module>
     <module>test-utils</module>
+    <module>container-client</module>
   </modules>
 
   <repositories>
@@ -63,6 +64,11 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependencies>
       <dependency>
         <groupId>org.apache.ozone</groupId>
+        <artifactId>container-client</artifactId>
+        <version>${hdds.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.ozone</groupId>
         <artifactId>hetu-photon</artifactId>
         <version>${hdds.version}</version>
       </dependency>
@@ -73,6 +79,12 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
         <version>${hdds.version}</version>
         <type>test-jar</type>
         <scope>test</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.ozone</groupId>
+        <artifactId>hetu-interface-photon</artifactId>
+        <version>${hdds.version}</version>
       </dependency>
 
       <dependency>

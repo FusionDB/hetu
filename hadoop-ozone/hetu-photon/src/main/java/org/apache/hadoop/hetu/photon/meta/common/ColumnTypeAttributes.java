@@ -1,9 +1,10 @@
 package org.apache.hadoop.hetu.photon.meta.common;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.hetu.photon.meta.table.ColumnSchema;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-        .ColumnSchemaProto.ColumnTypeAttributesProto;
+import org.apache.hadoop.hetu.photon.proto
+        .PhotonSchemaProtocolProtos
+        .ColumnSchemaProto
+        .ColumnTypeAttributesProto;
 
 import java.util.Objects;
 

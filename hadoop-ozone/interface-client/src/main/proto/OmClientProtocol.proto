@@ -37,6 +37,7 @@ This is similar to Namenode for Ozone.
 
 import "hdds.proto";
 import "Security.proto";
+import "PhotonSchemaProtocol.proto";
 
 enum Type {
   CreateVolume = 11;
@@ -518,42 +519,7 @@ message DatabaseInfo {
   optional uint64 updateID = 12;
 }
 
-message SchemaProto {
-  enum TypeProto {
-    HASH = 1;
-    RANGE = 2;
-    LIST = 3;
-  }
 
-  message PartitionKeyProto {
-    required TypeProto partitionKeyType = 1;
-    repeated string fields = 2;
-    optional int32 partitions = 3;
-  }
-
-  message DistributedKeyProto {
-    required TypeProto distributedKeyType = 1 [default = HASH];
-    repeated string fields = 2;
-    optional int32 buckets = 3 [default = 8];
-  }
-
-  enum ColumnKeyTypeProto {
-    PRIMARY_KEY = 1;
-    UNIQUE_KEY = 2;
-    AGGREGATE_KEY = 3;
-    NO_KEY = 4;
-  }
-
-  message ColumnKeyProto {
-    required ColumnKeyTypeProto columnKeyType = 1;
-    repeated string fields = 2;
-  }
-
-  repeated ColumnSchemaProto columns = 1;
-  required PartitionKeyProto partitionKey = 2;
-  required DistributedKeyProto distributedKey = 3;
-  required ColumnKeyProto columnKey = 4;
-}
 
 message TableInfo {
   enum StorageEngineProto {
@@ -563,7 +529,7 @@ message TableInfo {
 
   required string databaseName = 1;
   required string tableName = 2;
-  required SchemaProto schema = 3;
+  required hadoop.hetu.SchemaProto schema = 3;
   required StorageEngineProto storageEngine = 4 [default = LSTORE];
   required bool isVersionEnabled = 5 [default = false];
   required StorageTypeProto storageType = 6 [default = DISK];
@@ -595,25 +561,6 @@ message PartitionInfo {
   required uint64 sizeInBytes = 12;
   optional uint64 objectID = 13;
   optional uint64 updateID = 14;
-}
-
-message ColumnSchemaProto {
-  message ColumnTypeAttributesProto {
-    required int32  precision = 1;
-    required int32 scale = 2;
-    required int32 length = 3;
-  }
-
-  required string columnName = 1;
-  required string columnType = 2;
-  optional int32 desiredSize = 4;
-  optional string defaultValue = 5;
-  optional string extra = 7;
-  optional string columnComment = 8;
-  optional bool   isNullable = 9;
-  optional string wireType = 10;
-  optional int32 typeSize = 11;
-  optional ColumnTypeAttributesProto columnTypeAttributes = 12;
 }
 
 message TabletInfo {
@@ -914,7 +861,7 @@ message BucketArgs {
 message TableArgs {
   required string databaseName = 1;
   required string tableName = 2;
-  required SchemaProto schema = 3;
+  required hadoop.hetu.SchemaProto schema = 3;
   required bool isVersionEnabled = 4 [default = false];
   required StorageTypeProto storageType = 5 [default = DISK];
   required int32 numReplicas = 6;

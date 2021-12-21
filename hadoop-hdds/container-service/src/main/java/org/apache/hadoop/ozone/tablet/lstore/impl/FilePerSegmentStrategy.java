@@ -27,6 +27,8 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.hetu.photon.ReadType;
+import org.apache.hadoop.hetu.photon.WriteType;
 import org.apache.hadoop.ozone.common.ChecksumData;
 import org.apache.hadoop.ozone.common.ChunkBuffer;
 import org.apache.hadoop.ozone.common.utils.BufferUtils;
@@ -92,7 +94,14 @@ public class FilePerSegmentStrategy implements ChunkManager {
 
   @Override
   public void writeChunk(Container container, BlockID blockID, ChunkInfo info,
-      ChunkBuffer data, DispatcherContext dispatcherContext)
+    ChunkBuffer data, DispatcherContext dispatcherContext)
+    throws StorageContainerException {
+    throw new UnsupportedOperationException("Unsupported write chunk (LStore)");
+  }
+
+  @Override
+  public void writeChunk(Container container, BlockID blockID, ChunkInfo info,
+      WriteType writeType, ChunkBuffer data, DispatcherContext dispatcherContext)
           throws StorageContainerException {
 
     checkLayoutVersion(container);
@@ -130,7 +139,7 @@ public class FilePerSegmentStrategy implements ChunkManager {
     VolumeIOStats volumeIOStats = volume.getVolumeIOStats();
 
     // TODO: LStore write
-    LStoreUtils.writeData(chunkFile.toPath(), data, offset, len,
+    LStoreUtils.writeData(chunkFile.toPath(), writeType, data, len,
         volumeIOStats, doSyncWrite);
 
     containerData.updateWriteStats(len, overwrite);
@@ -138,64 +147,17 @@ public class FilePerSegmentStrategy implements ChunkManager {
 
   @Override
   public ChunkBuffer readChunk(Container container, BlockID blockID,
-      ChunkInfo info, DispatcherContext dispatcherContext)
-      throws StorageContainerException {
-
-    checkLayoutVersion(container);
-
-    if (info.getLen() <= 0) {
-      LOG.debug("Skip reading empty chunk {}", info);
-      return ChunkBuffer.wrap(ByteBuffer.wrap(new byte[0]));
-    }
-
-    LStoreContainerData containerData = (LStoreContainerData) container
-        .getContainerData();
-
-    HddsVolume volume = containerData.getVolume();
-    VolumeIOStats volumeIOStats = volume.getVolumeIOStats();
-
-    File chunkFile = getChunkFile(container, blockID, info);
-
-    long len = info.getLen();
-    long offset = info.getOffset();
-
-    long bufferCapacity = 0;
-    if (info.isReadDataIntoSingleBuffer()) {
-      // Older client - read all chunk data into one single buffer.
-      bufferCapacity = len;
-    } else {
-      // Set buffer capacity to checksum boundary size so that each buffer
-      // corresponds to one checksum. If checksum is NONE, then set buffer
-      // capacity to default (OZONE_CHUNK_READ_BUFFER_DEFAULT_SIZE_KEY = 64KB).
-      ChecksumData checksumData = info.getChecksumData();
-
-      if (checksumData != null) {
-        if (checksumData.getChecksumType() ==
-            ContainerProtos.ChecksumType.NONE) {
-          bufferCapacity = defaultReadBufferCapacity;
-        } else {
-          bufferCapacity = checksumData.getBytesPerChecksum();
-        }
-      }
-    }
-    // If the buffer capacity is 0, set all the data into one ByteBuffer
-    if (bufferCapacity == 0) {
-      bufferCapacity = len;
-    }
-
-    ByteBuffer[] dataBuffers = BufferUtils.assignByteBuffers(len,
-        bufferCapacity);
-
-    LStoreUtils.readData(chunkFile.toPath(), dataBuffers, offset, len, volumeIOStats);
-
-    return ChunkBuffer.wrap(Lists.newArrayList(dataBuffers));
+    ChunkInfo info, DispatcherContext dispatcherContext)
+    throws StorageContainerException {
+    throw new UnsupportedOperationException("Unsupported read chunk (LStore)");
   }
 
   @Override
   public ChunkBuffer readChunk(Container container, BlockID blockID,
-                               ChunkInfo info, ByteBuffer scanQueryOperation,
+                               ChunkInfo info, ReadType readType,
+                               ByteBuffer readExpress,
                                DispatcherContext dispatcherContext)
-          throws StorageContainerException {
+    throws StorageContainerException {
 
     checkLayoutVersion(container);
 
@@ -239,10 +201,8 @@ public class FilePerSegmentStrategy implements ChunkManager {
       bufferCapacity = len;
     }
 
-    ByteBuffer[] dataBuffers = BufferUtils.assignByteBuffers(len,
-            bufferCapacity);
-
-    LStoreUtils.readData(chunkFile.toPath(), dataBuffers, scanQueryOperation, offset, len, volumeIOStats);
+    ByteBuffer[] dataBuffers =  LStoreUtils.readData(chunkFile.toPath(), readType,
+            readExpress, volumeIOStats);
 
     return ChunkBuffer.wrap(Lists.newArrayList(dataBuffers));
   }

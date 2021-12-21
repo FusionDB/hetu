@@ -22,9 +22,6 @@ import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hetu.photon.ClientTestUtil;
 import org.apache.hadoop.hetu.photon.helpers.PartialRow;
-import org.apache.hadoop.hetu.photon.operation.OperationType;
-import org.apache.hadoop.hetu.photon.operation.request.InsertOperationRequest;
-import org.apache.hadoop.hetu.photon.operation.request.OperationRequest;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.impl.ChunkLayOutVersion;
 import org.apache.hadoop.ozone.container.common.transport.server.ratis.DispatcherContext;
@@ -68,7 +65,6 @@ public abstract class AbstractTestSegmentManager {
   private ChunkInfo chunkInfo;
   private ByteBuffer data;
   private PartialRow partialRow;
-  private byte[] header;
   private BlockManager blockManager;
 
   @Rule
@@ -108,13 +104,7 @@ public abstract class AbstractTestSegmentManager {
         UUID.randomUUID().toString());
 
     partialRow = ClientTestUtil.getPartialRowWithAllTypes();
-    OperationRequest operation = OperationRequest.newBuilder()
-            .setOperationType(OperationType.INSERT)
-            .setInsertOperationRequest(new InsertOperationRequest(partialRow))
-            .build();
-    header = operation.toProto().toByteArray();
-    data = ByteBuffer.allocate(header.length)
-        .put(header);
+    data = ByteBuffer.wrap(partialRow.toProtobuf().toByteArray());
     rewindBufferToDataStart();
 
     // Creating BlockData

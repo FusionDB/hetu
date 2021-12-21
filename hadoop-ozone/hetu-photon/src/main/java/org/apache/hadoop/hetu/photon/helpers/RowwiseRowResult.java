@@ -24,8 +24,8 @@ import java.util.BitSet;
 
 import org.apache.hadoop.hetu.photon.meta.common.ColumnType;
 import org.apache.hadoop.hetu.photon.meta.common.ColumnTypeAttributes;
-import org.apache.hadoop.hetu.photon.meta.table.ColumnSchema;
-import org.apache.hadoop.hetu.photon.meta.table.Schema;
+import org.apache.hadoop.hetu.photon.meta.schema.ColumnSchema;
+import org.apache.hadoop.hetu.photon.meta.schema.Schema;
 import org.apache.hadoop.hetu.photon.meta.util.TimestampUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -54,7 +54,7 @@ class RowwiseRowResult extends RowResult {
      * @param indirectData The full indirect data that contains the strings
      * @param rowIndex The index of the row in the rowData that this RowResult represents
      */
-    RowwiseRowResult(Schema schema, Slice rowData, Slice indirectData, int rowIndex) {
+    public RowwiseRowResult(Schema schema, Slice rowData, Slice indirectData, int rowIndex) {
         super(schema, rowIndex);
         this.rowData = rowData;
         this.indirectData = indirectData;

@@ -1,8 +1,8 @@
 package org.apache.hadoop.hetu.photon.encoder;
 
 import org.apache.hadoop.hetu.photon.meta.common.ColumnType;
-import org.apache.hadoop.hetu.photon.meta.table.ColumnSchema;
-import org.apache.hadoop.hetu.photon.meta.table.Schema;
+import org.apache.hadoop.hetu.photon.meta.schema.ColumnSchema;
+import org.apache.hadoop.hetu.photon.meta.schema.Schema;
 import org.apache.hadoop.hetu.photon.meta.util.ByteVec;
 import org.apache.hadoop.hetu.photon.helpers.Bytes;
 import org.apache.hadoop.hetu.photon.helpers.PartialRow;

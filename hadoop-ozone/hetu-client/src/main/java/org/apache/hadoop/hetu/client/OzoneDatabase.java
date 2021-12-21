@@ -34,8 +34,8 @@ import org.apache.hadoop.hetu.client.protocol.ClientProtocol;
 import org.apache.hadoop.hetu.photon.helpers.PartialRow;
 import org.apache.hadoop.hetu.photon.meta.DistributedKeyType;
 import org.apache.hadoop.hetu.photon.meta.PartitionKeyType;
-import org.apache.hadoop.hetu.photon.meta.table.ColumnSchema;
-import org.apache.hadoop.hetu.photon.meta.table.Schema;
+import org.apache.hadoop.hetu.photon.meta.schema.ColumnSchema;
+import org.apache.hadoop.hetu.photon.meta.schema.Schema;
 import org.apache.hadoop.hetu.photon.proto.HetuPhotonProtos;
 import org.apache.hadoop.ozone.om.helpers.WithMetadata;
 import org.slf4j.Logger;
@@ -675,9 +675,12 @@ public class OzoneDatabase extends WithMetadata {
         OzoneTablet ozoneTablet = it.next();
         hetuInputStream = ozonePartition.readTablet(ozoneTablet.getTabletName());
         byte[] content = IOUtils.toByteArray(hetuInputStream);
-        PartialRow partialRow = PartialRow.fromProtobuf(HetuPhotonProtos.PartialRowProto.parseFrom(content));
-        rows.add(partialRow);
-        LOG.info("Scan query [{}.{}], row: {}", partitionName, ozoneTablet.getTabletName(), partialRow);
+        LOG.info("Scan query [{}.{}], length: {}", partitionName,
+                ozoneTablet.getTabletName(), content.length);
+        List<PartialRow> tabletRows = PartialRow.deserialize(content);
+        rows.addAll(tabletRows);
+        LOG.info("Scan query [{}.{}], tablet rows: {}", partitionName,
+                ozoneTablet.getTabletName(), tabletRows.size());
       }
       return rows;
     } else if (distributedKeyType.equals(DistributedKeyType.LIST)) {

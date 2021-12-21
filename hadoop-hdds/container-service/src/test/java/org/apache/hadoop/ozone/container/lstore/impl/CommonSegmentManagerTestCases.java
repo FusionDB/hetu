@@ -21,6 +21,8 @@ package org.apache.hadoop.ozone.container.lstore.impl;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.hetu.photon.ReadType;
+import org.apache.hadoop.hetu.photon.WriteType;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.transport.server.ratis.DispatcherContext;
@@ -53,6 +55,7 @@ public abstract class CommonSegmentManagerTestCases
           0, randomLength);
 
       chunkManager.writeChunk(getLStoreContainer(), blockID, chunkInfo,
+          WriteType.INSERT,
           getData(),
           getDispatcherContext());
 
@@ -74,8 +77,8 @@ public abstract class CommonSegmentManagerTestCases
     checkWriteIOStats(0, 0);
 
     chunkManager.writeChunk(getLStoreContainer(), getBlockID(),
-        getChunkInfo(), getData(),
-        getDispatcherContext());
+        getChunkInfo(), WriteType.INSERT,
+        getData(), getDispatcherContext());
 
     // THEN
     checkChunkFileCount(1);
@@ -93,8 +96,8 @@ public abstract class CommonSegmentManagerTestCases
     ChunkInfo chunkInfo = getChunkInfo();
 
     chunkManager.writeChunk(container, blockID,
-        chunkInfo, getData(),
-        dispatcherContext);
+        chunkInfo, WriteType.INSERT,
+        getData(), dispatcherContext);
 
     checkWriteIOStats(chunkInfo.getLen(), 1);
     checkReadIOStats(0, 0);
@@ -103,7 +106,7 @@ public abstract class CommonSegmentManagerTestCases
     getBlockManager().putBlock(container, blockData);
 
     ByteBuffer expectedData = chunkManager
-        .readChunk(container, blockID, chunkInfo, dispatcherContext)
+        .readChunk(container, blockID, chunkInfo, ReadType.QUERY, null, dispatcherContext)
         .toByteString().asReadOnlyByteBuffer();
 
     // THEN
@@ -117,7 +120,7 @@ public abstract class CommonSegmentManagerTestCases
     // GIVEN
     ChunkManager chunkManager = createTestSubject();
     chunkManager.writeChunk(getLStoreContainer(), getBlockID(),
-        getChunkInfo(), getData(),
+        getChunkInfo(), WriteType.INSERT, getData(),
         getDispatcherContext());
     checkChunkFileCount(1);
 
@@ -134,7 +137,7 @@ public abstract class CommonSegmentManagerTestCases
     ChunkManager chunkManager = createTestSubject();
     try {
       chunkManager.writeChunk(getLStoreContainer(), getBlockID(),
-          getChunkInfo(), getData(),
+          getChunkInfo(), WriteType.INSERT, getData(),
           getDispatcherContext());
       long randomLength = 1000L;
       ChunkInfo chunkInfo = new ChunkInfo(String.format("%d.data.%d",
@@ -159,7 +162,7 @@ public abstract class CommonSegmentManagerTestCases
 
       // WHEN
       chunkManager.readChunk(getLStoreContainer(),
-          getBlockID(), getChunkInfo(), getDispatcherContext());
+          getBlockID(), getChunkInfo(), ReadType.QUERY, null, getDispatcherContext());
 
       // THEN
       fail("testReadChunkFileNotExists failed");
@@ -185,7 +188,7 @@ public abstract class CommonSegmentManagerTestCases
     for (int i = 0; i< count; i++) {
       ChunkInfo info = new ChunkInfo(String.format("%d.data.%d", localID, i),
           i * len, len);
-      chunkManager.writeChunk(container, blockID, info, data, context);
+      chunkManager.writeChunk(container, blockID, info, WriteType.INSERT, data, context);
       rewindBufferToDataStart();
       blockData.addChunk(info.getProtoBufMessage());
     }
@@ -199,7 +202,7 @@ public abstract class CommonSegmentManagerTestCases
     for (int i = 0; i < count; i++) {
       ChunkInfo info = new ChunkInfo(String.format("%d.data.%d", localID, i),
           i * len, len);
-      chunkManager.readChunk(container, blockID, info, context);
+      chunkManager.readChunk(container, blockID, info, ReadType.QUERY,null, context);
     }
 
     // THEN

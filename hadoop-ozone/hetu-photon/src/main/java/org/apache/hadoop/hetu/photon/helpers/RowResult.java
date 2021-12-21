@@ -18,8 +18,8 @@
 package org.apache.hadoop.hetu.photon.helpers;
 
 import org.apache.hadoop.hetu.photon.meta.common.ColumnType;
-import org.apache.hadoop.hetu.photon.meta.table.ColumnSchema;
-import org.apache.hadoop.hetu.photon.meta.table.Schema;
+import org.apache.hadoop.hetu.photon.meta.schema.ColumnSchema;
+import org.apache.hadoop.hetu.photon.meta.schema.Schema;
 import org.apache.hadoop.hetu.photon.meta.util.DateUtil;
 import org.apache.hadoop.hetu.photon.meta.util.TimestampUtil;
 import org.apache.yetus.audience.InterfaceAudience;

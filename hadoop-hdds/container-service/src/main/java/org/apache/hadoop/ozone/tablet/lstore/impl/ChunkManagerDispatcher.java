@@ -23,6 +23,8 @@ import com.google.protobuf.ByteString;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.hetu.photon.ReadType;
+import org.apache.hadoop.hetu.photon.WriteType;
 import org.apache.hadoop.ozone.common.ChunkBuffer;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
@@ -73,6 +75,14 @@ public class ChunkManagerDispatcher implements ChunkManager {
   }
 
   @Override
+  public void writeChunk(Container container, BlockID blockID, ChunkInfo info,
+                         WriteType writeType, ChunkBuffer data, DispatcherContext dispatcherContext)
+          throws StorageContainerException {
+    selectHandler(container)
+            .writeChunk(container, blockID, info, writeType, data, dispatcherContext);
+  }
+
+  @Override
   public void finishWriteChunks(LStoreContainer kvContainer,
      BlockData blockData) throws IOException {
 
@@ -96,17 +106,15 @@ public class ChunkManagerDispatcher implements ChunkManager {
 
   @Override
   public ChunkBuffer readChunk(Container container, BlockID blockID,
-                               ChunkInfo info, ByteBuffer scanQueryOperation,
-                               DispatcherContext dispatcherContext)
+                               ChunkInfo info, ReadType readType,
+                               ByteBuffer readExpress, DispatcherContext dispatcherContext)
           throws StorageContainerException {
-
     ChunkBuffer data = selectHandler(container)
-            .readChunk(container, blockID, info, scanQueryOperation, dispatcherContext);
+            .readChunk(container, blockID, info, readType, readExpress, dispatcherContext);
 
     Preconditions.checkState(data != null);
     // TODO: scan query read data not full data
     // container.getContainerData().updateReadStats(data.remaining());
-
     return data;
   }
 

@@ -1,6 +1,8 @@
 package org.apache.hadoop.hetu.photon.meta;
 
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SchemaProto.TypeProto;
+
+import org.apache.hadoop.hetu.photon.proto
+  .PhotonSchemaProtocolProtos.SchemaProto.TypeProto;
 
 /**
  * Created by xiliu on 2021/8/10

@@ -6,10 +6,10 @@ import org.apache.hadoop.hetu.photon.meta.common.ColumnKeyType;
 import org.apache.hadoop.hetu.photon.meta.common.ColumnType;
 import org.apache.hadoop.hetu.photon.meta.common.ColumnTypeAttributes;
 import org.apache.hadoop.hetu.photon.meta.common.DataType;
-import org.apache.hadoop.hetu.photon.meta.table.ColumnSchema;
-import org.apache.hadoop.hetu.photon.meta.table.DistributedKey;
-import org.apache.hadoop.hetu.photon.meta.table.PartitionKey;
-import org.apache.hadoop.hetu.photon.meta.table.Schema;
+import org.apache.hadoop.hetu.photon.meta.schema.ColumnSchema;
+import org.apache.hadoop.hetu.photon.meta.schema.DistributedKey;
+import org.apache.hadoop.hetu.photon.meta.schema.PartitionKey;
+import org.apache.hadoop.hetu.photon.meta.schema.Schema;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;

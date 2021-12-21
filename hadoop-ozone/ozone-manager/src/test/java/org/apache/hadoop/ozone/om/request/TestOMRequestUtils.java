@@ -40,7 +40,7 @@ import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
 import org.apache.hadoop.hetu.photon.meta.common.ColumnKey;
-import org.apache.hadoop.hetu.photon.meta.table.ColumnSchema;
+import org.apache.hadoop.hetu.photon.meta.schema.ColumnSchema;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.*;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;

@@ -1,6 +1,7 @@
 package org.apache.hadoop.hetu.photon.meta.common;
 
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SchemaProto.ColumnKeyTypeProto;
+import org.apache.hadoop.hetu.photon.proto
+   .PhotonSchemaProtocolProtos.SchemaProto.ColumnKeyTypeProto;
 
 /**
  * Created by xiliu on 2021/6/23

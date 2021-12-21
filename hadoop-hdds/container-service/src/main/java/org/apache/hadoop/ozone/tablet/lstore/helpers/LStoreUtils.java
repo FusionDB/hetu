@@ -3,12 +3,14 @@ package org.apache.hadoop.ozone.tablet.lstore.helpers;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
-import org.apache.hadoop.hetu.photon.operation.OperationType;
+import org.apache.hadoop.hetu.photon.ReadType;
+import org.apache.hadoop.hetu.photon.WriteType;
+import org.apache.hadoop.hetu.photon.express.HetuPredicate;
 import org.apache.hadoop.hetu.photon.helpers.PartialRow;
-import org.apache.hadoop.hetu.photon.meta.table.ColumnSchema;
-import org.apache.hadoop.hetu.photon.meta.table.Schema;
-import org.apache.hadoop.hetu.photon.operation.request.InsertOperationRequest;
-import org.apache.hadoop.hetu.photon.operation.request.OperationRequest;
+import org.apache.hadoop.hetu.photon.meta.schema.ColumnSchema;
+import org.apache.hadoop.hetu.photon.meta.schema.Schema;
+import org.apache.hadoop.hetu.photon.proto.HetuPhotonProtos;
+import org.apache.hadoop.hetu.photon.proto.HetuPhotonProtos.ColumnPredicatePB;
 import org.apache.hadoop.ozone.common.ChunkBuffer;
 import org.apache.hadoop.ozone.container.common.volume.VolumeIOStats;
 import org.apache.hadoop.util.Time;
@@ -26,22 +28,18 @@ import org.apache.lucene.document.SortedDocValuesField;
 import org.apache.lucene.document.StoredField;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
-import org.apache.lucene.index.BinaryDocValues;
 import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.index.DocValues;
 import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
-import org.apache.lucene.index.LeafReader;
-import org.apache.lucene.index.LeafReaderContext;
-import org.apache.lucene.index.Term;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.search.TermRangeQuery;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
@@ -59,6 +57,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.CONTAINER_INTERNAL_ERROR;
@@ -72,43 +71,46 @@ import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Res
  */
 public class LStoreUtils {
     private static final Set<Path> LOCKS = ConcurrentHashMap.newKeySet();
-    private static long OPERATION_DEFAULT_SIZE = 10;
     private static final Logger LOG =
             LoggerFactory.getLogger(LStoreUtils.class);
 
     public LStoreUtils() {
     }
 
-    public static void writeData(Path path, ChunkBuffer data,
-                                 long offset, long len, VolumeIOStats volumeIOStats, boolean sync) throws StorageContainerException {
-        validateBufferSize(len, (data.limit() - OPERATION_DEFAULT_SIZE));
+    public static void writeData(Path path, WriteType writeType, ChunkBuffer data,
+                                 long len, VolumeIOStats volumeIOStats, boolean sync)
+            throws StorageContainerException {
+        validateBufferSize(len, data.limit());
         AtomicLong bytesWritten = new AtomicLong();
         final long startTime = Time.monotonicNow();
         Analyzer analyzer = new StandardAnalyzer();
         Directory dir = null;
+        int rows = 0;
         try {
             dir = FSDirectory.open(path);
             IndexWriterConfig iwc = new IndexWriterConfig(analyzer);
             iwc.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND);
             IndexWriter indexWriter = new IndexWriter(dir, iwc);
             List<ByteBuffer> byteBufferList = data.asByteBufferList();
+            rows = byteBufferList.size();
             byteBufferList.stream().forEach(byteBuffer -> {
                 try {
-                    OperationRequest operation = OperationRequest.fromPersistedFormat(byteBuffer.array());
+                    PartialRow row = PartialRow.fromPersistedFormat(byteBuffer.array());
                     processFileExclusively(path, () -> {
                         try {
-                            if (operation.getOperationType().equals(OperationType.INSERT)) {
-                                InsertOperationRequest insertOperation = operation.getInsertOperationRequest();
-                                int length = insertRow(indexWriter, insertOperation.getRow());
-                                bytesWritten.getAndAdd(length);
-                            } else if (operation.getOperationType().equals(OperationType.UPDATE)) {
-                                // TODO
-                            } else if (operation.getOperationType().equals(OperationType.DELETE)) {
-                                // TODO
-                            } else if (operation.getOperationType().equals(OperationType.UPSERT)) {
-                                // TODO
-                            } else {
-                                throw new RuntimeException("Unsupported operation type of write: " + operation.getOperationType());
+                            switch (writeType) {
+                                case DELETE:
+                                    break;
+                                case INSERT:
+                                    int length = insertRow(indexWriter, row);
+                                    bytesWritten.getAndAdd(length);
+                                    break;
+                                case UPDATE:
+                                    break;
+                                case UPSERT:
+                                    break;
+                                default:
+                                    throw new RuntimeException("Unsupported write type: " + writeType);
                             }
                             return byteBuffer.array().length;
                         } catch (IOException e) {
@@ -129,14 +131,13 @@ public class LStoreUtils {
         }
         final long endTime = Time.monotonicNow();
         long elapsed = endTime - startTime;
-        offset = bytesWritten.get();
         len = bytesWritten.get();
         volumeIOStats.incWriteTime(elapsed);
         volumeIOStats.incWriteOpCount();
         volumeIOStats.incWriteBytes(bytesWritten.get());
 
-        LOG.debug("Written {} bytes at offset {} to {} in {} ms",
-                bytesWritten, offset, path, elapsed);
+        LOG.debug("Written {} bytes at rows {} to {} in {} ms",
+                bytesWritten, rows, path, elapsed);
 
         validateWriteSize(len, bytesWritten.get());
     }
@@ -253,40 +254,65 @@ public class LStoreUtils {
     }
 
 
-    public static void readData(Path path, ByteBuffer[] buffers, ByteBuffer scanQueryOperation,
-                                long offset, long len, VolumeIOStats volumeIOStats)
+    public static ByteBuffer[] readData(Path path, ReadType readType,
+                                        ByteBuffer readExpress,
+                                        VolumeIOStats volumeIOStats)
             throws StorageContainerException {
+        // TODO: add header row offset: page[32kb] next (put -> queue pool (page) -> get)
+        final int offset = 100;
         final long startTime = Time.monotonicNow();
         long bytesRead = 0;
         IndexReader reader = null;
+        ByteBuffer[] buffers = new ByteBuffer[0];
         try {
+            // DirectoryReader.open(final IndexWriter indexWriter) -> NRT
             reader = DirectoryReader.open(FSDirectory.open(path));
             IndexSearcher indexSearcher = new IndexSearcher(reader);
+            Schema schema = getSchema(indexSearcher);
+            List<HetuPredicate> hetuPredicates = null;
+            if (null != readExpress) {
+                hetuPredicates = HetuPredicate.deserialize(schema, readExpress.array());
+            }
 
-            final Query q1 =
-                    new BooleanQuery.Builder()
-                            .add(new TermQuery(new Term("bool", "true")), BooleanClause.Occur.MUST)
-                    .build();
-            TopDocs results = indexSearcher.search(q1, 10);
-            ScoreDoc[] hits = results.scoreDocs;
-            LOG.debug("Found " + hits.length + " hits.");
-            for (int i = 0; i < hits.length; i++) {
-                int docId = hits[i].doc;
-                Document d = indexSearcher.doc(docId);
-                BytesRef rowBytes = d.getBinaryValue("_source");
-                bytesRead += rowBytes.length;
-                buffers[i] = ByteBuffer.wrap(rowBytes.bytes);
+            AtomicReference<Query> query = null;
+            if (hetuPredicates != null && hetuPredicates.size() > 0) {
+                hetuPredicates.stream().forEach(hetuPredicate -> {
+                    ColumnPredicatePB columnPredicatePb = hetuPredicate.toPB();
+                    if (columnPredicatePb.hasRange()) {
+                        ColumnPredicatePB.Range range = columnPredicatePb.getRange();
+                        ColumnSchema columnSchema = schema.getColumn(columnPredicatePb.getColumn());
+                        query.set(new TermRangeQuery(
+                                columnSchema.getColumnName(),
+                                new BytesRef(range.getLower().toByteArray()),
+                                new BytesRef(range.getUpper().toByteArray()),
+                                true, false));
+
+                    }
+                });
+                TopDocs results = indexSearcher.search(query.get(), Integer.MAX_VALUE);
+                FetchRows fetchRows = new FetchRows(bytesRead, indexSearcher, results).invoke();
+                bytesRead = fetchRows.getBytesRead();
+                buffers = fetchRows.getBuffers();
+            } else {
+                final Query q1 =
+                        new BooleanQuery.Builder()
+                                .add(new MatchAllDocsQuery(), BooleanClause.Occur.MUST)
+                                .build();
+                TopDocs results = indexSearcher.search(q1, Integer.MAX_VALUE);
+                FetchRows fetchRows = new FetchRows(bytesRead, indexSearcher, results).invoke();
+                bytesRead = fetchRows.getBytesRead();
+                buffers = fetchRows.getBuffers();
             }
 
             // Increment volumeIO stats here.
             long endTime = Time.monotonicNow();
             volumeIOStats.incReadTime(endTime - startTime);
             volumeIOStats.incReadOpCount();
-            offset = bytesRead;
             volumeIOStats.incReadBytes(bytesRead);
 
             LOG.debug("Read {} bytes starting at offset {} from {}",
                     bytesRead, offset, path);
+            return buffers;
         } catch (IOException e) {
             LOG.error(e.getMessage(), e);
             throw wrapInStorageContainerException(e);
@@ -301,45 +327,13 @@ public class LStoreUtils {
         }
     }
 
-    public static void readData(Path path, ByteBuffer[] buffers,
-                                long offset, long len, VolumeIOStats volumeIOStats)
-            throws StorageContainerException {
-        final long startTime = Time.monotonicNow();
-        long bytesRead = 0;
-        IndexReader reader = null;
-        try {
-            reader = DirectoryReader.open(FSDirectory.open(path));
-            // Read DocValue
-            List<LeafReaderContext> subReaders = reader.leaves();
-            for (int i = 0; i < subReaders.size(); i++) {
-                LeafReaderContext subReader = subReaders.get(i);
-                LeafReader leafReader = subReader.reader();
-                BinaryDocValues docValues = DocValues.getBinary(leafReader, "_source");
-                ByteBuffer rowOpBytes = ByteBuffer.wrap(docValues.binaryValue().bytes);
-                bytesRead += rowOpBytes.limit();
-                buffers[i] = rowOpBytes;
-            }
-            // Increment volumeIO stats here.
-            long endTime = Time.monotonicNow();
-            volumeIOStats.incReadTime(endTime - startTime);
-            volumeIOStats.incReadOpCount();
-            offset = bytesRead;
-            volumeIOStats.incReadBytes(bytesRead);
-
-            LOG.debug("Read {} bytes starting at offset {} from {}",
-                    bytesRead, offset, path);
-        } catch (IOException e) {
-            LOG.error(e.getMessage(), e);
-            throw wrapInStorageContainerException(e);
-        } finally {
-            try {
-                if (reader != null) {
-                    reader.close();
-                }
-            } catch (IOException e) {
-                LOG.error(e.getMessage(), e);
-            }
-        }
+    private static Schema getSchema(IndexSearcher indexSearcher) throws IOException {
+        TopDocs res = indexSearcher.search(new MatchAllDocsQuery(), 1);
+        ScoreDoc[] hits = res.scoreDocs;
+        Document document = indexSearcher.doc(hits[0].doc);
+        BytesRef rowBytes = document.getBinaryValue("_source");
+        PartialRow row = PartialRow.fromPersistedFormat(rowBytes.bytes);
+        return row.getSchema();
     }
 
     private static StorageContainerException wrapInStorageContainerException(
@@ -363,5 +357,40 @@ public class LStoreUtils {
         }
 
         return CONTAINER_INTERNAL_ERROR;
+    }
+
+    private static class FetchRows {
+        private long bytesRead;
+        private IndexSearcher indexSearcher;
+        private TopDocs results;
+        private ByteBuffer[] buffers;
+
+        public FetchRows(long bytesRead, IndexSearcher indexSearcher, TopDocs results) {
+            this.bytesRead = bytesRead;
+            this.indexSearcher = indexSearcher;
+            this.results = results;
+        }
+
+        public long getBytesRead() {
+            return bytesRead;
+        }
+
+        public ByteBuffer[] getBuffers() {
+            return buffers;
+        }
+
+        public FetchRows invoke() throws IOException {
+            ScoreDoc[] hits = results.scoreDocs;
+            LOG.debug("Found " + hits.length + " hits.");
+            buffers = new ByteBuffer[hits.length];
+            for (int i = 0; i < hits.length; i++) {
+                int docId = hits[i].doc;
+                Document d = indexSearcher.doc(docId);
+                BytesRef rowBytes = d.getBinaryValue("_source");
+                bytesRead += rowBytes.length;
+                buffers[i] = ByteBuffer.wrap(rowBytes.bytes);
+            }
+            return this;
+        }
     }
 }

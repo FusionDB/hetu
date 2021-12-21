@@ -1,12 +1,11 @@
 package org.apache.hadoop.hetu.photon;
 
 import org.apache.hadoop.hetu.photon.meta.common.ColumnType;
-import org.apache.hadoop.hetu.photon.meta.table.ColumnSchema;
-import org.apache.hadoop.hetu.photon.meta.table.Schema;
+import org.apache.hadoop.hetu.photon.meta.schema.ColumnSchema;
+import org.apache.hadoop.hetu.photon.meta.schema.Schema;
 import org.apache.hadoop.hetu.photon.helpers.PartialRow;
 import org.apache.hadoop.hetu.photon.meta.util.DateUtil;
 import org.apache.hadoop.hetu.photon.proto.HetuPhotonProtos;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.math.BigDecimal;

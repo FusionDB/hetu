@@ -1,7 +1,8 @@
 package org.apache.hadoop.hetu.photon.meta.common;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SchemaProto.ColumnKeyProto;
+import org.apache.hadoop.hetu.photon.proto
+   .PhotonSchemaProtocolProtos.SchemaProto.ColumnKeyProto;
 
 import java.util.List;
 import java.util.Objects;

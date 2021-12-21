@@ -24,9 +24,9 @@ import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hetu.client.protocol.ClientProtocol;
+import org.apache.hadoop.hetu.common.StorageEngine;
 import org.apache.hadoop.hetu.photon.helpers.PartialRow;
-import org.apache.hadoop.hetu.photon.meta.table.Schema;
-import org.apache.hadoop.hetu.photon.meta.common.StorageEngine;
+import org.apache.hadoop.hetu.photon.meta.schema.Schema;
 import org.apache.hadoop.ozone.om.helpers.WithMetadata;
 
 import java.io.IOException;

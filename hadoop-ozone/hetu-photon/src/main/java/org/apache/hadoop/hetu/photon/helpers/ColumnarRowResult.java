@@ -23,8 +23,8 @@ import java.sql.Timestamp;
 
 import org.apache.hadoop.hetu.photon.meta.common.ColumnType;
 import org.apache.hadoop.hetu.photon.meta.common.ColumnTypeAttributes;
-import org.apache.hadoop.hetu.photon.meta.table.ColumnSchema;
-import org.apache.hadoop.hetu.photon.meta.table.Schema;
+import org.apache.hadoop.hetu.photon.meta.schema.ColumnSchema;
+import org.apache.hadoop.hetu.photon.meta.schema.Schema;
 import org.apache.hadoop.hetu.photon.meta.util.TimestampUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -34,7 +34,7 @@ import org.apache.yetus.audience.InterfaceStability;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-class ColumnarRowResult extends RowResult {
+public class ColumnarRowResult extends RowResult {
 
     private final Slice[] data;
     private final Slice[] varlenData;
@@ -49,8 +49,8 @@ class ColumnarRowResult extends RowResult {
      * @param nonNullBitmaps The bitmaps corresponding to the non-null status of the cells
      * @param rowIndex The index of the row in data/varlenData/nonNullBitmaps
      */
-    ColumnarRowResult(Schema schema, Slice[] data, Slice[] varlenData, Slice[] nonNullBitmaps,
-                      int rowIndex) {
+    public ColumnarRowResult(Schema schema, Slice[] data, Slice[] varlenData, Slice[] nonNullBitmaps,
+                             int rowIndex) {
         super(schema, rowIndex);
         this.data = data;
         this.varlenData = varlenData;

@@ -21,29 +21,13 @@ package org.apache.hadoop.hetu.client;
 import org.apache.hadoop.hdds.client.RatisReplicationConfig;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.conf.InMemoryConfiguration;
-import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.XceiverClientFactory;
 import org.apache.hadoop.hetu.client.io.HetuInputStream;
 import org.apache.hadoop.hetu.client.io.HetuOutputStream;
 import org.apache.hadoop.hetu.photon.helpers.PartialRow;
-import org.apache.hadoop.hetu.photon.meta.DistributedKeyType;
-import org.apache.hadoop.hetu.photon.meta.PartitionKeyType;
-import org.apache.hadoop.hetu.photon.meta.common.ColumnKeyType;
-import org.apache.hadoop.hetu.photon.meta.common.ColumnType;
-import org.apache.hadoop.hetu.photon.meta.common.ColumnTypeAttributes;
-import org.apache.hadoop.hetu.photon.meta.common.DataType;
-import org.apache.hadoop.hetu.photon.meta.table.DistributedKey;
-import org.apache.hadoop.hetu.photon.meta.table.PartitionKey;
-import org.apache.hadoop.hetu.photon.meta.table.Schema;
-import org.apache.hadoop.hetu.photon.operation.OperationType;
-import org.apache.hadoop.hetu.photon.operation.request.InsertOperationRequest;
-import org.apache.hadoop.hetu.photon.operation.request.OperationRequest;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.hetu.client.rpc.RpcClient;
-import org.apache.hadoop.hetu.photon.meta.common.ColumnKey;
-import org.apache.hadoop.hetu.photon.meta.table.ColumnSchema;
-import org.apache.hadoop.hetu.photon.meta.common.StorageEngine;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.protocolPB.OmTransport;
@@ -53,11 +37,12 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
@@ -68,6 +53,7 @@ import java.util.UUID;
  * Used for testing Hetu client without external network calls.
  */
 public class TestHetuClient extends TestHetuUtil {
+  static final Logger LOG = LoggerFactory.getLogger(TestHetuUtil.class);
 
   private HetuClient client;
   private HetuStore store;
@@ -164,11 +150,7 @@ public class TestHetuClient extends TestHetuUtil {
 
 //    String value = "sample value";
     PartialRow row = getPartialRowWithAllTypes();
-    OperationRequest operationRequest = OperationRequest.newBuilder()
-            .setOperationType(OperationType.INSERT)
-            .setInsertOperationRequest(new InsertOperationRequest(row))
-            .build();
-    byte[] data = OperationRequest.toPersistedFormat(operationRequest);
+    byte[] data = row.toProtobuf().toByteArray();
 
     store.createDatabase(databaseName);
     OzoneDatabase database = store.getDatabase(databaseName);
@@ -203,9 +185,9 @@ public class TestHetuClient extends TestHetuUtil {
       is.close();
 
       // TODO: data by mock data node storage
-      OperationRequest orRes = OperationRequest.fromPersistedFormat(fileContent);
-      Assert.assertEquals(orRes.getInsertOperationRequest().getRow().getVarLengthData().size(), row.getVarLengthData().size());
-      Assert.assertEquals(orRes.getInsertOperationRequest().getRow().toString(), row.toString());
+      LOG.info("Read length {} from tablet name {}", fileContent.length, tableName);
+      PartialRow partialRow = PartialRow.fromPersistedFormat(fileContent);
+      Assert.assertEquals(partialRow.getVarLengthData().size(), row.getVarLengthData().size());
       Assert.assertFalse(tablet.getCreationTime().isBefore(testStartTime));
       Assert.assertFalse(tablet.getModificationTime().isBefore(testStartTime));
     }
