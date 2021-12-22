@@ -429,7 +429,28 @@ message ReadChunkRequestProto {
   required ChunkInfo chunkData = 2;
   optional ReadChunkVersion readChunkVersion = 3;
   optional ReadTypeProto readType = 4;
-  optional bytes readExpress = 5;
+
+  message ReadExpress {
+    /**
+     * Express op: limit overwrite this limit
+     */
+    required bytes express = 1;
+    required uint32 batchSizeBytes = 2;
+    required uint32 limit = 3;
+  }
+
+  optional ReadExpress readExpress = 5;
+  /**
+   * The sequence ID of this call. The sequence ID should start at 0
+   * with the request for a new scanner, and after each successful request,
+   * the client should increment it by 1. When retrying a request, the client
+   * should _not_ increment this value. If the server detects that the client
+   * missed a chunk of rows from the middle of a scan, it will respond with an
+   * error.
+   */
+  optional uint32 sequenceId = 6;
+
+  optional uint64 readChunkRequestTimeout = 7;
 }
 
 message  ReadChunkResponseProto {

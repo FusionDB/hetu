@@ -1,7 +1,10 @@
 package org.apache.hadoop.ozone.tablet.lstore.helpers;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+        .ReadChunkRequestProto.ReadExpress;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.hetu.photon.ReadType;
 import org.apache.hadoop.hetu.photon.WriteType;
@@ -9,7 +12,6 @@ import org.apache.hadoop.hetu.photon.express.HetuPredicate;
 import org.apache.hadoop.hetu.photon.helpers.PartialRow;
 import org.apache.hadoop.hetu.photon.meta.schema.ColumnSchema;
 import org.apache.hadoop.hetu.photon.meta.schema.Schema;
-import org.apache.hadoop.hetu.photon.proto.HetuPhotonProtos;
 import org.apache.hadoop.hetu.photon.proto.HetuPhotonProtos.ColumnPredicatePB;
 import org.apache.hadoop.ozone.common.ChunkBuffer;
 import org.apache.hadoop.ozone.container.common.volume.VolumeIOStats;
@@ -60,6 +62,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.CONTAINER_INTERNAL_ERROR;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.INVALID_WRITE_SIZE;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.IO_EXCEPTION;
@@ -270,10 +273,21 @@ public class LStoreUtils {
             IndexSearcher indexSearcher = new IndexSearcher(reader);
             Schema schema = getSchema(indexSearcher);
             List<HetuPredicate> hetuPredicates = null;
+            int batchSizeBytes = -1;
+            int limit = -1;
             if (null != readExpress) {
-                hetuPredicates = HetuPredicate.deserialize(schema, readExpress.array());
+                ReadExpress express = ReadExpress.parseFrom(readExpress.array());
+                batchSizeBytes = express.getBatchSizeBytes();
+                limit = express.getLimit();
+                if (express.hasExpress()) {
+                    hetuPredicates = HetuPredicate.deserialize(schema, express.getExpress().toByteArray());
+                }
             }
 
+            checkArgument(batchSizeBytes >= 0, "Need non-negative number of bytes, " +
+                    "got %s", batchSizeBytes);
+            checkArgument(limit > 0, "Need a strictly positive number for the limit, " +
+                    "got %s", limit);
             AtomicReference<Query> query = null;
             if (hetuPredicates != null && hetuPredicates.size() > 0) {
                 hetuPredicates.stream().forEach(hetuPredicate -> {
@@ -289,7 +303,7 @@ public class LStoreUtils {
 
                     }
                 });
-                TopDocs results = indexSearcher.search(query.get(), Integer.MAX_VALUE);
+                TopDocs results = indexSearcher.search(query.get(), limit);
                 FetchRows fetchRows = new FetchRows(bytesRead, indexSearcher, results).invoke();
                 bytesRead = fetchRows.getBytesRead();
                 buffers = fetchRows.getBuffers();
@@ -298,7 +312,7 @@ public class LStoreUtils {
                         new BooleanQuery.Builder()
                                 .add(new MatchAllDocsQuery(), BooleanClause.Occur.MUST)
                                 .build();
-                TopDocs results = indexSearcher.search(q1, Integer.MAX_VALUE);
+                TopDocs results = indexSearcher.search(q1, limit);
                 FetchRows fetchRows = new FetchRows(bytesRead, indexSearcher, results).invoke();
                 bytesRead = fetchRows.getBytesRead();
                 buffers = fetchRows.getBuffers();
