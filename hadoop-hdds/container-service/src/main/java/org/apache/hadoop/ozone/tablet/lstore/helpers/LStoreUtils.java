@@ -1,11 +1,12 @@
 package org.apache.hadoop.ozone.tablet.lstore.helpers;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import com.google.common.primitives.Bytes;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
         .ReadChunkRequestProto.ReadExpress;
-import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.hdds.scm.container.common
+        .helpers.StorageContainerException;
 import org.apache.hadoop.hetu.photon.ReadType;
 import org.apache.hadoop.hetu.photon.WriteType;
 import org.apache.hadoop.hetu.photon.express.HetuPredicate;
@@ -13,6 +14,7 @@ import org.apache.hadoop.hetu.photon.helpers.PartialRow;
 import org.apache.hadoop.hetu.photon.meta.schema.ColumnSchema;
 import org.apache.hadoop.hetu.photon.meta.schema.Schema;
 import org.apache.hadoop.hetu.photon.proto.HetuPhotonProtos.ColumnPredicatePB;
+import org.apache.hadoop.hetu.photon.proto.HetuPhotonProtos.RowwiseRowChunkHeaderPB;
 import org.apache.hadoop.ozone.common.ChunkBuffer;
 import org.apache.hadoop.ozone.container.common.volume.VolumeIOStats;
 import org.apache.hadoop.util.Time;
@@ -55,6 +57,7 @@ import java.nio.ByteBuffer;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -76,6 +79,9 @@ public class LStoreUtils {
     private static final Set<Path> LOCKS = ConcurrentHashMap.newKeySet();
     private static final Logger LOG =
             LoggerFactory.getLogger(LStoreUtils.class);
+
+    public final static int OFFSET = 0;
+    public final static int LIMIT = 10000;
 
     public LStoreUtils() {
     }
@@ -262,30 +268,30 @@ public class LStoreUtils {
                                         VolumeIOStats volumeIOStats)
             throws StorageContainerException {
         // TODO: add header row offset: page[32kb] next (put -> queue pool (page) -> get)
-        final int offset = 100;
         final long startTime = Time.monotonicNow();
+        int totalSize = 0;
         long bytesRead = 0;
         IndexReader reader = null;
-        ByteBuffer[] buffers = new ByteBuffer[0];
+        ByteBuffer[] buffers = new ByteBuffer[2];
         try {
             // DirectoryReader.open(final IndexWriter indexWriter) -> NRT
             reader = DirectoryReader.open(FSDirectory.open(path));
             IndexSearcher indexSearcher = new IndexSearcher(reader);
             Schema schema = getSchema(indexSearcher);
             List<HetuPredicate> hetuPredicates = null;
-            int batchSizeBytes = -1;
+            int offset = -1;
             int limit = -1;
             if (null != readExpress) {
                 ReadExpress express = ReadExpress.parseFrom(readExpress.array());
-                batchSizeBytes = express.getBatchSizeBytes();
+                offset = express.getOffset();
                 limit = express.getLimit();
                 if (express.hasExpress()) {
                     hetuPredicates = HetuPredicate.deserialize(schema, express.getExpress().toByteArray());
                 }
             }
 
-            checkArgument(batchSizeBytes >= 0, "Need non-negative number of bytes, " +
-                    "got %s", batchSizeBytes);
+            checkArgument(offset >= 0, "Need non-negative number for the offset, " +
+                    "got %s", offset);
             checkArgument(limit > 0, "Need a strictly positive number for the limit, " +
                     "got %s", limit);
             AtomicReference<Query> query = null;
@@ -303,19 +309,21 @@ public class LStoreUtils {
 
                     }
                 });
-                TopDocs results = indexSearcher.search(query.get(), limit);
+                TopDocs results = indexSearcher.search(query.get(), offset * limit);
                 FetchRows fetchRows = new FetchRows(bytesRead, indexSearcher, results).invoke();
                 bytesRead = fetchRows.getBytesRead();
-                buffers = fetchRows.getBuffers();
+                buffers[0] = ByteBuffer.wrap(fetchRows.getRowwiseRowChunkHeaderPB().toByteArray());
+                buffers[1] = ByteBuffer.wrap(fetchRows.getRows());
             } else {
                 final Query q1 =
                         new BooleanQuery.Builder()
                                 .add(new MatchAllDocsQuery(), BooleanClause.Occur.MUST)
                                 .build();
-                TopDocs results = indexSearcher.search(q1, limit);
+                TopDocs results = indexSearcher.search(q1, offset * limit);
                 FetchRows fetchRows = new FetchRows(bytesRead, indexSearcher, results).invoke();
                 bytesRead = fetchRows.getBytesRead();
-                buffers = fetchRows.getBuffers();
+                buffers[0] = ByteBuffer.wrap(fetchRows.getRowwiseRowChunkHeaderPB().toByteArray());
+                buffers[1] = ByteBuffer.wrap(fetchRows.getRows());
             }
 
             // Increment volumeIO stats here.
@@ -377,7 +385,10 @@ public class LStoreUtils {
         private long bytesRead;
         private IndexSearcher indexSearcher;
         private TopDocs results;
-        private ByteBuffer[] buffers;
+        private ByteBuffer[] rowBuffers;
+        private ByteBuffer[] rowVarlenBuffers;
+        private Integer[] sidecarOffsets;
+        private RowwiseRowChunkHeaderPB rowwiseRowChunkHeaderPB;
 
         public FetchRows(long bytesRead, IndexSearcher indexSearcher, TopDocs results) {
             this.bytesRead = bytesRead;
@@ -389,21 +400,39 @@ public class LStoreUtils {
             return bytesRead;
         }
 
-        public ByteBuffer[] getBuffers() {
-            return buffers;
+        public RowwiseRowChunkHeaderPB getRowwiseRowChunkHeaderPB() {
+            return rowwiseRowChunkHeaderPB;
+        }
+
+        public byte[] getRows() {
+            byte[] row = Bytes.concat(rowBuffers, rowVarlenBuffers);
+            return row;
         }
 
         public FetchRows invoke() throws IOException {
             ScoreDoc[] hits = results.scoreDocs;
+
             LOG.debug("Found " + hits.length + " hits.");
-            buffers = new ByteBuffer[hits.length];
+            rowBuffers = new ByteBuffer[hits.length];
+            rowVarlenBuffers = new ByteBuffer[hits.length];
+            sidecarOffsets = new Integer[hits.length];
             for (int i = 0; i < hits.length; i++) {
                 int docId = hits[i].doc;
                 Document d = indexSearcher.doc(docId);
-                BytesRef rowBytes = d.getBinaryValue("_source");
-                bytesRead += rowBytes.length;
-                buffers[i] = ByteBuffer.wrap(rowBytes.bytes);
+                BytesRef rowData = d.getBinaryValue("__rowData__");
+                BytesRef rowVarlenData = d.getBinaryValue("__indirectRowData__");
+
+                sidecarOffsets[i] = rowData.length + rowVarlenData.length;
+                rowBuffers[i] = ByteBuffer.wrap(rowData.bytes);
+                rowVarlenBuffers[i] = ByteBuffer.wrap(rowVarlenData.bytes);
             }
+            rowwiseRowChunkHeaderPB = RowwiseRowChunkHeaderPB.newBuilder()
+                    .setNumRows(hits.length)
+                    .setRowsSidecar(rowBuffers.length)
+                    .setIndirectDataSidecar(rowVarlenBuffers.length)
+                    .addAllSidecarOffsets((Iterable<? extends Integer>) Arrays.stream(sidecarOffsets).iterator())
+                    .build();
+            bytesRead = rowBuffers.length + rowVarlenBuffers.length;
             return this;
         }
     }

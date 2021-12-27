@@ -420,37 +420,32 @@ enum ReadChunkVersion {
 }
 
 message ReadChunkRequestProto {
-  enum ReadTypeProto {
-    QUERY = 0;
-    SCAN = 1;
-  }
-
   required DatanodeBlockID blockID = 1;
   required ChunkInfo chunkData = 2;
   optional ReadChunkVersion readChunkVersion = 3;
-  optional ReadTypeProto readType = 4;
+  optional string queryId = 4;
 
   message ReadExpress {
     /**
-     * Express op: limit overwrite this limit
+     * Express Op
      */
     required bytes express = 1;
-    required uint32 batchSizeBytes = 2;
+    /**
+     * The offset of this call. The sequence ID should start at 0
+     * with the request for a new query, and after each successful request,
+     * the client should increment it by 1. When retrying a request, the client
+     * should _not_ increment this value. If the server detects that the client
+     * missed a chunk of rows from the middle of a scan, it will respond with an
+     * error.
+    */
+    required uint32  offset = 2;
+    /**
+     * Batch read chunk batchSize max limit
+     */
     required uint32 limit = 3;
   }
-
   optional ReadExpress readExpress = 5;
-  /**
-   * The sequence ID of this call. The sequence ID should start at 0
-   * with the request for a new scanner, and after each successful request,
-   * the client should increment it by 1. When retrying a request, the client
-   * should _not_ increment this value. If the server detects that the client
-   * missed a chunk of rows from the middle of a scan, it will respond with an
-   * error.
-   */
-  optional uint32 sequenceId = 6;
-
-  optional uint64 readChunkRequestTimeout = 7;
+  optional uint64 readChunkRequestTimeout = 6;
 }
 
 message  ReadChunkResponseProto {

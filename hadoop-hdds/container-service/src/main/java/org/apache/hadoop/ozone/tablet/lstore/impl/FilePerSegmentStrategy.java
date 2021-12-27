@@ -22,7 +22,6 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.RemovalListener;
 import com.google.common.collect.Lists;
-import com.google.protobuf.ByteString;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
@@ -31,7 +30,6 @@ import org.apache.hadoop.hetu.photon.ReadType;
 import org.apache.hadoop.hetu.photon.WriteType;
 import org.apache.hadoop.ozone.common.ChecksumData;
 import org.apache.hadoop.ozone.common.ChunkBuffer;
-import org.apache.hadoop.ozone.common.utils.BufferUtils;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
@@ -40,16 +38,9 @@ import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.common.volume.VolumeIOStats;
 import org.apache.hadoop.ozone.tablet.lstore.LStoreContainer;
 import org.apache.hadoop.ozone.tablet.lstore.LStoreContainerData;
-import org.apache.hadoop.ozone.tablet.lstore.helpers.ChunkUtils;
 import org.apache.hadoop.ozone.tablet.lstore.helpers.LStoreUtils;
 import org.apache.hadoop.ozone.tablet.lstore.interfaces.BlockManager;
 import org.apache.hadoop.ozone.tablet.lstore.interfaces.ChunkManager;
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.index.IndexWriterConfig;
-import org.apache.lucene.store.Directory;
-import org.apache.lucene.store.FSDirectory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -203,7 +194,6 @@ public class FilePerSegmentStrategy implements ChunkManager {
 
     ByteBuffer[] dataBuffers =  LStoreUtils.readData(chunkFile.toPath(), readType,
             readExpress, volumeIOStats);
-
     return ChunkBuffer.wrap(Lists.newArrayList(dataBuffers));
   }
 
