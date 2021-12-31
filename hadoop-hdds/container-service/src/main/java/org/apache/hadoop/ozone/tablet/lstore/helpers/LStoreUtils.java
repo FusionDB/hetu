@@ -2,6 +2,7 @@ package org.apache.hadoop.ozone.tablet.lstore.helpers;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.primitives.Bytes;
+import com.google.protobuf.ByteString;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
         .ReadChunkRequestProto.ReadExpress;
@@ -11,10 +12,12 @@ import org.apache.hadoop.hetu.photon.ReadType;
 import org.apache.hadoop.hetu.photon.WriteType;
 import org.apache.hadoop.hetu.photon.express.HetuPredicate;
 import org.apache.hadoop.hetu.photon.helpers.PartialRow;
+import org.apache.hadoop.hetu.photon.helpers.Slice;
+import org.apache.hadoop.hetu.photon.helpers.Slices;
 import org.apache.hadoop.hetu.photon.meta.schema.ColumnSchema;
 import org.apache.hadoop.hetu.photon.meta.schema.Schema;
 import org.apache.hadoop.hetu.photon.proto.HetuPhotonProtos.ColumnPredicatePB;
-import org.apache.hadoop.hetu.photon.proto.HetuPhotonProtos.RowwiseRowChunkHeaderPB;
+import org.apache.hadoop.hetu.photon.proto.HetuPhotonProtos.RowwiseRowChunkPB;
 import org.apache.hadoop.ozone.common.ChunkBuffer;
 import org.apache.hadoop.ozone.container.common.volume.VolumeIOStats;
 import org.apache.hadoop.util.Time;
@@ -263,8 +266,7 @@ public class LStoreUtils {
     }
 
 
-    public static ByteBuffer[] readData(Path path, ReadType readType,
-                                        ByteBuffer readExpress,
+    public static ByteBuffer[] readData(Path path, ByteBuffer readExpress,
                                         VolumeIOStats volumeIOStats)
             throws StorageContainerException {
         // TODO: add header row offset: page[32kb] next (put -> queue pool (page) -> get)
@@ -312,8 +314,7 @@ public class LStoreUtils {
                 TopDocs results = indexSearcher.search(query.get(), offset * limit);
                 FetchRows fetchRows = new FetchRows(bytesRead, indexSearcher, results).invoke();
                 bytesRead = fetchRows.getBytesRead();
-                buffers[0] = ByteBuffer.wrap(fetchRows.getRowwiseRowChunkHeaderPB().toByteArray());
-                buffers[1] = ByteBuffer.wrap(fetchRows.getRows());
+                buffers[0] = ByteBuffer.wrap(fetchRows.getRowwiseRowChunkPB().toByteArray());
             } else {
                 final Query q1 =
                         new BooleanQuery.Builder()
@@ -322,8 +323,7 @@ public class LStoreUtils {
                 TopDocs results = indexSearcher.search(q1, offset * limit);
                 FetchRows fetchRows = new FetchRows(bytesRead, indexSearcher, results).invoke();
                 bytesRead = fetchRows.getBytesRead();
-                buffers[0] = ByteBuffer.wrap(fetchRows.getRowwiseRowChunkHeaderPB().toByteArray());
-                buffers[1] = ByteBuffer.wrap(fetchRows.getRows());
+                buffers[0] = ByteBuffer.wrap(fetchRows.getRowwiseRowChunkPB().toByteArray());
             }
 
             // Increment volumeIO stats here.
@@ -385,10 +385,10 @@ public class LStoreUtils {
         private long bytesRead;
         private IndexSearcher indexSearcher;
         private TopDocs results;
-        private ByteBuffer[] rowBuffers;
-        private ByteBuffer[] rowVarlenBuffers;
+        private Slice rowSlice;
+        private Slice rowVarlenSlice;
         private Integer[] sidecarOffsets;
-        private RowwiseRowChunkHeaderPB rowwiseRowChunkHeaderPB;
+        private RowwiseRowChunkPB rowwiseRowChunkPB;
 
         public FetchRows(long bytesRead, IndexSearcher indexSearcher, TopDocs results) {
             this.bytesRead = bytesRead;
@@ -400,21 +400,16 @@ public class LStoreUtils {
             return bytesRead;
         }
 
-        public RowwiseRowChunkHeaderPB getRowwiseRowChunkHeaderPB() {
-            return rowwiseRowChunkHeaderPB;
-        }
-
-        public byte[] getRows() {
-            byte[] row = Bytes.concat(rowBuffers, rowVarlenBuffers);
-            return row;
+        public RowwiseRowChunkPB getRowwiseRowChunkPB() {
+            return rowwiseRowChunkPB;
         }
 
         public FetchRows invoke() throws IOException {
             ScoreDoc[] hits = results.scoreDocs;
 
             LOG.debug("Found " + hits.length + " hits.");
-            rowBuffers = new ByteBuffer[hits.length];
-            rowVarlenBuffers = new ByteBuffer[hits.length];
+            rowSlice = Slices.allocate(hits.length);
+            rowVarlenSlice = Slices.allocate(hits.length);
             sidecarOffsets = new Integer[hits.length];
             for (int i = 0; i < hits.length; i++) {
                 int docId = hits[i].doc;
@@ -423,16 +418,21 @@ public class LStoreUtils {
                 BytesRef rowVarlenData = d.getBinaryValue("__indirectRowData__");
 
                 sidecarOffsets[i] = rowData.length + rowVarlenData.length;
-                rowBuffers[i] = ByteBuffer.wrap(rowData.bytes);
-                rowVarlenBuffers[i] = ByteBuffer.wrap(rowVarlenData.bytes);
+                rowSlice.setBytes(i, ByteBuffer.wrap(rowData.bytes));
+                rowVarlenSlice.setBytes(i, ByteBuffer.wrap(rowVarlenData.bytes));
             }
-            rowwiseRowChunkHeaderPB = RowwiseRowChunkHeaderPB.newBuilder()
+            byte[] fullRows = Bytes.concat(rowSlice.getBytes(), rowVarlenSlice.getBytes());
+            rowwiseRowChunkPB = RowwiseRowChunkPB.newBuilder()
+                    .setTotalNumRows(hits.length)
                     .setNumRows(hits.length)
-                    .setRowsSidecar(rowBuffers.length)
-                    .setIndirectDataSidecar(rowVarlenBuffers.length)
-                    .addAllSidecarOffsets((Iterable<? extends Integer>) Arrays.stream(sidecarOffsets).iterator())
+                    .setRowsSidecar(rowSlice.length())
+                    .setIndirectDataSidecar(rowVarlenSlice.length())
+                    .addAllSidecarOffsets(
+                       (Iterable<? extends Integer>) Arrays.stream(sidecarOffsets).iterator()
+                    )
+                    .setRows(ByteString.copyFrom(fullRows))
                     .build();
-            bytesRead = rowBuffers.length + rowVarlenBuffers.length;
+            bytesRead = rowSlice.length() + rowVarlenSlice.length();
             return this;
         }
     }
