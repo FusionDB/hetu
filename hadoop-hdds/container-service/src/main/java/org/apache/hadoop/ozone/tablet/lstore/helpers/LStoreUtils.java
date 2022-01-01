@@ -8,14 +8,16 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
         .ReadChunkRequestProto.ReadExpress;
 import org.apache.hadoop.hdds.scm.container.common
         .helpers.StorageContainerException;
-import org.apache.hadoop.hetu.photon.ReadType;
 import org.apache.hadoop.hetu.photon.WriteType;
 import org.apache.hadoop.hetu.photon.express.HetuPredicate;
+import org.apache.hadoop.hetu.photon.helpers.Insert;
 import org.apache.hadoop.hetu.photon.helpers.PartialRow;
+import org.apache.hadoop.hetu.photon.helpers.Operation;
 import org.apache.hadoop.hetu.photon.helpers.Slice;
 import org.apache.hadoop.hetu.photon.helpers.Slices;
 import org.apache.hadoop.hetu.photon.meta.schema.ColumnSchema;
 import org.apache.hadoop.hetu.photon.meta.schema.Schema;
+import org.apache.hadoop.hetu.photon.proto.HetuPhotonProtos;
 import org.apache.hadoop.hetu.photon.proto.HetuPhotonProtos.ColumnPredicatePB;
 import org.apache.hadoop.hetu.photon.proto.HetuPhotonProtos.RowwiseRowChunkPB;
 import org.apache.hadoop.ozone.common.ChunkBuffer;
@@ -89,7 +91,7 @@ public class LStoreUtils {
     public LStoreUtils() {
     }
 
-    public static void writeData(Path path, WriteType writeType, ChunkBuffer data,
+    public static void writeData(Path path, ChunkBuffer data,
                                  long len, VolumeIOStats volumeIOStats, boolean sync)
             throws StorageContainerException {
         validateBufferSize(len, data.limit());
@@ -221,8 +223,11 @@ public class LStoreUtils {
 
         // add _source
         BytesRef source = new BytesRef(row.toProtobuf().toByteArray());
-        doc.add(new StoredField("_source", source));
-        doc.add(new SortedDocValuesField("_source", source));
+        HetuPhotonProtos.RowOperationsPB rowOperationsPB = Operation.builderRowOperationsPB(Arrays.asList(new Insert(row)));
+        doc.add(new StoredField("__rowData__", rowOperationsPB.getRows().toByteArray()));
+        doc.add(new StoredField("__indirectRowData__", rowOperationsPB.getIndirectData().toByteArray()));
+        doc.add(new SortedDocValuesField("__rowData__", new BytesRef(rowOperationsPB.getRows().toByteArray())));
+        doc.add(new SortedDocValuesField("__indirectRowData__", new BytesRef(rowOperationsPB.getIndirectData().toByteArray())));
         doc.add(new StoredField("_id", row.encodeColumnKey()));
         indexWriter.addDocument(doc);
         return source.length;

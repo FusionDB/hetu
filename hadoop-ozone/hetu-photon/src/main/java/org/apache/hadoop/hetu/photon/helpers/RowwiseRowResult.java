@@ -35,7 +35,7 @@ import org.apache.yetus.audience.InterfaceStability;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-class RowwiseRowResult extends RowResult {
+public class RowwiseRowResult extends RowResult {
 
     private final Slice rowData;
     private final Slice indirectData;

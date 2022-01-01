@@ -75,6 +75,8 @@ message RowOperationsPB {
     INCLUSIVE_RANGE_UPPER_BOUND = 9;
   }
 
+  // schema of row
+  required SchemaProto schema = 1;
   // The row data for each operation is stored in the following format:
   //
   // [operation type] (one byte):
