@@ -26,9 +26,10 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.hetu.photon.ReadType;
+import org.apache.hadoop.hetu.photon.WriteType;
 import org.apache.hadoop.ozone.common.ChecksumData;
 import org.apache.hadoop.ozone.common.ChunkBuffer;
-import org.apache.hadoop.ozone.common.utils.BufferUtils;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
@@ -37,16 +38,9 @@ import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.common.volume.VolumeIOStats;
 import org.apache.hadoop.ozone.tablet.lstore.LStoreContainer;
 import org.apache.hadoop.ozone.tablet.lstore.LStoreContainerData;
-import org.apache.hadoop.ozone.tablet.lstore.helpers.ChunkUtils;
 import org.apache.hadoop.ozone.tablet.lstore.helpers.LStoreUtils;
 import org.apache.hadoop.ozone.tablet.lstore.interfaces.BlockManager;
 import org.apache.hadoop.ozone.tablet.lstore.interfaces.ChunkManager;
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.index.IndexWriterConfig;
-import org.apache.lucene.store.Directory;
-import org.apache.lucene.store.FSDirectory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,7 +85,14 @@ public class FilePerSegmentStrategy implements ChunkManager {
 
   @Override
   public void writeChunk(Container container, BlockID blockID, ChunkInfo info,
-      ChunkBuffer data, DispatcherContext dispatcherContext)
+    ChunkBuffer data, DispatcherContext dispatcherContext)
+    throws StorageContainerException {
+    throw new UnsupportedOperationException("Unsupported write chunk (LStore)");
+  }
+
+  @Override
+  public void writeChunk(Container container, BlockID blockID, ChunkInfo info,
+      WriteType writeType, ChunkBuffer data, DispatcherContext dispatcherContext)
           throws StorageContainerException {
 
     checkLayoutVersion(container);
@@ -129,7 +130,7 @@ public class FilePerSegmentStrategy implements ChunkManager {
     VolumeIOStats volumeIOStats = volume.getVolumeIOStats();
 
     // TODO: LStore write
-    LStoreUtils.writeData(chunkFile.toPath(), data, offset, len,
+    LStoreUtils.writeData(chunkFile.toPath(), writeType, data, len,
         volumeIOStats, doSyncWrite);
 
     containerData.updateWriteStats(len, overwrite);
@@ -137,8 +138,17 @@ public class FilePerSegmentStrategy implements ChunkManager {
 
   @Override
   public ChunkBuffer readChunk(Container container, BlockID blockID,
-      ChunkInfo info, DispatcherContext dispatcherContext)
-      throws StorageContainerException {
+    ChunkInfo info, DispatcherContext dispatcherContext)
+    throws StorageContainerException {
+    throw new UnsupportedOperationException("Unsupported read chunk (LStore)");
+  }
+
+  @Override
+  public ChunkBuffer readChunk(Container container, BlockID blockID,
+                               ChunkInfo info, ReadType readType,
+                               ByteBuffer readExpress,
+                               DispatcherContext dispatcherContext)
+    throws StorageContainerException {
 
     checkLayoutVersion(container);
 
@@ -148,7 +158,7 @@ public class FilePerSegmentStrategy implements ChunkManager {
     }
 
     LStoreContainerData containerData = (LStoreContainerData) container
-        .getContainerData();
+            .getContainerData();
 
     HddsVolume volume = containerData.getVolume();
     VolumeIOStats volumeIOStats = volume.getVolumeIOStats();
@@ -170,7 +180,7 @@ public class FilePerSegmentStrategy implements ChunkManager {
 
       if (checksumData != null) {
         if (checksumData.getChecksumType() ==
-            ContainerProtos.ChecksumType.NONE) {
+                ContainerProtos.ChecksumType.NONE) {
           bufferCapacity = defaultReadBufferCapacity;
         } else {
           bufferCapacity = checksumData.getBytesPerChecksum();
@@ -182,11 +192,8 @@ public class FilePerSegmentStrategy implements ChunkManager {
       bufferCapacity = len;
     }
 
-    ByteBuffer[] dataBuffers = BufferUtils.assignByteBuffers(len,
-        bufferCapacity);
-
-    LStoreUtils.readData(chunkFile.toPath(), dataBuffers, offset, len, volumeIOStats);
-
+    ByteBuffer[] dataBuffers =  LStoreUtils.readData(chunkFile.toPath(), readType,
+            readExpress, volumeIOStats);
     return ChunkBuffer.wrap(Lists.newArrayList(dataBuffers));
   }
 
@@ -246,7 +253,9 @@ public class FilePerSegmentStrategy implements ChunkManager {
   private static void checkFullDelete(ChunkInfo info, File chunkFile)
       throws StorageContainerException {
     long fileLength = chunkFile.length();
-    if ((info.getOffset() > 0)) {
+    // TODO：check file row size
+//    if ((info.getOffset() > 0) || (info.getLen() != fileLength)) {
+      if ((info.getOffset() > 0)) {
       String msg = String.format(
           "Trying to delete partial chunk %s from file %s with length %s",
           info, chunkFile, fileLength);

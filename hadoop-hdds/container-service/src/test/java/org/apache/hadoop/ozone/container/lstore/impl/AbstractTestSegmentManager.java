@@ -20,6 +20,8 @@ package org.apache.hadoop.ozone.container.lstore.impl;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hetu.photon.ClientTestUtil;
+import org.apache.hadoop.hetu.photon.helpers.PartialRow;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.impl.ChunkLayOutVersion;
 import org.apache.hadoop.ozone.container.common.transport.server.ratis.DispatcherContext;
@@ -36,7 +38,6 @@ import org.apache.hadoop.ozone.tablet.lstore.interfaces.BlockManager;
 import org.apache.hadoop.ozone.tablet.lstore.interfaces.ChunkManager;
 import org.junit.Before;
 import org.junit.Rule;
-import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.mockito.Mockito;
 
@@ -45,7 +46,6 @@ import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.util.UUID;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -64,7 +64,7 @@ public abstract class AbstractTestSegmentManager {
   private BlockID blockID;
   private ChunkInfo chunkInfo;
   private ByteBuffer data;
-  private byte[] header;
+  private PartialRow partialRow;
   private BlockManager blockManager;
 
   @Rule
@@ -103,16 +103,14 @@ public abstract class AbstractTestSegmentManager {
     lStoreContainer.create(volumeSet, volumeChoosingPolicy,
         UUID.randomUUID().toString());
 
-    header = "{\"id\":\"1\",\"test\":\"my header\"}".getBytes(UTF_8);
-    byte[] bytes = "{\"id\":\"2\",\"test\":\"testing write chunks\"}".getBytes(UTF_8);
-    data = ByteBuffer.allocate(header.length + bytes.length)
-        .put(header).put(bytes);
+    partialRow = ClientTestUtil.getPartialRowWithAllTypes();
+    data = ByteBuffer.wrap(partialRow.toProtobuf().toByteArray());
     rewindBufferToDataStart();
 
     // Creating BlockData
     blockID = new BlockID(1L, 1L);
     chunkInfo = new ChunkInfo(String.format("%d.data.%d", blockID
-        .getLocalID(), 0), 0, bytes.length);
+        .getLocalID(), 0), 0, partialRow.toProtobuf().getSerializedSize());
   }
 
   protected DispatcherContext getDispatcherContext() {
@@ -120,7 +118,9 @@ public abstract class AbstractTestSegmentManager {
   }
 
   protected Buffer rewindBufferToDataStart() {
-    return data.position(header.length);
+    byte[] row = partialRow.toProtobuf().toByteArray();
+    return ByteBuffer.allocate(row.length)
+            .put(row).position(0);
   }
 
   protected void checkChunkFileCount(int expected) {
@@ -170,6 +170,10 @@ public abstract class AbstractTestSegmentManager {
 
   protected ByteBuffer getData() {
     return data;
+  }
+
+  protected long getRealDataSerializedSize() {
+    return partialRow.toProtobuf().getSerializedSize();
   }
 
   protected BlockManager getBlockManager() {

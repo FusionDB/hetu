@@ -48,7 +48,7 @@ import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.hdds.utils.TransactionInfoCodec;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.codec.HmDatabaseArgsCodec;
 import org.apache.hadoop.ozone.om.codec.OmBucketInfoCodec;
 import org.apache.hadoop.ozone.om.codec.OmKeyInfoCodec;
@@ -261,7 +261,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   }
 
   @Override
-  public Table<String, HmDatabaseArgs> getDatabaseTable() {
+  public Table<String, OmDatabaseArgs> getDatabaseTable() {
     return databaseTable;
   }
 
@@ -419,7 +419,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
             new RepeatedOmTabletInfoCodec(true))
         .addCodec(OmBucketInfo.class, new OmBucketInfoCodec())
         .addCodec(OmVolumeArgs.class, new OmVolumeArgsCodec())
-        .addCodec(HmDatabaseArgs.class, new HmDatabaseArgsCodec())
+        .addCodec(OmDatabaseArgs.class, new HmDatabaseArgsCodec())
         .addCodec(OmTableInfo.class, new OmTableInfoCodec())
         .addCodec(OmPartitionInfo.class, new OmPartitionInfoCodec())
         .addCodec(PersistedUserVolumeInfo.class, new UserVolumeInfoCodec())
@@ -454,7 +454,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     checkTableStatus(volumeTable, VOLUME_TABLE);
 
     databaseTable =
-            this.store.getTable(DATABASE_TABLE, String.class, HmDatabaseArgs.class,
+            this.store.getTable(DATABASE_TABLE, String.class, OmDatabaseArgs.class,
                     cacheType);
     checkTableStatus(databaseTable, DATABASE_TABLE);
 
@@ -1472,14 +1472,14 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   }
 
   @Override
-  public List<HmDatabaseArgs> listDatabase(String userName, String prefix, String startKey, int maxKeys) throws IOException {
+  public List<OmDatabaseArgs> listDatabase(String userName, String prefix, String startKey, int maxKeys) throws IOException {
 
     if (StringUtil.isBlank(userName)) {
       // null userName represents listing all database in cluster.
       return listAllDatabase(prefix, startKey, maxKeys);
     }
 
-    final List<HmDatabaseArgs> result = Lists.newArrayList();
+    final List<OmDatabaseArgs> result = Lists.newArrayList();
     final List<String> databases = getDatabasesByUser(userName)
             .getDatabaseNamesList();
 
@@ -1498,7 +1498,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     while (index != -1 && index < databases.size() && result.size() < maxKeys) {
       final String databaseName = databases.get(index);
       if (databaseName.startsWith(startChar)) {
-        final HmDatabaseArgs databaseArgs = getDatabaseTable()
+        final OmDatabaseArgs databaseArgs = getDatabaseTable()
                 .get(getDatabaseKey(databaseName));
         if (databaseArgs == null) {
           // Could not get database info by given database name,
@@ -1519,23 +1519,23 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   /**
    * @return list of all databases.
    */
-  private List<HmDatabaseArgs> listAllDatabase(String prefix, String startKey,
-                                            int maxKeys) {
-    List<HmDatabaseArgs> result = Lists.newArrayList();
+  private List<OmDatabaseArgs> listAllDatabase(String prefix, String startKey,
+                                               int maxKeys) {
+    List<OmDatabaseArgs> result = Lists.newArrayList();
 
     /* databaseTable is full-cache, so we use cacheIterator. */
-    Iterator<Map.Entry<CacheKey<String>, CacheValue<HmDatabaseArgs>>>
+    Iterator<Map.Entry<CacheKey<String>, CacheValue<OmDatabaseArgs>>>
             cacheIterator = getDatabaseTable().cacheIterator();
 
     String databaseName;
-    HmDatabaseArgs hmDatabaseArgs;
+    OmDatabaseArgs omDatabaseArgs;
     boolean prefixIsEmpty = Strings.isNullOrEmpty(prefix);
     boolean startKeyIsEmpty = Strings.isNullOrEmpty(startKey);
     while (cacheIterator.hasNext() && result.size() < maxKeys) {
-      Map.Entry<CacheKey<String>, CacheValue<HmDatabaseArgs>> entry =
+      Map.Entry<CacheKey<String>, CacheValue<OmDatabaseArgs>> entry =
               cacheIterator.next();
-      hmDatabaseArgs = entry.getValue().getCacheValue();
-      databaseName = hmDatabaseArgs.getName();
+      omDatabaseArgs = entry.getValue().getCacheValue();
+      databaseName = omDatabaseArgs.getName();
 
       if (!prefixIsEmpty && !databaseName.startsWith(prefix)) {
         continue;
@@ -1548,7 +1548,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
         continue;
       }
 
-      result.add(hmDatabaseArgs);
+      result.add(omDatabaseArgs);
     }
 
     return result;
@@ -1676,5 +1676,20 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
       }
     }
     return result;
+  }
+
+  @Override
+  public List<OmTabletInfo> listTablets(String databaseName, String tableName, String partitionName, String startTablet, String tabletPrefix, int maxTablets) throws IOException {
+    return null;
+  }
+
+  @Override
+  public List<BlockGroup> getPendingDeletionTablets(int count) throws IOException {
+    return null;
+  }
+
+  @Override
+  public List<String> getExpiredOpenTablets(int count) throws IOException {
+    return null;
   }
 }

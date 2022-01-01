@@ -45,6 +45,11 @@
     <module>csi</module>
     <module>fault-injection-test</module>
     <module>insight</module>
+    <!-- hetu storage -->
+    <module>hetu-interface-photon</module>
+    <module>hetu-photon</module>
+    <module>hetu-client</module>
+    <module>hetu-manager</module>
   </modules>
 
   <repositories>
@@ -210,6 +215,11 @@
       </dependency>
       <dependency>
         <groupId>org.apache.ozone</groupId>
+        <artifactId>container-client</artifactId>
+        <version>${hdds.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.ozone</groupId>
         <artifactId>hdds-tools</artifactId>
         <version>${hdds.version}</version>
       </dependency>
@@ -239,6 +249,28 @@
         <groupId>org.bouncycastle</groupId>
         <artifactId>bcprov-jdk15on</artifactId>
         <version>${bouncycastle.version}</version>
+      </dependency>
+
+      <!--hetu storage-->
+      <dependency>
+        <groupId>org.apache.ozone</groupId>
+        <artifactId>hetu-manager</artifactId>
+        <version>${ozone.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.ozone</groupId>
+        <artifactId>hetu-client</artifactId>
+        <version>${ozone.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.ozone</groupId>
+        <artifactId>hetu-interface-photon</artifactId>
+        <version>${ozone.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.ozone</groupId>
+        <artifactId>hetu-photon</artifactId>
+        <version>${ozone.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

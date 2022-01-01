@@ -25,7 +25,7 @@ import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.audit.OMAction;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.OzoneManager;
@@ -37,7 +37,6 @@ import org.apache.hadoop.ozone.om.response.database.OMDatabaseSetQuotaResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DatabaseInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetDatabasePropertyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetDatabasePropertyResponse;
 
@@ -45,7 +44,6 @@ import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.xml.crypto.Data;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -67,7 +65,7 @@ public class OMDatabaseSetQuotaRequest extends OMDatabaseRequest {
   public OMRequest preExecute(OzoneManager ozoneManager) throws IOException {
 
     long modificationTime = Time.now();
-    HmDatabaseArgs databaseArgs = HmDatabaseArgs.getFromProtobuf(getOmRequest().getSetDatabasePropertyRequest().getDatabaseInfo());
+    OmDatabaseArgs databaseArgs = OmDatabaseArgs.getFromProtobuf(getOmRequest().getSetDatabasePropertyRequest().getDatabaseInfo());
     databaseArgs.setModificationTime(modificationTime);
 
     SetDatabasePropertyRequest.Builder setPropertyRequestBuilde = getOmRequest()
@@ -126,29 +124,29 @@ public class OMDatabaseSetQuotaRequest extends OMDatabaseRequest {
       acquireDatabaseLock = omMetadataManager.getLock().acquireWriteLock(
           DATABASE_LOCK, database);
 
-      HmDatabaseArgs hmDatabaseArgs = getDatabaseInfo(omMetadataManager, database);
+      OmDatabaseArgs omDatabaseArgs = getDatabaseInfo(omMetadataManager, database);
       if (checkQuotaBytesValid(omMetadataManager,
           setDatabasePropertyRequest.getDatabaseInfo().getQuotaInBytes(), database)) {
-        hmDatabaseArgs.setQuotaInBytes(
+        omDatabaseArgs.setQuotaInBytes(
             setDatabasePropertyRequest
                     .getDatabaseInfo()
                     .getQuotaInBytes());
       } else {
-        hmDatabaseArgs.setQuotaInBytes(hmDatabaseArgs.getQuotaInBytes());
+        omDatabaseArgs.setQuotaInBytes(omDatabaseArgs.getQuotaInBytes());
       }
       if (checkQuotaNamespaceValid(
           setDatabasePropertyRequest.getDatabaseInfo().getQuotaInNamespace())) {
-        hmDatabaseArgs.setQuotaInNamespace(
+        omDatabaseArgs.setQuotaInNamespace(
             setDatabasePropertyRequest
                 .getDatabaseInfo()
                 .getQuotaInNamespace());
       } else {
-        hmDatabaseArgs.setQuotaInNamespace(hmDatabaseArgs.getQuotaInNamespace());
+        omDatabaseArgs.setQuotaInNamespace(omDatabaseArgs.getQuotaInNamespace());
       }
 
-      hmDatabaseArgs.setUpdateID(transactionLogIndex,
+      omDatabaseArgs.setUpdateID(transactionLogIndex,
           ozoneManager.isRatisEnabled());
-      hmDatabaseArgs.setModificationTime(
+      omDatabaseArgs.setModificationTime(
           setDatabasePropertyRequest
                   .getDatabaseInfo()
                   .getModificationTime());
@@ -156,12 +154,12 @@ public class OMDatabaseSetQuotaRequest extends OMDatabaseRequest {
       // update cache.
       omMetadataManager.getDatabaseTable().addCacheEntry(
           new CacheKey<>(omMetadataManager.getDatabaseKey(database)),
-          new CacheValue<>(Optional.of(hmDatabaseArgs), transactionLogIndex));
+          new CacheValue<>(Optional.of(omDatabaseArgs), transactionLogIndex));
 
       omResponse.setSetDatabasePropertyResponse(
           SetDatabasePropertyResponse.newBuilder().build());
       omClientResponse = new OMDatabaseSetQuotaResponse(omResponse.build(),
-          hmDatabaseArgs);
+              omDatabaseArgs);
     } catch (IOException ex) {
       exception = ex;
       omClientResponse = new OMDatabaseSetQuotaResponse(
@@ -202,7 +200,7 @@ public class OMDatabaseSetQuotaRequest extends OMDatabaseRequest {
     List<OmTableInfo> tableList = metadataManager.listMetaTables(
         databaseName, null, null, Integer.MAX_VALUE);
     for(OmTableInfo tableInfo : tableList) {
-      long nextQuotaInBytes = tableInfo.getUsedCapacityInBytes();
+      long nextQuotaInBytes = tableInfo.getUsedInBytes();
       if(nextQuotaInBytes > OzoneConsts.QUOTA_RESET) {
         totalTableQuota += nextQuotaInBytes;
       }

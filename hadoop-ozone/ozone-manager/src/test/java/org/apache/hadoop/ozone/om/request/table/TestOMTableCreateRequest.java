@@ -19,7 +19,7 @@
 
 package org.apache.hadoop.ozone.om.request.table;
 
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmTableInfo;
@@ -209,10 +209,10 @@ public class TestOMTableCreateRequest extends TestTableRequest {
 
   public static void addCreateDatabaseToTable(String databaseName,
       OMMetadataManager omMetadataManager) throws Exception {
-    HmDatabaseArgs hmDatabaseArgs =
-        HmDatabaseArgs.newBuilder().setCreationTime(Time.now())
+    OmDatabaseArgs omDatabaseArgs =
+        OmDatabaseArgs.newBuilder().setCreationTime(Time.now())
             .setName(databaseName).setAdminName(UUID.randomUUID().toString())
             .setOwnerName(UUID.randomUUID().toString()).build();
-    TestOMRequestUtils.addDatabaseToOM(omMetadataManager, hmDatabaseArgs);
+    TestOMRequestUtils.addDatabaseToOM(omMetadataManager, omDatabaseArgs);
   }
 }

@@ -297,7 +297,7 @@ public final class OmPartitionInfo extends WithObjectID implements Auditable {
       this.isVersionEnabled = false;
       this.rows = 0;
       this.metadata = new HashMap<>();
-      this.sizeInBytes = OzoneConsts.USED_CAPACITY_IN_BYTES_RESET;
+      this.sizeInBytes = OzoneConsts.USED_IN_BYTES_RESET;
     }
 
     public Builder setDatabaseName(String databaseName) {

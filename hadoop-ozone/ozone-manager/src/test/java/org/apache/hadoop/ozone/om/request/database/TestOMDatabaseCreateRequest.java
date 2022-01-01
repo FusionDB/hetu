@@ -18,10 +18,9 @@
 
 package org.apache.hadoop.ozone.om.request.database;
 
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
-import org.apache.hadoop.ozone.om.request.database.OMDatabaseCreateRequest;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.om.response.database.OMDatabaseCreateResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -130,24 +129,24 @@ public class TestOMDatabaseCreateRequest extends TestOMDatabaseRequest {
     DatabaseInfo databaseInfo = omDatabaseCreateRequest.getOmRequest()
         .getCreateDatabaseRequest().getDatabaseInfo();
 
-    HmDatabaseArgs hmDatabaseArgs =
+    OmDatabaseArgs omDatabaseArgs =
         omMetadataManager.getDatabaseTable().get(databaseKey);
     // As request is valid database table should not have entry.
-    Assert.assertNotNull(hmDatabaseArgs);
-    Assert.assertEquals(expectedObjId, hmDatabaseArgs.getObjectID());
-    Assert.assertEquals(txLogIndex, hmDatabaseArgs.getUpdateID());
+    Assert.assertNotNull(omDatabaseArgs);
+    Assert.assertEquals(expectedObjId, omDatabaseArgs.getObjectID());
+    Assert.assertEquals(txLogIndex, omDatabaseArgs.getUpdateID());
 
     // Initial modificationTime should be equal to creationTime.
-    long creationTime = hmDatabaseArgs.getCreationTime();
-    long modificationTime = hmDatabaseArgs.getModificationTime();
+    long creationTime = omDatabaseArgs.getCreationTime();
+    long modificationTime = omDatabaseArgs.getModificationTime();
     Assert.assertEquals(creationTime, modificationTime);
 
     // Check data from table and request.
-    Assert.assertEquals(databaseInfo.getName(), hmDatabaseArgs.getName());
-    Assert.assertEquals(databaseInfo.getOwnerName(), hmDatabaseArgs.getOwnerName());
-    Assert.assertEquals(databaseInfo.getAdminName(), hmDatabaseArgs.getAdminName());
+    Assert.assertEquals(databaseInfo.getName(), omDatabaseArgs.getName());
+    Assert.assertEquals(databaseInfo.getOwnerName(), omDatabaseArgs.getOwnerName());
+    Assert.assertEquals(databaseInfo.getAdminName(), omDatabaseArgs.getAdminName());
     Assert.assertEquals(databaseInfo.getCreationTime(),
-            hmDatabaseArgs.getCreationTime());
+            omDatabaseArgs.getCreationTime());
 
     OzoneManagerStorageProtos.PersistedUserDatabaseInfo userDatabaseInfo =
         omMetadataManager.getUserTableDb().get(ownerKey);

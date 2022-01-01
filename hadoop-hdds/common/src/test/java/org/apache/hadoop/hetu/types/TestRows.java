@@ -29,5 +29,6 @@ public class TestRows {
         Assert.assertEquals(row1.get(row1.fieldIndex("name")), "Alex");
         Assert.assertTrue(row1.isNullAt(row1.fieldIndex("city")));
         Assert.assertTrue(row1.schema.names().length == 5);
+        System.out.println(structType.toString());
     }
 }

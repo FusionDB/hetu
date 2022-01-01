@@ -206,7 +206,7 @@ public final class OmPartitionArgs extends WithMetadata implements Auditable {
      * Constructs a builder.
      */
     public Builder() {
-      sizeInBytes = OzoneConsts.USED_CAPACITY_IN_BYTES_RESET;
+      sizeInBytes = OzoneConsts.USED_IN_BYTES_RESET;
     }
 
     public Builder setDatabaseName(String databaseName) {
@@ -294,7 +294,7 @@ public final class OmPartitionArgs extends WithMetadata implements Auditable {
     if(rows >= 0L) {
       builder.setRows(rows);
     }
-    if(sizeInBytes > 0 || sizeInBytes == OzoneConsts.USED_CAPACITY_IN_BYTES_RESET) {
+    if(sizeInBytes > 0 || sizeInBytes == OzoneConsts.USED_IN_BYTES_RESET) {
       builder.setSizeInBytes(sizeInBytes);
     }
     return builder.build();

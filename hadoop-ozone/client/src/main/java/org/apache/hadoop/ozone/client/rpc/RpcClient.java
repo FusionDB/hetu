@@ -62,8 +62,6 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.apache.hadoop.ozone.client.BucketArgs;
-import org.apache.hadoop.ozone.client.DatabaseArgs;
-import org.apache.hadoop.ozone.client.HetuDatabase;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneKey;
 import org.apache.hadoop.ozone.client.OzoneKeyDetails;
@@ -81,7 +79,6 @@ import org.apache.hadoop.ozone.client.io.OzoneCryptoInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.BucketEncryptionKeyInfo;
@@ -342,118 +339,6 @@ public class RpcClient implements ClientProtocol {
               " to {}", volumeName, owner, quotaInBytes, quotaInNamespace);
     }
     ozoneManagerClient.createVolume(builder.build());
-  }
-
-  @Override
-  public void createDatabase(String databaseName, DatabaseArgs databaseArgs) throws IOException {
-    verifyDatabaseName(databaseName);
-    Preconditions.checkNotNull(databaseArgs);
-    verifyCountsQuota(databaseArgs.getQuotaInNamespace());
-    verifySpaceQuota(databaseArgs.getQuotaInBytes());
-
-    String admin = databaseArgs.getAdmin() == null ?
-            ugi.getUserName() : databaseArgs.getAdmin();
-    String owner = databaseArgs.getOwner() == null ?
-            ugi.getUserName() : databaseArgs.getOwner();
-    long quotaInNamespace = databaseArgs.getQuotaInNamespace();
-    long quotaInBytes = databaseArgs.getQuotaInBytes();
-
-    //Group ACLs of the User
-    List<String> userGroups = Arrays.asList(UserGroupInformation
-            .createRemoteUser(owner).getGroupNames());
-
-    HmDatabaseArgs.Builder builder = HmDatabaseArgs.newBuilder();
-    builder.setName(databaseName);
-    builder.setAdminName(admin);
-    builder.setOwnerName(owner);
-    builder.setQuotaInBytes(quotaInBytes);
-    builder.setQuotaInNamespace(quotaInNamespace);
-    builder.setUsedNamespace(0L);
-    builder.addAllMetadata(databaseArgs.getMetadata());
-
-    if (databaseArgs.getQuotaInBytes() == 0) {
-      LOG.info("Creating Database: {}, with {} as owner.", databaseName, owner);
-    } else {
-      LOG.info("Creating Database: {}, with {} as owner "
-              + "and space quota set to {} bytes, counts quota set" +
-              " to {}", databaseName, owner, quotaInBytes, quotaInNamespace);
-    }
-    ozoneManagerClient.createDatabase(builder.build());
-  }
-
-  @Override
-  public void createDatabase(String databaseName) throws IOException {
-    createDatabase(databaseName, DatabaseArgs.newBuilder().build());
-  }
-
-  @Override
-  public HetuDatabase getDatabaseDetails(String databaseName)
-      throws IOException {
-      verifyDatabaseName(databaseName);
-      HmDatabaseArgs database = ozoneManagerClient.getDatabaseInfo(databaseName);
-      return new HetuDatabase(
-              conf,
-              this,
-              database.getName(),
-              database.getAdminName(),
-              database.getOwnerName(),
-              database.getQuotaInBytes(),
-              database.getQuotaInNamespace(),
-              database.getUsedNamespace(),
-              database.getCreationTime(),
-              database.getModificationTime(),
-              database.getMetadata());
-  }
-
-  @Override
-  public void deleteDatabase(String databaseName) throws IOException {
-    verifyDatabaseName(databaseName);
-    ozoneManagerClient.deleteDatabase(databaseName);
-  }
-
-  @Override
-  public HetuDatabase updateDatabase(HetuDatabase hetuDatabase) {
-    // TODO update database name
-    return null;
-  }
-
-  @Override
-  public List<HetuDatabase> listDatabase(String user, String databasePrefix, String prevDatabase, int maxListResult) throws IOException {
-    List<HmDatabaseArgs>  databases = ozoneManagerClient.listDatabaseByUser(
-            user, databasePrefix, prevDatabase, maxListResult);
-
-    return databases.stream().map(db -> new HetuDatabase(
-            conf,
-            this,
-            db.getName(),
-            db.getAdminName(),
-            db.getOwnerName(),
-            db.getQuotaInBytes(),
-            db.getQuotaInNamespace(),
-            db.getUsedNamespace(),
-            db.getCreationTime(),
-            db.getModificationTime(),
-            db.getMetadata()))
-            .collect(Collectors.toList());
-  }
-
-  @Override
-  public List<HetuDatabase> listDatabase(String databasePrefix, String prevDatabase, int maxListResult) throws IOException {
-    List<HmDatabaseArgs>  databases = ozoneManagerClient.listAllDatabases(
-            databasePrefix, prevDatabase, maxListResult);
-
-    return databases.stream().map(db -> new HetuDatabase(
-            conf,
-            this,
-            db.getName(),
-            db.getAdminName(),
-            db.getOwnerName(),
-            db.getQuotaInBytes(),
-            db.getQuotaInNamespace(),
-            db.getUsedNamespace(),
-            db.getCreationTime(),
-            db.getModificationTime()))
-            .collect(Collectors.toList());
   }
 
   @Override

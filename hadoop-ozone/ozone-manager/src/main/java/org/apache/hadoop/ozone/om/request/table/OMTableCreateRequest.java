@@ -19,18 +19,13 @@
 package org.apache.hadoop.ozone.om.request.table;
 
 import com.google.common.base.Optional;
-import org.apache.hadoop.crypto.CipherSuite;
-import org.apache.hadoop.crypto.key.KeyProvider;
-import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.hadoop.ozone.OmUtils;
-import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.audit.OMAction;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.OzoneManager;
@@ -47,27 +42,17 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateT
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateTableResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
-import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
-import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
-import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
-import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.BUCKET_ALREADY_EXISTS;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.DATABASE_NOT_FOUND;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TABLE_ALREADY_EXISTS;
-import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.VOLUME_NOT_FOUND;
-import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.DATABASE_LOCK;
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.TABLE_LOCK;
-import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.VOLUME_LOCK;
-import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CryptoProtocolVersionProto.ENCRYPTION_ZONES;
 
 /**
  * Handles CreateTable Request.
@@ -149,10 +134,10 @@ public class OMTableCreateRequest extends OMClientRequest {
       acquiredTableLock = metadataManager.getLock().acquireWriteLock(
           TABLE_LOCK, databaseName, tableName);
 
-      HmDatabaseArgs hmDatabaseArgs =
+      OmDatabaseArgs omDatabaseArgs =
           metadataManager.getDatabaseTable().getReadCopy(databaseKey);
       //Check if the database exists
-      if (hmDatabaseArgs == null) {
+      if (omDatabaseArgs == null) {
         LOG.debug("database: {} not found ", databaseName);
         throw new OMException("Databsae doesn't exist", DATABASE_NOT_FOUND);
       }
@@ -164,7 +149,7 @@ public class OMTableCreateRequest extends OMClientRequest {
       }
 
       //Check quotaInBytes to update
-      checkQuotaBytesValid(metadataManager, hmDatabaseArgs, omTableInfo,
+      checkQuotaBytesValid(metadataManager, omDatabaseArgs, omTableInfo,
           databaseKey);
 
       // TODO: check schema, partitions, numReplicas
@@ -176,18 +161,18 @@ public class OMTableCreateRequest extends OMClientRequest {
           ozoneManager.isRatisEnabled());
 
       // update used namespace for database
-      hmDatabaseArgs.incrUsedNamespace(1L);
+      omDatabaseArgs.incrUsedNamespace(1L);
 
       // Update table cache.
       metadataManager.getDatabaseTable().addCacheEntry(new CacheKey<>(databaseKey),
-          new CacheValue<>(Optional.of(hmDatabaseArgs), transactionLogIndex));
+          new CacheValue<>(Optional.of(omDatabaseArgs), transactionLogIndex));
       metadataManager.getMetaTable().addCacheEntry(new CacheKey<>(tableKey),
           new CacheValue<>(Optional.of(omTableInfo), transactionLogIndex));
 
       omResponse.setCreateTableResponse(
           CreateTableResponse.newBuilder().build());
       omClientResponse = new OMTableCreateResponse(omResponse.build(),
-          omTableInfo, hmDatabaseArgs.copyObject());
+          omTableInfo, omDatabaseArgs.copyObject());
     } catch (IOException ex) {
       exception = ex;
       omClientResponse = new OMTableCreateResponse(
@@ -222,10 +207,10 @@ public class OMTableCreateRequest extends OMClientRequest {
   }
 
   public boolean checkQuotaBytesValid(OMMetadataManager metadataManager,
-      HmDatabaseArgs hmDatabaseArgs, OmTableInfo omTableInfo, String databaseKey)
+                                      OmDatabaseArgs omDatabaseArgs, OmTableInfo omTableInfo, String databaseKey)
       throws IOException {
-    long usedCapacityInBytes = omTableInfo.getUsedCapacityInBytes();
-    long databaseQuotaInBytes = hmDatabaseArgs.getQuotaInBytes();
+    long usedCapacityInBytes = omTableInfo.getUsedInBytes();
+    long databaseQuotaInBytes = omDatabaseArgs.getQuotaInBytes();
 
     long totalTableQuota = 0;
     if (usedCapacityInBytes > 0) {
@@ -235,9 +220,9 @@ public class OMTableCreateRequest extends OMClientRequest {
     }
 
     List<OmTableInfo>  tableList = metadataManager.listMetaTables(
-        hmDatabaseArgs.getName(), null, null, Integer.MAX_VALUE);
+        omDatabaseArgs.getName(), null, null, Integer.MAX_VALUE);
     for(OmTableInfo tableInfo : tableList) {
-      long nextUsedCapacityInBytes = tableInfo.getUsedCapacityInBytes();
+      long nextUsedCapacityInBytes = tableInfo.getUsedInBytes();
       if(nextUsedCapacityInBytes > OzoneConsts.USED_CAPACITY_IN_BYTES_RESET) {
         totalTableQuota += nextUsedCapacityInBytes;
       }

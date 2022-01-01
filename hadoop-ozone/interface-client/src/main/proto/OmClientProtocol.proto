@@ -37,6 +37,7 @@ This is similar to Namenode for Ozone.
 
 import "hdds.proto";
 import "Security.proto";
+import "PhotonSchemaProtocol.proto";
 
 enum Type {
   CreateVolume = 11;
@@ -126,6 +127,9 @@ enum Type {
   AllocateTablet = 144;
   ListTablets = 145;
   CommitTablet = 146;
+  DeleteOpenTablets = 147;
+  PurgeTablets = 148;
+  LookupTablet = 149;
 }
 
 message OMRequest {
@@ -231,6 +235,9 @@ message OMRequest {
   optional AllocateTabletRequest            allocateTabletRequest = 144;
   optional ListTabletsRequest               listTabletsRequest = 145;
   optional CommitTabletRequest              commitTabletRequest = 146;
+  optional DeleteOpenTabletsRequest         deleteOpenTabletsRequest = 147;
+  optional PurgeTabletsRequest              purgeTabletsRequest = 148;
+  optional LookupTabletRequest                 lookupTabletRequest = 149;
 }
 
 message OMResponse {
@@ -331,6 +338,8 @@ message OMResponse {
   optional AllocateTabletResponse            allocateTabletResponse = 144;
   optional ListTabletsResponse               listTabletsResponse = 145;
   optional CommitTabletResponse              commitTabletResponse = 146;
+  optional PurgeTabletsResponse              purgeTabletsResponse = 148;
+  optional LookupTabletResponse                 lookupTabletResponse = 149;
 }
 
 enum Status {
@@ -497,18 +506,20 @@ message VolumeInfo {
 
 message DatabaseInfo {
   required string adminName = 1;
-  required string ownerName = 2;
+  optional string ownerName = 2;
   required string name = 3;
   optional uint64 creationTime = 4;
   optional uint64 modificationTime = 5;
   repeated hadoop.hdds.KeyValue metadata = 6;
   optional uint64 quotaInBytes = 7;
-  optional int64 quotaInNamespace = 8 [default = -2];
-  optional uint64 usedNamespace = 9;
-  optional uint64 objectID = 10;
-  optional uint64 updateID = 11;
-  optional string Comment = 12;
+  optional int32  quotaInTable = 8 [default = -2];
+  optional uint64  usedNamespace = 9;
+
+  optional uint64 objectID = 11;
+  optional uint64 updateID = 12;
 }
+
+
 
 message TableInfo {
   enum StorageEngineProto {
@@ -516,51 +527,23 @@ message TableInfo {
     CSTORE = 2;
   }
 
-  enum Type {
-    HASH = 1;
-    RANGE = 2;
-    LIST = 3;
-  }
-
-  message PartitionsProto {
-    required Type partitionType = 1;
-    repeated string fields = 2;
-  }
-
-  message DistributedKeyProto {
-    required Type distributedKeyType = 1 [default = HASH];
-    required int32 buckets = 2 [default = 8];
-    repeated string fields = 3;
-  }
-
-  enum ColumnKeyTypeProto {
-    PRIMARY_KEY = 1;
-    UNIQUE_KEY = 2;
-    AGGREGATE_KEY = 3;
-    NO_KEY = 4;
-  }
-
-  message ColumnKeyProto {
-    optional ColumnKeyTypeProto columnKeyType = 1;
-    repeated string fields = 2;
-  }
-
   required string databaseName = 1;
   required string tableName = 2;
-  repeated ColumnSchemaProto columns = 3;
+  required hadoop.hetu.SchemaProto schema = 3;
   required StorageEngineProto storageEngine = 4 [default = LSTORE];
   required bool isVersionEnabled = 5 [default = false];
   required StorageTypeProto storageType = 6 [default = DISK];
   required int32 numReplicas = 7;
-  optional uint64 creationTime = 8;
-  repeated hadoop.hdds.KeyValue metadata = 9;
-  required PartitionsProto partitions = 10;
-  required DistributedKeyProto distributedKey = 11;
-  required ColumnKeyProto columnKey = 12;
-  optional uint64 objectID = 13;
-  optional uint64 updateID = 14;
-  optional uint64 modificationTime = 15;
-  optional uint64 usedCapacityInBytes = 16;
+  required int32 buckets = 8 [default = 8];
+  repeated hadoop.hdds.KeyValue metadata = 10;
+  optional uint64 creationTime = 11;
+  optional uint64 modificationTime = 12;
+  optional uint64 quotaInBytes = 13;
+  optional int64 usedBytes = 14 [default = -2];
+  optional int32 quotaInBucket = 15;
+  optional int32 usedBucket = 16 [default = -2];
+  optional uint64 objectID = 17;
+  optional uint64 updateID = 18;
 }
 
 message PartitionInfo {
@@ -580,17 +563,6 @@ message PartitionInfo {
   optional uint64 updateID = 14;
 }
 
-message ColumnSchemaProto {
-  required string columnType = 1;
-  required string columnName = 2;
-  required string dataType = 3;
-  required int32 ordinalPosition = 4;
-  optional string columnDefault = 6;
-  optional string extra = 7 [default = "DEFAULT_GENERATED"];
-  optional string columnComment = 8;
-  optional bool isNullable = 9;
-}
-
 message TabletInfo {
   required string databaseName = 1;
   required string tableName = 2;
@@ -604,7 +576,6 @@ message TabletInfo {
   optional uint64 creationTime = 10;
   optional uint64 modificationTime = 11;
   repeated hadoop.hdds.KeyValue metadata = 12;
-  optional FileEncryptionInfoProto fileEncryptionInfo = 13;
   optional uint64 objectID = 14;
   optional uint64 updateID = 15;
 }
@@ -697,7 +668,11 @@ message GetDatabaseResponse {
 update a database
  */
 message SetDatabasePropertyRequest {
-  required DatabaseInfo databaseInfo = 1;
+  required string databaseName = 1;
+  optional string ownerName = 2;
+  optional uint64 quotaInBytes = 3;
+  optional uint64 modificationTime = 4;
+  optional int32 quotaInTable = 5;
 }
 
 message SetDatabasePropertyResponse {
@@ -886,12 +861,16 @@ message BucketArgs {
 message TableArgs {
   required string databaseName = 1;
   required string tableName = 2;
-  repeated ColumnSchemaProto columns = 3;
+  required hadoop.hetu.SchemaProto schema = 3;
   required bool isVersionEnabled = 4 [default = false];
   required StorageTypeProto storageType = 5 [default = DISK];
   required int32 numReplicas = 6;
-  repeated hadoop.hdds.KeyValue metadata = 7;
-  optional uint64 usedCapacityInBytes = 8;
+  required int32 buckets = 7;
+  repeated hadoop.hdds.KeyValue metadata = 8;
+  optional uint64 usedBytes = 9;
+  optional uint64 quotaInBytes = 10;
+  optional int32 usedBucket = 11;
+  optional int32  quotaInBucket = 12;
 }
 
 message PartitionArgs {
@@ -926,6 +905,25 @@ message OzoneObj {
   enum StoreType {
     OZONE = 1;
     S3 = 2;
+  }
+  required ObjectType resType = 1;
+  required StoreType storeType = 2  [default = S3];
+  required string path = 3;
+}
+
+message HetuObj {
+  enum ObjectType {
+    DATABASE = 1;
+    TABLE = 2;
+    PARTITION = 3;
+    TABLET = 4;
+    PREFIX = 5;
+  }
+
+  enum StoreType {
+    OZONE = 1;
+    S3 = 2;
+    HETU = 3;
   }
   required ObjectType resType = 1;
   required StoreType storeType = 2  [default = S3];
@@ -1268,6 +1266,12 @@ message OzoneFileStatusProto {
 
 }
 
+message OzoneTabletStatusProto {
+  optional TabletInfo tabletInfo = 2;
+  optional uint64 blockSize = 3;
+
+}
+
 message GetFileStatusRequest {
   required KeyArgs keyArgs = 1;
 }
@@ -1356,6 +1360,19 @@ message LookupKeyRequest {
 
 message LookupKeyResponse {
   optional KeyInfo keyInfo = 2;
+  // clients' followup request may carry this ID for stateful operations (similar
+  // to a cookie).
+  optional uint64 ID = 3;
+  // TODO : allow specifying a particular version to read.
+  optional uint64 openVersion = 4;
+}
+
+message LookupTabletRequest {
+  required TabletArgs tabletArgs = 1;
+}
+
+message LookupTabletResponse {
+  optional TabletInfo tabletInfo = 2;
   // clients' followup request may carry this ID for stateful operations (similar
   // to a cookie).
   optional uint64 ID = 3;
@@ -1464,8 +1481,27 @@ message PurgeKeysResponse {
 
 }
 
+message PurgeTabletsRequest {
+  repeated DeletedTablets deletedTablets = 1;
+}
+
+message PurgeTabletsResponse {
+
+}
+
+message DeletedTablets {
+  required string databaseName = 1;
+  required string tableName = 2;
+  required string partitionName = 3;
+  repeated string tablets = 4;
+}
+
 message DeleteOpenKeysRequest {
   repeated OpenKeyBucket openKeysPerBucket = 1;
+}
+
+message DeleteOpenTabletsRequest {
+  repeated OpenTabletPartition openTabletsPerPartition = 1;
 }
 
 message OpenKeyBucket {
@@ -1474,7 +1510,19 @@ message OpenKeyBucket {
   repeated OpenKey keys = 3;
 }
 
+message OpenTabletPartition {
+  required string databaseName = 1;
+  required string tableName = 2;
+  required string partitionName = 3;
+  repeated OpenTablet tablets = 4;
+}
+
 message OpenKey {
+  required string name = 1;
+  required uint64 clientID = 2;
+}
+
+message OpenTablet {
   required string name = 1;
   required uint64 clientID = 2;
 }
@@ -1523,9 +1571,10 @@ message ListKeysResponse {
 message ListTabletsRequest {
   required string databaseName = 1;
   required string tableName = 2;
-  optional string startTablet = 3;
-  optional string prefix = 4;
-  optional int32 count = 5;
+  required string partitionName = 3;
+  optional string startTablet = 4;
+  optional string prefix = 5;
+  optional int32 count = 6;
 }
 
 message ListTabletsResponse {

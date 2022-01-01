@@ -113,4 +113,13 @@ public interface ScmBlockLocationProtocol extends Closeable {
    */
   List<DatanodeDetails> sortDatanodes(List<String> nodes,
       String clientMachine) throws IOException;
+
+  /**
+   * Delete blocks for a set of object tablets.
+   *
+   * @param tabletBlocksInfoList Map of object tablet and its blocks.
+   * @return list of block deletion results.
+   * @throws IOException if there is any failure.
+   */
+  List<DeleteBlockGroupResult> deleteTabletBlocks(List<BlockGroup> tabletBlocksInfoList) throws IOException;
 }

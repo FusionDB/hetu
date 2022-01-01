@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.container.lstore.impl;
 
 import org.apache.hadoop.hdds.client.BlockID;
+import org.apache.hadoop.hetu.photon.WriteType;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.common.ChunkBuffer;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
@@ -58,7 +59,7 @@ public class TestFilePerSegmentStrategy extends CommonSegmentManagerTestCases {
     LStoreContainer container = getLStoreContainer();
     BlockID blockID = getBlockID();
     ChunkInfo chunkInfo = getChunkInfo();
-    chunkManager.writeChunk(container, blockID, chunkInfo, getData(),
+    chunkManager.writeChunk(container, blockID, chunkInfo, WriteType.INSERT, getData(),
         new DispatcherContext.Builder()
             .setStage(DispatcherContext.WriteChunkStage.WRITE_DATA).build());
     // Now a chunk file is being written with Stage WRITE_DATA, so it should
@@ -72,7 +73,7 @@ public class TestFilePerSegmentStrategy extends CommonSegmentManagerTestCases {
 
     checkWriteIOStats(chunkInfo.getLen(), 1);
 
-    chunkManager.writeChunk(container, blockID, chunkInfo, getData(),
+    chunkManager.writeChunk(container, blockID, chunkInfo, WriteType.INSERT, getData(),
         new DispatcherContext.Builder()
             .setStage(DispatcherContext.WriteChunkStage.COMMIT_DATA).build());
 
@@ -104,11 +105,12 @@ public class TestFilePerSegmentStrategy extends CommonSegmentManagerTestCases {
     File file = ChunkLayOutVersion.FILE_PER_SEGMENT.getChunkFile(
         container.getContainerData(), blockID, chunkInfo);
     LStoreUtils.writeData(file.toPath(),
-        ChunkBuffer.wrap(getData()), offset, chunkInfo.getLen(),
+        WriteType.INSERT,
+        ChunkBuffer.wrap(getData()), chunkInfo.getLen(),
         new VolumeIOStats(), true);
     checkChunkFileCount(1);
     assertTrue(file.exists());
-    assertEquals(offset + chunkInfo.getLen(), getData().limit());
+    assertEquals(offset + chunkInfo.getLen(), getRealDataSerializedSize());
 
     // WHEN
     chunkManager.deleteChunk(container, blockID, oldDatanodeChunkInfo);

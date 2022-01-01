@@ -28,7 +28,7 @@ import org.apache.hadoop.hdds.utils.db.TableIterator;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.hadoop.ozone.common.BlockGroup;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
@@ -239,6 +239,28 @@ public interface OMMetadataManager extends DBStoreHAManager {
       throws IOException;
 
   /**
+   * Returns a list of tablets represented by {@link OmKeyInfo} in the given
+   * partition of table.
+   *
+   * @param databaseName the name of the database.
+   * @param tableName the name of the table.
+   * @param partitionName the name of the partition.
+   * @param startTablet the start tablet name, only the tablets whose name is after this
+   * value will be included in the result. This tablet is excluded from the
+   * result.
+   * @param tabletPrefix tablet name prefix, only the tablets whose name has this prefix
+   * will be included in the result.
+   * @param maxTablets the maximum number of tablets to return. It ensures the size of
+   * the result will not exceed this limit.
+   * @return a list of tablets.
+   * @throws IOException
+   */
+  List<OmTabletInfo> listTablets(String databaseName,
+                           String tableName, String partitionName, String startTablet,
+                           String tabletPrefix, int maxTablets)
+          throws IOException;
+
+  /**
    * List trash allows the user to list the keys that were marked as deleted,
    * but not actually deleted by Ozone Manager. This allows a user to recover
    * keys within a configurable window.
@@ -296,6 +318,18 @@ public interface OMMetadataManager extends DBStoreHAManager {
   List<BlockGroup> getPendingDeletionKeys(int count) throws IOException;
 
   /**
+   * Returns a list of pending deletion tablet info that ups to the given count.
+   * Each entry is a {@link BlockGroup}, which contains the info about the tablet
+   * name and all its associated block IDs. A pending deletion tablet is stored
+   * with #deleting# prefix in OM DB.
+   *
+   * @param count max number of tablets to return.
+   * @return a list of {@link BlockGroup} represent tablets and blocks.
+   * @throws IOException
+   */
+  List<BlockGroup> getPendingDeletionTablets(int count) throws IOException;
+
+  /**
    * Returns the names of up to {@code count} open keys that are older than
    * the configured expiration age.
    *
@@ -304,6 +338,16 @@ public interface OMMetadataManager extends DBStoreHAManager {
    * @throws IOException
    */
   List<String> getExpiredOpenKeys(int count) throws IOException;
+
+  /**
+   * Returns the names of up to {@code count} open keys that are older than
+   * the configured expiration age.
+   *
+   * @param count The maximum number of open tablets to return.
+   * @return a list of {@link String} representing names of open expired tablets.
+   * @throws IOException
+   */
+  List<String> getExpiredOpenTablets(int count) throws IOException;
 
   /**
    * Returns the user Table.
@@ -465,7 +509,7 @@ public interface OMMetadataManager extends DBStoreHAManager {
    *
    * @return DatabaseTable.
    */
-  Table<String, HmDatabaseArgs> getDatabaseTable();
+  Table<String, OmDatabaseArgs> getDatabaseTable();
 
   /**
    * Given a database return the corresponding DB key.
@@ -490,10 +534,10 @@ public interface OMMetadataManager extends DBStoreHAManager {
    * @param startKey the start database name determines where to start listing
    * from, this key is excluded from the result.
    * @param maxKeys the maximum number of databases to return.
-   * @return a list of {@link HmDatabaseArgs}
+   * @return a list of {@link OmDatabaseArgs}
    * @throws IOException
    */
-  List<HmDatabaseArgs> listDatabase(String userName, String prefix, String startKey, int maxKeys) throws IOException;
+  List<OmDatabaseArgs> listDatabase(String userName, String prefix, String startKey, int maxKeys) throws IOException;
 
   /**
    * Given a table return the corresponding DB key.

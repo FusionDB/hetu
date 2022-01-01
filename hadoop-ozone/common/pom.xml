@@ -49,6 +49,15 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
     </dependency>
     <dependency>
       <groupId>org.apache.ozone</groupId>
+      <artifactId>container-client</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.ozone</groupId>
+      <artifactId>container-client</artifactId>
+      <version>${hdds.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.ozone</groupId>
       <artifactId>ozone-interface-client</artifactId>
     </dependency>
     <dependency>
@@ -71,6 +80,10 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <groupId>com.github.spotbugs</groupId>
       <artifactId>spotbugs-annotations</artifactId>
       <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.ozone</groupId>
+      <artifactId>hetu-photon</artifactId>
     </dependency>
   </dependencies>
 

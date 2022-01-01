@@ -130,6 +130,20 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <!-- nwe lib for hetu-->
     <dependency>
+      <groupId>org.apache.ozone</groupId>
+      <artifactId>hetu-photon</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
+      <version>${protobuf-compile.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.ozone</groupId>
+      <artifactId>hetu-photon</artifactId>
+      <type>test-jar</type>
+    </dependency>
+    <dependency>
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-core</artifactId>
       <version>8.8.2</version>

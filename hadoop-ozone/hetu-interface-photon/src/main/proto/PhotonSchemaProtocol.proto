@@ -1,0 +1,62 @@
+syntax = "proto2";
+option java_package = "org.apache.hadoop.hetu.photon.proto";
+option java_outer_classname = "PhotonSchemaProtocolProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+package hadoop.hetu;
+
+message SchemaProto {
+  enum TypeProto {
+    HASH = 1;
+    RANGE = 2;
+    LIST = 3;
+  }
+
+  message PartitionKeyProto {
+    required TypeProto partitionKeyType = 1;
+    repeated string fields = 2;
+    optional int32 partitions = 3;
+  }
+
+  message DistributedKeyProto {
+    required TypeProto distributedKeyType = 1 [default = HASH];
+    repeated string fields = 2;
+    optional int32 buckets = 3 [default = 8];
+  }
+
+  enum ColumnKeyTypeProto {
+    PRIMARY_KEY = 1;
+    UNIQUE_KEY = 2;
+    AGGREGATE_KEY = 3;
+    NO_KEY = 4;
+  }
+
+  message ColumnKeyProto {
+    required ColumnKeyTypeProto columnKeyType = 1;
+    repeated string fields = 2;
+  }
+
+  repeated ColumnSchemaProto columns = 1;
+  required PartitionKeyProto partitionKey = 2;
+  required DistributedKeyProto distributedKey = 3;
+  required ColumnKeyProto columnKey = 4;
+}
+
+message ColumnSchemaProto {
+  message ColumnTypeAttributesProto {
+    required int32  precision = 1;
+    required int32 scale = 2;
+    required int32 length = 3;
+  }
+
+  required string columnName = 1;
+  required string columnType = 2;
+  optional int32 desiredSize = 4;
+  optional string defaultValue = 5;
+  optional string extra = 7;
+  optional string columnComment = 8;
+  optional bool   isNullable = 9;
+  optional string wireType = 10;
+  optional int32 typeSize = 11;
+  optional ColumnTypeAttributesProto columnTypeAttributes = 12;
+}

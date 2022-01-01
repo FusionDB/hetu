@@ -308,7 +308,7 @@ public class OzoneTokenIdentifier extends
     /**
      * returns password.
      */
-    byte[] getPassword() {
+    public byte[] getPassword() {
       return password;
     }
 

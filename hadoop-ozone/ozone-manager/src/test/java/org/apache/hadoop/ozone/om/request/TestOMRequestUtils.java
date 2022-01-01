@@ -23,7 +23,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import com.google.common.base.Optional;
@@ -36,9 +38,9 @@ import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
-import org.apache.hadoop.ozone.hm.meta.table.ColumnKey;
-import org.apache.hadoop.ozone.hm.meta.table.ColumnSchema;
+import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
+import org.apache.hadoop.hetu.photon.meta.common.ColumnKey;
+import org.apache.hadoop.hetu.photon.meta.schema.ColumnSchema;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.*;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -73,7 +75,6 @@ import org.apache.hadoop.ozone.storage.proto.OzoneManagerStorageProtos;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
-import org.checkerframework.checker.nullness.Opt;
 import org.jetbrains.annotations.NotNull;
 
 import static java.util.stream.Collectors.toList;
@@ -430,6 +431,30 @@ public final class TestOMRequestUtils {
   }
 
   /**
+   * Adds one block to {@code tabletInfo} with the provided size and offset.
+   */
+  public static void addTabletLocationInfo(
+          OmTabletInfo tabletInfo, long offset, long keyLength) throws IOException {
+
+    Pipeline pipeline = Pipeline.newBuilder()
+            .setState(Pipeline.PipelineState.OPEN)
+            .setId(PipelineID.randomId())
+            .setReplicationConfig(ReplicationConfig
+                    .fromTypeAndFactor(tabletInfo.getType(), tabletInfo.getFactor()))
+            .setNodes(new ArrayList<>())
+            .build();
+
+    OmTabletLocationInfo locationInfo = new OmTabletLocationInfo.Builder()
+            .setBlockID(new BlockID(100L, 1000L))
+            .setOffset(offset)
+            .setLength(keyLength)
+            .setPipeline(pipeline)
+            .build();
+
+    tabletInfo.appendNewBlocks(Collections.singletonList(locationInfo), false);
+  }
+
+  /**
    * Create OmKeyInfo.
    */
   public static OmKeyInfo createOmKeyInfo(String volumeName, String bucketName,
@@ -513,7 +538,16 @@ public final class TestOMRequestUtils {
             .setReplicationFactor(replicationFactor)
             .setObjectID(objectID)
             .setUpdateID(objectID)
+            .addAllMetadata(getMetadataMap())
             .build();
+  }
+
+  private static Map<String, String> getMetadataMap() {
+    Map<String, String> map = new HashMap<>();
+    map.put("k1", "v1");
+    map.put("k2", "v2");
+    map.put(OzoneConsts.GDPR_FLAG, "false");
+    return map;
   }
 
   /**
@@ -632,7 +666,7 @@ public final class TestOMRequestUtils {
             .setPartitions(partitionsProto)
             .setColumnKey(ColumnKey.fromProtobuf(getColumnKeyProto()))
             .setCreationTime(Time.now())
-            .setUsedCapacityInBytes(0L).build();
+            .setUsedInBytes(0L).build();
 
     // Add to cache.
     omMetadataManager.getMetaTable().addCacheEntry(
@@ -711,7 +745,7 @@ public final class TestOMRequestUtils {
             .setPartitions(partitionsProto)
             .setCreationTime(Time.now())
             .setDistributedKey(getDistributedKeyProto())
-            .setUsedCapacityInBytes(usedCapacityInBytes).build();
+            .setUsedInBytes(usedCapacityInBytes).build();
 
     // Add to cache.
     omMetadataManager.getMetaTable().addCacheEntry(
@@ -1172,6 +1206,30 @@ public final class TestOMRequestUtils {
   }
 
   /**
+   * Deletes tablet from Tablet table and adds it to DeletedTablets table.
+   * @return the deletedTablet name
+   */
+  public static String deleteTablet(String ozoneTablet,
+                                 OMMetadataManager omMetadataManager, long trxnLogIndex)
+          throws IOException {
+    // Retrieve the tabletInfo
+    OmTabletInfo omTabletInfo = omMetadataManager.getTabletTable().get(ozoneTablet);
+
+    // Delete tablet from tabletTable and put in DeletedTabletTable
+    omMetadataManager.getTabletTable().delete(ozoneTablet);
+
+    RepeatedOmTabletInfo repeatedOmTabletInfo =
+            omMetadataManager.getDeletedTablet().get(ozoneTablet);
+
+    repeatedOmTabletInfo = OmUtils.prepareTabletForDelete(omTabletInfo,
+            repeatedOmTabletInfo, trxnLogIndex, true);
+
+    omMetadataManager.getDeletedTablet().put(ozoneTablet, repeatedOmTabletInfo);
+
+    return ozoneTablet;
+  }
+
+  /**
    * Create OMRequest which encapsulates InitiateMultipartUpload request.
    * @param volumeName
    * @param bucketName
@@ -1363,17 +1421,17 @@ public final class TestOMRequestUtils {
   /**
    * Add the Database information to OzoneManager DB and Cache.
    * @param omMetadataManager
-   * @param hmDatabaseArgs
+   * @param omDatabaseArgs
    * @throws IOException
    */
   public static void addDatabaseToOM(OMMetadataManager omMetadataManager,
-                                   HmDatabaseArgs hmDatabaseArgs) throws IOException {
+                                   OmDatabaseArgs omDatabaseArgs) throws IOException {
     String dbDatabaseKey =
-            omMetadataManager.getDatabaseKey(hmDatabaseArgs.getName());
-    omMetadataManager.getDatabaseTable().put(dbDatabaseKey, hmDatabaseArgs);
+            omMetadataManager.getDatabaseKey(omDatabaseArgs.getName());
+    omMetadataManager.getDatabaseTable().put(dbDatabaseKey, omDatabaseArgs);
     omMetadataManager.getDatabaseTable().addCacheEntry(
             new CacheKey<>(dbDatabaseKey),
-            new CacheValue<>(Optional.of(hmDatabaseArgs), 1L));
+            new CacheValue<>(Optional.of(omDatabaseArgs), 1L));
   }
 
   public static void addDatabaseToDB(String databaseName,
@@ -1390,18 +1448,18 @@ public final class TestOMRequestUtils {
    */
   public static void addDatabaseToDB(String databaseName, String ownerName,
                                    OMMetadataManager omMetadataManager) throws Exception {
-    HmDatabaseArgs hmDatabaseArgs =
-            HmDatabaseArgs.newBuilder().setCreationTime(Time.now())
+    OmDatabaseArgs omDatabaseArgs =
+            OmDatabaseArgs.newBuilder().setCreationTime(Time.now())
                     .setName(databaseName).setAdminName(ownerName)
                     .setOwnerName(ownerName).setQuotaInBytes(Long.MAX_VALUE)
                     .setQuotaInNamespace(10000L).build();
     omMetadataManager.getDatabaseTable().put(
-            omMetadataManager.getVolumeKey(databaseName), hmDatabaseArgs);
+            omMetadataManager.getVolumeKey(databaseName), omDatabaseArgs);
 
     // Add to cache.
     omMetadataManager.getDatabaseTable().addCacheEntry(
             new CacheKey<>(omMetadataManager.getVolumeKey(databaseName)),
-            new CacheValue<>(Optional.of(hmDatabaseArgs), 1L));
+            new CacheValue<>(Optional.of(omDatabaseArgs), 1L));
   }
 
   /**
@@ -1413,17 +1471,17 @@ public final class TestOMRequestUtils {
    */
   public static void addDatabaseToDB(String databaseName,
                                    OMMetadataManager omMetadataManager, long quotaInBytes) throws Exception {
-    HmDatabaseArgs hmDatabaseArgs =
-            HmDatabaseArgs.newBuilder().setCreationTime(Time.now())
+    OmDatabaseArgs omDatabaseArgs =
+            OmDatabaseArgs.newBuilder().setCreationTime(Time.now())
                     .setName(databaseName).setAdminName(databaseName)
                     .setOwnerName(databaseName).setQuotaInBytes(quotaInBytes)
                     .setQuotaInNamespace(10000L).build();
     omMetadataManager.getDatabaseTable().put(
-            omMetadataManager.getDatabaseKey(databaseName), hmDatabaseArgs);
+            omMetadataManager.getDatabaseKey(databaseName), omDatabaseArgs);
 
     // Add to cache.
     omMetadataManager.getDatabaseTable().addCacheEntry(
             new CacheKey<>(omMetadataManager.getDatabaseKey(databaseName)),
-            new CacheValue<>(Optional.of(hmDatabaseArgs), 1L));
+            new CacheValue<>(Optional.of(omDatabaseArgs), 1L));
   }
 }

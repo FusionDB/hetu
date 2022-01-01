@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.container.lstore.impl;
 
 import org.apache.hadoop.conf.StorageUnit;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
@@ -93,7 +94,7 @@ public class TestBlockManagerImpl {
     UUID datanodeId = UUID.randomUUID();
     HddsVolume hddsVolume = new HddsVolume.Builder(folder.getRoot()
         .getAbsolutePath()).conf(config).datanodeUuid(datanodeId
-        .toString()).build();
+        .toString()).storageType(StorageType.SSD).build();
 
     volumeSet = mock(MutableVolumeSet.class);
 

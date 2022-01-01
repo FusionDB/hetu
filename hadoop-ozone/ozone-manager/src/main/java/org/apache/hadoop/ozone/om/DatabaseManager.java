@@ -16,8 +16,7 @@
  */
 package org.apache.hadoop.ozone.om;
 
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
-import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
 
 import java.io.IOException;
 import java.util.List;
@@ -31,7 +30,7 @@ public interface DatabaseManager extends IHetuAccess{
    * Create a new volume.
    * @param args - Volume args to create a volume
    */
-  void createDatabase(HmDatabaseArgs args)
+  void createDatabase(OmDatabaseArgs args)
       throws IOException;
 
   /**
@@ -50,7 +49,7 @@ public interface DatabaseManager extends IHetuAccess{
    * @return VolumeArgs or exception is thrown.
    * @throws IOException
    */
-  HmDatabaseArgs getDatabaseInfo(String database) throws IOException;
+  OmDatabaseArgs getDatabaseInfo(String database) throws IOException;
 
   /**
    * Deletes an existing empty volume.
@@ -73,10 +72,10 @@ public interface DatabaseManager extends IHetuAccess{
    *   this key is excluded from the result.
    * @param maxKeys
    *   the maximum number of databases to return.
-   * @return a list of {@link HmDatabaseArgs}
+   * @return a list of {@link OmDatabaseArgs}
    * @throws IOException
    */
-  List<HmDatabaseArgs> listDatabase(String userName, String prefix,
-      String startKey, int maxKeys) throws IOException;
+  List<OmDatabaseArgs> listDatabase(String userName, String prefix,
+                                    String startKey, int maxKeys) throws IOException;
 
 }

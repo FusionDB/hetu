@@ -20,16 +20,13 @@
 package org.apache.hadoop.ozone.om.response;
 
 import org.apache.hadoop.hdds.protocol.StorageType;
-import org.apache.hadoop.ozone.hm.meta.table.ColumnKey;
-import org.apache.hadoop.ozone.hm.meta.table.ColumnSchema;
+import org.apache.hadoop.hetu.photon.meta.common.ColumnKey;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmPartitionInfo;
 import org.apache.hadoop.ozone.om.helpers.OmTableInfo;
 import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.util.Time;
-
-import java.util.Arrays;
 
 /**
  * Helper class to test OMClientResponse classes.

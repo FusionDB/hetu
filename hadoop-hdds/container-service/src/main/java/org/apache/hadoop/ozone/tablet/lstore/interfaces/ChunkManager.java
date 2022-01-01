@@ -20,6 +20,8 @@ package org.apache.hadoop.ozone.tablet.lstore.interfaces;
 
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.hetu.photon.ReadType;
+import org.apache.hadoop.hetu.photon.WriteType;
 import org.apache.hadoop.ozone.common.ChunkBuffer;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
@@ -52,10 +54,34 @@ public interface ChunkManager {
       throws StorageContainerException;
 
   default void writeChunk(Container container, BlockID blockID, ChunkInfo info,
-      ByteBuffer data, DispatcherContext dispatcherContext)
-      throws StorageContainerException {
+    ByteBuffer data, DispatcherContext dispatcherContext)
+    throws StorageContainerException {
     ChunkBuffer wrapper = ChunkBuffer.wrap(data);
     writeChunk(container, blockID, info, wrapper, dispatcherContext);
+  }
+
+  /**
+   * writes a given chunk.
+   *
+   * @param container - Container for the chunk
+   * @param blockID - ID of the block.
+   * @param info - ChunkInfo.
+   * @param writeType write type in the chunk
+   * @param data
+   * @param dispatcherContext - dispatcher context info.
+   * @throws StorageContainerException
+   */
+  void writeChunk(Container container, BlockID blockID, ChunkInfo info,
+    WriteType writeType, ChunkBuffer data,
+    DispatcherContext dispatcherContext)
+    throws StorageContainerException;
+
+  default void writeChunk(Container container, BlockID blockID, ChunkInfo info,
+    WriteType writeType, ByteBuffer data,
+    DispatcherContext dispatcherContext)
+    throws StorageContainerException {
+    ChunkBuffer wrapper = ChunkBuffer.wrap(data);
+    writeChunk(container, blockID, info, writeType, wrapper, dispatcherContext);
   }
 
   /**
@@ -73,6 +99,24 @@ public interface ChunkManager {
    */
   ChunkBuffer readChunk(Container container, BlockID blockID, ChunkInfo info,
       DispatcherContext dispatcherContext) throws StorageContainerException;
+
+  /**
+   * reads the data defined by a chunk.
+   *
+   * @param container - Container for the chunk
+   * @param blockID - ID of the block.
+   * @param info - ChunkInfo.
+   * @param readType - read type in the chunk.
+   * @param dispatcherContext - dispatcher context info.
+   * @return  byte array
+   * @throws StorageContainerException
+   *
+   * TODO: Right now we do not support partial reads and writes of chunks.
+   * TODO: Explore if we need to do that for ozone.
+   */
+  ChunkBuffer readChunk(Container container, BlockID blockID, ChunkInfo info,
+                        ReadType readType, ByteBuffer readExpress,
+                        DispatcherContext dispatcherContext) throws StorageContainerException;
 
   /**
    * Deletes a given chunk.

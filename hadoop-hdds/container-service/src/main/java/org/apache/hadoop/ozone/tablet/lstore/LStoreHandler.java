@@ -37,6 +37,8 @@ import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolPro
 import org.apache.hadoop.hdds.scm.ByteStringConversion;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.hetu.photon.ReadType;
+import org.apache.hadoop.hetu.photon.WriteType;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.common.ChunkBuffer;
 import org.apache.hadoop.ozone.common.utils.BufferUtils;
@@ -122,6 +124,7 @@ public class LStoreHandler extends Handler {
                        ContainerSet contSet, VolumeSet volSet, ContainerMetrics metrics,
                        Consumer<ContainerReplicaProto> icrSender) {
     super(config, datanodeId, contSet, volSet, metrics, icrSender);
+    // TODO: Default ContainerType is LStore
     containerType = ContainerType.LStoreContainer;
     blockManager = new BlockManagerImpl(config);
     chunkManager = ChunkManagerFactory.createChunkManager(config, blockManager);
@@ -615,8 +618,16 @@ public class LStoreHandler extends Handler {
         chunkInfo.setReadDataIntoSingleBuffer(true);
       }
 
-      data = chunkManager.readChunk(lStoreContainer, blockID, chunkInfo,
-          dispatcherContext);
+      if (request.getReadChunk().hasReadType()) {
+        // TODO: read chunk req readExpress
+        data = chunkManager.readChunk(lStoreContainer, blockID, chunkInfo,
+                ReadType.valueOf(request.getReadChunk().getReadType()),
+                null,
+                dispatcherContext);
+      } else {
+        data = chunkManager.readChunk(lStoreContainer, blockID, chunkInfo,
+                dispatcherContext);
+      }
       metrics.incContainerBytesStats(Type.ReadChunk, chunkInfo.getLen());
     } catch (StorageContainerException ex) {
       return ContainerUtils.logAndReturnError(LOG, ex, request);
@@ -710,7 +721,9 @@ public class LStoreHandler extends Handler {
       BlockID blockID = BlockID.getFromProtobuf(writeChunk.getBlockID());
       ContainerProtos.ChunkInfo chunkInfoProto = writeChunk.getChunkData();
       ChunkInfo chunkInfo = ChunkInfo.getFromProtoBuf(chunkInfoProto);
+      WriteType writeType = WriteType.valueOf(writeChunk.getWriteType());
       Preconditions.checkNotNull(chunkInfo);
+      Preconditions.checkNotNull(writeType);
 
       ChunkBuffer data = null;
       if (dispatcherContext == null) {
@@ -720,11 +733,11 @@ public class LStoreHandler extends Handler {
       if (stage == WriteChunkStage.WRITE_DATA ||
           stage == WriteChunkStage.COMBINED) {
         data =
-            ChunkBuffer.wrap(writeChunk.getData().asReadOnlyByteBufferList());
+            ChunkBuffer.wrap(writeChunk.getWriteData().asReadOnlyByteBufferList());
       }
 
       chunkManager
-          .writeChunk(lStoreContainer, blockID, chunkInfo, data, dispatcherContext);
+          .writeChunk(lStoreContainer, blockID, chunkInfo, writeType, data, dispatcherContext);
 
       // We should increment stats after writeChunk
       if (stage == WriteChunkStage.WRITE_DATA||

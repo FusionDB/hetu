@@ -21,6 +21,8 @@ package org.apache.hadoop.ozone.tablet.lstore.impl;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.hetu.photon.ReadType;
+import org.apache.hadoop.hetu.photon.WriteType;
 import org.apache.hadoop.ozone.common.ChunkBuffer;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
@@ -53,7 +55,8 @@ public class ChunkManagerDummyImpl implements ChunkManager {
     if (stage == DispatcherContext.WriteChunkStage.WRITE_DATA
         || stage == DispatcherContext.WriteChunkStage.COMBINED) {
 
-      ChunkUtils.validateBufferSize(info.getLen(), data.remaining());
+//      ChunkUtils.validateBufferSize(info.getLen(), data.remaining());
+      ChunkUtils.validateBufferSize(info.getLen(), data.limit());
 
       HddsVolume volume = containerData.getVolume();
       VolumeIOStats volumeIOStats = volume.getVolumeIOStats();
@@ -67,6 +70,13 @@ public class ChunkManagerDummyImpl implements ChunkManager {
     }
   }
 
+  @Override
+  public void writeChunk(Container container, BlockID blockID, ChunkInfo info,
+                         WriteType writeType, ChunkBuffer data, DispatcherContext dispatcherContext)
+          throws StorageContainerException {
+    throw new UnsupportedOperationException();
+  }
+
   /**
    * return a zero-filled buffer.
    */
@@ -76,6 +86,14 @@ public class ChunkManagerDummyImpl implements ChunkManager {
 
     // stats are handled in ChunkManagerImpl
     return ChunkBuffer.wrap(ByteBuffer.allocate((int) info.getLen()));
+  }
+
+  @Override
+  public ChunkBuffer readChunk(Container container, BlockID blockID,
+                               ChunkInfo info, ReadType readType,
+                               ByteBuffer readExpress, DispatcherContext dispatcherContext)
+          throws StorageContainerException {
+    throw new UnsupportedOperationException();
   }
 
   @Override

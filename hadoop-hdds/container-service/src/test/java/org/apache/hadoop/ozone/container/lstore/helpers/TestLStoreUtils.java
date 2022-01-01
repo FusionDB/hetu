@@ -2,11 +2,13 @@ package org.apache.hadoop.ozone.container.lstore.helpers;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.hetu.photon.ClientTestUtil;
+import org.apache.hadoop.hetu.photon.ReadType;
+import org.apache.hadoop.hetu.photon.WriteType;
+import org.apache.hadoop.hetu.photon.helpers.PartialRow;
+import org.apache.hadoop.hetu.photon.proto.HetuPhotonProtos.PartialRowProto;
 import org.apache.hadoop.ozone.common.ChunkBuffer;
-import org.apache.hadoop.ozone.common.utils.BufferUtils;
-import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.volume.VolumeIOStats;
-import org.apache.hadoop.ozone.container.keyvalue.helpers.ChunkUtils;
 import org.apache.hadoop.ozone.tablet.lstore.helpers.LStoreUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -16,7 +18,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,7 +31,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.UNABLE_TO_FIND_CHUNK;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -47,15 +47,14 @@ public class TestLStoreUtils {
 
     @Test
     public void concurrentReadOfSameFile() throws Exception {
-        String s = "{\"name\":\"小明\",\"id\":\"1\",\"age\":\"18\",\"content\":\"Hello world!\"}";
-        byte[] array = s.getBytes(UTF_8);
-        ChunkBuffer data = ChunkBuffer.wrap(ByteBuffer.wrap(array));
+        PartialRow raw = ClientTestUtil.getPartialRowWithAllTypes();
+        byte[] array = raw.toProtobuf().toByteArray();
+        ChunkBuffer data = ChunkBuffer.wrap(Arrays.asList(ByteBuffer.wrap(array), ByteBuffer.wrap(array)));
         Path tempPath = Files.createTempDirectory(PREFIX);
         try {
             long len = data.limit();
-            long offset = 0;
             VolumeIOStats stats = new VolumeIOStats();
-            LStoreUtils.writeData(tempPath, data, offset, len, stats, true);
+            LStoreUtils.writeData(tempPath, WriteType.INSERT, data, len, stats, true);
             int threads = 10;
             ExecutorService executor = new ThreadPoolExecutor(threads, threads,
                     0, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
@@ -65,19 +64,18 @@ public class TestLStoreUtils {
                 final int threadNumber = i;
                 executor.execute(() -> {
                     try {
-                        ByteBuffer[] readBuffers = BufferUtils.assignByteBuffers(len, len);
-                        LStoreUtils.readData(tempPath, readBuffers, offset, len, stats);
+                        ByteBuffer[] readBuffers =  LStoreUtils.readData(tempPath, ReadType.QUERY,
+                                null, stats);
 
                         // There should be only one element in readBuffers
-                        Assert.assertEquals(1, readBuffers.length);
+                        Assert.assertEquals(2, readBuffers.length);
                         ByteBuffer readBuffer = readBuffers[0];
 
-                        LOG.info("Read data ({}): {}", threadNumber,
-                                new String(readBuffer.array(), UTF_8));
-                        if (!Arrays.equals(array, readBuffer.array())) {
+                        PartialRow partialRow = PartialRow.fromPersistedFormat(readBuffer.array());
+                        LOG.info("Read data ({}): {}", threadNumber, partialRow.toString());
+                        if (!Arrays.equals(raw.toProtobuf().toByteArray(), readBuffer.array())) {
                             failed.set(true);
                         }
-                        assertEquals(len, readBuffer.remaining());
                     } catch (Exception e) {
                         LOG.error("Failed to read data ({})", threadNumber, e);
                         failed.set(true);
@@ -107,29 +105,32 @@ public class TestLStoreUtils {
 
     @Test
     public void serialRead() throws Exception {
-        String s = "{\"name\":\"小明\",\"id\":\"1\",\"age\":\"18\",\"content\":\"Hello world!\"}";
-        byte[] array = s.getBytes(UTF_8);
+        PartialRow raw = ClientTestUtil.getPartialRowWithAllTypes();
+        byte[] array = raw.toProtobuf().toByteArray();
         ChunkBuffer data = ChunkBuffer.wrap(ByteBuffer.wrap(array));
         Path tempFile = Files.createTempDirectory(PREFIX);
         try {
             VolumeIOStats stats = new VolumeIOStats();
             long len = data.limit();
             long offset = 0;
-            LStoreUtils.writeData(tempFile, data, offset, len, stats, true);
-
-            ByteBuffer[] readBuffers = BufferUtils.assignByteBuffers(len, len);
-            LStoreUtils.readData(tempFile, readBuffers, offset, len, stats);
+            LStoreUtils.writeData(tempFile, WriteType.INSERT, data, len, stats, true);
+            LStoreUtils.writeData(tempFile, WriteType.INSERT, data, len, stats, true);
+            ByteBuffer[] readBuffers = LStoreUtils.readData(tempFile, ReadType.QUERY,
+                    null, stats);
 
             // There should be only one element in readBuffers
-            Assert.assertEquals(1, readBuffers.length);
+            Assert.assertEquals(2, readBuffers.length);
             ByteBuffer readBuffer = readBuffers[0];
+            PartialRow partialRow = PartialRow.fromPersistedFormat(readBuffer.array());
 
-            assertArrayEquals(array, readBuffer.array());
-            assertEquals(len, readBuffer.remaining());
+            assertArrayEquals(raw.encodeColumnKey(), partialRow.encodeColumnKey());
+            assertEquals(raw.getVarLengthData().size(),
+                    partialRow.getVarLengthData().size());
+            LOG.info("Read data: {}", partialRow);
         } catch (Exception e) {
             LOG.error("Failed to read data", e);
         } finally {
-           deleteDir(tempFile.toFile());
+            deleteDir(tempFile.toFile());
         }
     }
 
@@ -175,16 +176,14 @@ public class TestLStoreUtils {
     @Test
     public void readMissingFile() throws Exception {
         // given
-        int len = 123;
-        int offset = 0;
         File nonExistentFile = new File("nosuchfile");
-        ByteBuffer[] bufs = BufferUtils.assignByteBuffers(len, len);
         VolumeIOStats stats = new VolumeIOStats();
 
         // when
         StorageContainerException e = LambdaTestUtils.intercept(
                 StorageContainerException.class,
-                () -> LStoreUtils.readData(nonExistentFile.toPath(), bufs, offset, len, stats));
+                () -> LStoreUtils.readData(nonExistentFile.toPath(),
+                        ReadType.QUERY, null, stats));
 
         // then
         Assert.assertEquals(UNABLE_TO_FIND_CHUNK, e.getResult());

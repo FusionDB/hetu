@@ -84,6 +84,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numPartitionUpdates;
   private @Metric MutableCounterLong numTabletAllocate;
   private @Metric MutableCounterLong numTabletCommits;
+  private @Metric MutableCounterLong numTabletAllocations;
 
 
   private @Metric MutableCounterLong numGetFileStatus;
@@ -95,6 +96,10 @@ public class OMMetrics {
   private @Metric MutableCounterLong numOpenKeyDeleteRequests;
   private @Metric MutableCounterLong numOpenKeysSubmittedForDeletion;
   private @Metric MutableCounterLong numOpenKeysDeleted;
+  private @Metric MutableCounterLong numOpenTabletDeleteRequests;
+  private @Metric MutableCounterLong numOpenTabletsSubmittedForDeletion;
+  private @Metric MutableCounterLong numOpenTabletsDeleted;
+
 
   private @Metric MutableCounterLong numAddAcl;
   private @Metric MutableCounterLong numSetAcl;
@@ -145,6 +150,8 @@ public class OMMetrics {
   private @Metric MutableCounterLong numPartitionUpdateFails;
   private @Metric MutableCounterLong numTabletCommitFails;
   private @Metric MutableCounterLong numTabletDeleteFails;
+  private @Metric MutableCounterLong numOpenTabletDeleteRequestFails;
+  private @Metric MutableCounterLong numTabletAllocationFails;
 
   private @Metric MutableCounterLong numGetFileStatusFails;
   private @Metric MutableCounterLong numCreateDirectoryFails;
@@ -638,8 +645,16 @@ public class OMMetrics {
     numBlockAllocations.incr();
   }
 
+  public void incNumTabletAllocateCalls() {
+    numTabletAllocations.incr();
+  }
+
   public void incNumBlockAllocateCallFails() {
     numBlockAllocationFails.incr();
+  }
+
+  public void incNumTabletAllocateCallFails() {
+    numTabletAllocationFails.incr();
   }
 
   public void incNumBucketListFails() {
@@ -666,16 +681,32 @@ public class OMMetrics {
     numOpenKeyDeleteRequests.incr();
   }
 
+  public void incNumOpenTabletDeleteRequests() {
+    numOpenTabletDeleteRequests.incr();
+  }
+
   public void incNumOpenKeysSubmittedForDeletion(long amount) {
     numOpenKeysSubmittedForDeletion.incr(amount);
+  }
+
+  public void incNumOpenTabletsSubmittedForDeletion(long amount) {
+    numOpenTabletsSubmittedForDeletion.incr(amount);
   }
 
   public void incNumOpenKeysDeleted() {
     numOpenKeysDeleted.incr();
   }
 
+  public void incNumOpenTabletsDeleted() {
+    numOpenTabletsDeleted.incr();
+  }
+
   public void incNumOpenKeyDeleteRequestFails() {
     numOpenKeyDeleteRequestFails.incr();
+  }
+
+  public void incNumOpenTabletDeleteRequestFails() {
+    numOpenTabletDeleteRequestFails.incr();
   }
 
   public void incNumAddAcl() {
@@ -986,8 +1017,18 @@ public class OMMetrics {
   }
 
   @VisibleForTesting
+  public long getNumTabletAllocates() {
+    return numTabletAllocations.value();
+  }
+
+  @VisibleForTesting
   public long getNumBlockAllocateFails() {
     return numBlockAllocationFails.value();
+  }
+
+  @VisibleForTesting
+  public long getNumTabletAllocateFails() {
+    return numTabletAllocationFails.value();
   }
 
   @VisibleForTesting
@@ -1025,16 +1066,32 @@ public class OMMetrics {
     return numOpenKeyDeleteRequests.value();
   }
 
+  public long getNumOpenTabletDeleteRequests() {
+    return numOpenTabletDeleteRequests.value();
+  }
+
   public long getNumOpenKeysSubmittedForDeletion() {
     return numOpenKeysSubmittedForDeletion.value();
+  }
+
+  public long getNumOpenTabletsSubmittedForDeletion() {
+    return numOpenTabletsSubmittedForDeletion.value();
   }
 
   public long getNumOpenKeysDeleted() {
     return numOpenKeysDeleted.value();
   }
 
+  public long getNumOpenTabletsDeleted() {
+    return numOpenTabletsDeleted.value();
+  }
+
   public long getNumOpenKeyDeleteRequestFails() {
     return numOpenKeyDeleteRequestFails.value();
+  }
+
+  public long getNumOpenTabletDeleteRequestFails() {
+    return numOpenTabletDeleteRequestFails.value();
   }
 
   public long getNumAddAcl() {

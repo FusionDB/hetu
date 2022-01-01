@@ -19,9 +19,8 @@
 package org.apache.hadoop.ozone.om.response.table;
 
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
-import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.response.CleanupTableInfo;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
@@ -39,14 +38,14 @@ public final class OMTableDeleteResponse extends OMClientResponse {
 
   private String databaseName;
   private String tableName;
-  private final HmDatabaseArgs hmDatabaseArgs;
+  private final OmDatabaseArgs omDatabaseArgs;
 
   public OMTableDeleteResponse(@Nonnull OMResponse omResponse,
-                               String databaseName, String tableName, HmDatabaseArgs hmDatabaseArgs) {
+                               String databaseName, String tableName, OmDatabaseArgs omDatabaseArgs) {
     super(omResponse);
     this.databaseName = databaseName;
     this.tableName = tableName;
-    this.hmDatabaseArgs = hmDatabaseArgs;
+    this.omDatabaseArgs = omDatabaseArgs;
   }
 
   public OMTableDeleteResponse(@Nonnull OMResponse omResponse,
@@ -54,7 +53,7 @@ public final class OMTableDeleteResponse extends OMClientResponse {
     super(omResponse);
     this.databaseName = tableName;
     this.tableName = tableName;
-    this.hmDatabaseArgs = null;
+    this.omDatabaseArgs = null;
   }
 
   /**
@@ -64,7 +63,7 @@ public final class OMTableDeleteResponse extends OMClientResponse {
   public OMTableDeleteResponse(@Nonnull OMResponse omResponse) {
     super(omResponse);
     checkStatusNotOK();
-    this.hmDatabaseArgs = null;
+    this.omDatabaseArgs = null;
   }
 
   @Override
@@ -76,10 +75,10 @@ public final class OMTableDeleteResponse extends OMClientResponse {
     omMetadataManager.getMetaTable().deleteWithBatch(batchOperation,
            dbTableKey);
     // update database info
-    if (hmDatabaseArgs != null) {
+    if (omDatabaseArgs != null) {
       omMetadataManager.getDatabaseTable().putWithBatch(batchOperation,
-              omMetadataManager.getDatabaseKey(hmDatabaseArgs.getName()),
-              hmDatabaseArgs);
+              omMetadataManager.getDatabaseKey(omDatabaseArgs.getName()),
+              omDatabaseArgs);
     }
   }
 

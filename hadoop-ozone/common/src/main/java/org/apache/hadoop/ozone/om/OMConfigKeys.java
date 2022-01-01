@@ -90,6 +90,11 @@ public final class OMConfigKeys {
       "ozone.key.deleting.limit.per.task";
   public static final int OZONE_KEY_DELETING_LIMIT_PER_TASK_DEFAULT = 20000;
 
+  public static final String OZONE_TABLET_DELETING_LIMIT_PER_TASK =
+          "ozone.tablet.deleting.limit.per.task";
+  public static final int OZONE_TABLET_DELETING_LIMIT_PER_TASK_DEFAULT = 20000;
+
+
   public static final String OZONE_OM_METRICS_SAVE_INTERVAL =
       "ozone.om.save.metrics.interval";
   public static final String OZONE_OM_METRICS_SAVE_INTERVAL_DEFAULT = "5m";

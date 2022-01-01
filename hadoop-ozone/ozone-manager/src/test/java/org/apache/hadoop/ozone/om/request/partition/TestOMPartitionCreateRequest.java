@@ -19,9 +19,9 @@
 
 package org.apache.hadoop.ozone.om.request.partition;
 
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
-import org.apache.hadoop.ozone.hm.meta.table.ColumnKey;
-import org.apache.hadoop.ozone.hm.meta.table.ColumnSchema;
+import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
+import org.apache.hadoop.hetu.photon.meta.common.ColumnKey;
+import org.apache.hadoop.hetu.photon.meta.schema.ColumnSchema;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmPartitionInfo;
@@ -224,11 +224,11 @@ public class TestOMPartitionCreateRequest extends TestPartitionRequest {
 
   public static void addCreateDatabaseToTable(String databaseName,
       OMMetadataManager omMetadataManager) throws Exception {
-    HmDatabaseArgs hmDatabaseArgs =
-        HmDatabaseArgs.newBuilder().setCreationTime(Time.now())
+    OmDatabaseArgs omDatabaseArgs =
+        OmDatabaseArgs.newBuilder().setCreationTime(Time.now())
             .setName(databaseName).setAdminName(UUID.randomUUID().toString())
             .setOwnerName(UUID.randomUUID().toString()).build();
-    TestOMRequestUtils.addDatabaseToOM(omMetadataManager, hmDatabaseArgs);
+    TestOMRequestUtils.addDatabaseToOM(omMetadataManager, omDatabaseArgs);
   }
 
   public static void addCreateMetaTableToTable(String databaseName, String tableName,
@@ -271,7 +271,7 @@ public class TestOMPartitionCreateRequest extends TestPartitionRequest {
   }
 
   @NotNull
-  private static OzoneManagerProtocolProtos.TableInfo.PartitionsProto getPartitionsProto() {
+  public static OzoneManagerProtocolProtos.TableInfo.PartitionsProto getPartitionsProto() {
     return OzoneManagerProtocolProtos.TableInfo.PartitionsProto.newBuilder()
             .addAllFields(Arrays.asList("city"))
             .setPartitionType(OzoneManagerProtocolProtos.TableInfo.Type.HASH)

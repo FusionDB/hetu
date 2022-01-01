@@ -100,6 +100,7 @@ enum Type {
   GetSmallFile = 16;
   CloseContainer = 17;
   GetCommittedBlockLength = 18;
+
 }
 
 
@@ -199,6 +200,7 @@ message ContainerCommandRequestProto {
 
   optional   string encodedToken = 23;
   optional   uint32 version = 24;
+
 }
 
 message ContainerCommandResponseProto {
@@ -248,7 +250,7 @@ message ContainerDataProto {
   optional int64 size = 7;
   optional int64 blockCount = 8;
   optional State state = 9 [default = OPEN];
-  optional ContainerType containerType = 10 [default = KeyValueContainer];
+  optional ContainerType containerType = 10 [default = LStoreContainer];
 }
 
 message Container2BCSIDMapProto {
@@ -266,7 +268,7 @@ enum ContainerType {
 // Container Messages.
 message  CreateContainerRequestProto {
   repeated KeyValue metadata = 2;
-  optional ContainerType containerType = 3 [default = KeyValueContainer];
+  optional ContainerType containerType = 3 [default = LStoreContainer];
 }
 
 message  CreateContainerResponseProto {
@@ -371,25 +373,7 @@ message ChunkInfo {
   required uint64 len = 3;
   repeated KeyValue metadata = 4;
   required ChecksumData checksumData = 5;
-  repeated ColumnSchemaProto columns = 6;
-}
-
-message ColumnSchemaProto {
-  enum ColumnKeyProto {
-    PRIMARY_KEY = 1;
-    UNIQUE_KEY = 2;
-    AGGREGATE_KEY = 3;
-    NO_KEY = 4;
-  }
-  required string columnType = 1;
-  required string columnName = 2;
-  required string dataType = 3;
-  required int32 ordinalPosition = 4;
-  optional ColumnKeyProto columnKey = 5;
-  optional string columnDefault = 6;
-  optional string extra = 7 [default = "DEFAULT_GENERATED"];
-  optional string columnComment = 8;
-  optional bool isNullable = 9;
+  optional uint32 rows = 6;
 }
 
 message ChunkInfoList {
@@ -410,13 +394,24 @@ enum ChecksumType {
     MD5 = 5;
 }
 
-message  WriteChunkRequestProto  {
+message WriteChunkRequestProto  {
+  enum WriteTypeProto {
+    INSERT = 1;
+    UPDATE = 2;
+    UPSERT = 3;
+    DELETE = 4;
+  }
+
   required DatanodeBlockID blockID = 1;
   required ChunkInfo chunkData = 2;
   optional bytes data = 3;
+  // LStore or CStore
+  optional WriteTypeProto writeType = 4;
+  optional bytes writeData = 5;
 }
 
 message  WriteChunkResponseProto {
+  optional bytes expressResponse = 1;
 }
 
 enum ReadChunkVersion {
@@ -424,16 +419,39 @@ enum ReadChunkVersion {
   V1 = 1; // Response data is split into multiple buffers
 }
 
-message  ReadChunkRequestProto  {
+message ReadChunkRequestProto {
   required DatanodeBlockID blockID = 1;
   required ChunkInfo chunkData = 2;
   optional ReadChunkVersion readChunkVersion = 3;
+  optional string queryId = 4;
+
+  message ReadExpress {
+    /**
+     * Express Op
+     */
+    required bytes express = 1;
+    /**
+     * The offset of this call. The sequence ID should start at 0
+     * with the request for a new query, and after each successful request,
+     * the client should increment it by 1. When retrying a request, the client
+     * should _not_ increment this value. If the server detects that the client
+     * missed a chunk of rows from the middle of a scan, it will respond with an
+     * error.
+    */
+    required uint32  offset = 2;
+    /**
+     * Batch read chunk batchSize max limit
+     */
+    required uint32 limit = 3;
+  }
+  optional ReadExpress readExpress = 5;
+  optional uint64 readChunkRequestTimeout = 6;
 }
 
 message  ReadChunkResponseProto {
   required DatanodeBlockID blockID = 1;
   required ChunkInfo chunkData = 2;
-  // Chunk data should be returned in one of the two for
+  // Chunk data should be returned in one of the three for
   oneof responseData {
     bytes data = 3; // Chunk data is returned as single buffer for V0
     DataBuffers dataBuffers = 4; // Chunk data is returned as a list of buffers

@@ -19,7 +19,7 @@
 package org.apache.hadoop.ozone.om.response.tablet;
 
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.hm.HmDatabaseArgs;
+import org.apache.hadoop.hetu.hm.helpers.OmDatabaseArgs;
 import org.apache.hadoop.ozone.om.helpers.OmTabletInfo;
 import org.apache.hadoop.ozone.om.helpers.OmPartitionInfo;
 import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
@@ -46,7 +46,7 @@ public class TestOMTabletCreateResponse extends TestOMTabletResponse {
     OmPartitionInfo omPartitionInfo = TestOMResponseUtils.createPartition(databaseName, tableName,
             partitionName, "202021");
 
-    HmDatabaseArgs hmDatabaseArgs = HmDatabaseArgs.newBuilder().setCreationTime(Time.now())
+    OmDatabaseArgs omDatabaseArgs = OmDatabaseArgs.newBuilder().setCreationTime(Time.now())
             .setName(databaseName)
             .setAdminName(OzoneConsts.ADMIN)
             .setOwnerName(OzoneConsts.OWNER)
@@ -61,7 +61,7 @@ public class TestOMTabletCreateResponse extends TestOMTabletResponse {
 
     OMTabletCreateResponse omTabletCreateResponse =
         new OMTabletCreateResponse(omResponse, omTabletInfo, null, clientID,
-            omPartitionInfo, hmDatabaseArgs);
+            omPartitionInfo, omDatabaseArgs);
 
     String openTablet = omMetadataManager.getOpenTablet(databaseName, tableName,
         partitionName, tabletName, clientID);
@@ -82,7 +82,7 @@ public class TestOMTabletCreateResponse extends TestOMTabletResponse {
     OmPartitionInfo omPartitionInfo = TestOMResponseUtils.createPartition(databaseName, tableName,
             partitionName, "202021");
 
-    HmDatabaseArgs hmDatabaseArgs = HmDatabaseArgs.newBuilder().setCreationTime(Time.now())
+    OmDatabaseArgs omDatabaseArgs = OmDatabaseArgs.newBuilder().setCreationTime(Time.now())
             .setName(databaseName)
             .setAdminName(OzoneConsts.ADMIN)
             .setOwnerName(OzoneConsts.OWNER)
@@ -97,7 +97,7 @@ public class TestOMTabletCreateResponse extends TestOMTabletResponse {
 
     OMTabletCreateResponse omTabletCreateResponse =
         new OMTabletCreateResponse(omResponse, omTabletInfo, null, clientID,
-            omPartitionInfo, hmDatabaseArgs);
+            omPartitionInfo, omDatabaseArgs);
 
     // Before calling addToDBBatch
     String openTablet = omMetadataManager.getOpenTablet(databaseName, tableName,
